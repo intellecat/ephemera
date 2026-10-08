@@ -19,6 +19,7 @@ add_library(ephemeris STATIC
     src/moon.cpp
     src/elp.cpp
     src/correction.cpp
+    src/compressed.cpp
     src/pluto.cpp
     src/ephemeris.cpp
     data/vsop87d_data.cpp
@@ -48,4 +49,8 @@ if(EPHEMERIS_BUILD_TESTS)
     add_executable(test_ephemeris tests/test_ephemeris.cpp)
     target_link_libraries(test_ephemeris PRIVATE ephemeris)
     add_test(NAME ephemeris COMMAND test_ephemeris)
+
+    add_executable(test_compressed tests/test_compressed.cpp)
+    target_link_libraries(test_compressed PRIVATE ephemeris)
+    add_test(NAME compressed COMMAND test_compressed ${CMAKE_CURRENT_SOURCE_DIR}/data/ephem.bin)
 endif()

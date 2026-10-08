@@ -8,6 +8,7 @@ BUILD     = build
 
 LIB_SRC = src/time.cpp src/frames.cpp src/vsop87.cpp src/moon.cpp \
           src/elp.cpp src/pluto.cpp src/ephemeris.cpp src/correction.cpp \
+          src/compressed.cpp \
           data/vsop87d_data.cpp data/pluto_data.cpp data/elp_data.cpp \
           data/corr_data.cpp data/corr_moon.cpp
 LIB_OBJ = $(patsubst %.cpp,$(BUILD)/%.o,$(LIB_SRC))
@@ -15,7 +16,7 @@ LIB     = $(BUILD)/libephemeris.a
 
 .PHONY: all test clean
 
-all: $(LIB) $(BUILD)/ephcliapp $(BUILD)/test_ephemeris
+all: $(LIB) $(BUILD)/ephcliapp $(BUILD)/test_ephemeris $(BUILD)/test_compressed
 
 $(BUILD)/%.o: %.cpp
 	@mkdir -p $(dir $@)
@@ -31,8 +32,12 @@ $(BUILD)/ephcliapp: examples/positions.c $(LIB)
 $(BUILD)/test_ephemeris: tests/test_ephemeris.cpp $(LIB)
 	$(CXX) $(CXXFLAGS) -Iinclude -Itests $< $(LIB) -lm -o $@
 
-test: $(BUILD)/test_ephemeris
+test: $(BUILD)/test_ephemeris $(BUILD)/test_compressed
 	$(BUILD)/test_ephemeris
+	$(BUILD)/test_compressed data/ephem.bin
+
+$(BUILD)/test_compressed: tests/test_compressed.cpp $(LIB)
+	$(CXX) $(CXXFLAGS) -Iinclude -Itests $< $(LIB) -lm -o $@
 
 clean:
 	rm -rf $(BUILD)

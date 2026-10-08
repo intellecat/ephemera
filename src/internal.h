@@ -25,6 +25,10 @@ inline Vec3 operator-(const Vec3& a, const Vec3& b) {
     return {a.x - b.x, a.y - b.y, a.z - b.z};
 }
 
+inline double length(const Vec3& v) {
+    return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+}
+
 /* Reduce an angle to [0, 2pi). */
 inline double normalize(double a) {
     a = std::fmod(a, TWO_PI);
@@ -42,6 +46,11 @@ void apply_correction(int planet, double jd_tt, double& lon, double& lat,
 
 /* DE440 correction for the Moon (geocentric of date, AU); src/correction.cpp. */
 void apply_moon_correction(double jd_tt, double& lon, double& lat, double& r);
+
+/* Optional Chebyshev compressed ephemeris backend (src/compressed.cpp).
+ * Returns the geocentric vector in the mean ecliptic J2000 frame. */
+bool compressed_geocentric(int body, double jd, bool light_time, Vec3& out,
+                           double& dist);
 
 /* Frame helpers (src/frames.cpp). */
 Vec3 spherical_to_cartesian(double lon, double lat, double r);

@@ -105,6 +105,14 @@ int eph_heliocentric_tt(eph_body body, double jd_tt,
 
 const char* eph_body_name(eph_body body);
 
+/* ---- optional compressed ephemeris backend -------------------------- *
+ * Loads a Chebyshev table produced by tools/pack_ephemeris.py.  When
+ * loaded, eph_position_* use it (for dates in its range) instead of the
+ * analytical series, reaching ~0.01 arcsec.  Returns 0 on success. */
+int eph_load_compressed(const char* path);
+void eph_unload_compressed(void);
+int eph_compressed_available(void);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

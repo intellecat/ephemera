@@ -29,8 +29,6 @@ Vec3 body_heliocentric(eph_body body, double jd) {
     return planet_heliocentric(static_cast<int>(body), jd);
 }
 
-double length(const Vec3& v) { return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z); }
-
 Vec3 normalize_vec(const Vec3& v) {
     const double n = length(v);
     return (n > 0.0) ? Vec3{v.x / n, v.y / n, v.z / n} : v;
@@ -40,6 +38,20 @@ Vec3 normalize_vec(const Vec3& v) {
 bool geocentric_vector(eph_body body, double jd, bool light_time, Vec3& out,
                        double& dist) {
     if (body == EPH_EARTH) return false;
+
+    /* Optional high-accuracy Chebyshev backend (ecliptic J2000). */
+    if (eph_compressed_available()) {
+        Vec3 cv;
+        double cd;
+        if (compressed_geocentric((int)body, jd, light_time, cv, cd)) {
+            double l = std::atan2(cv.y, cv.x);
+            double b = std::asin(cv.z / cd);
+            precess_ecliptic_j2000_to_date(jd, l, b);
+            out = spherical_to_cartesian(l, b, cd);
+            dist = cd;
+            return true;
+        }
+    }
 
     const Vec3 earth = earth_heliocentric(jd);
 
