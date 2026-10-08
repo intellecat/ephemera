@@ -15,24 +15,30 @@ void elp_moon_j2000(double jd_tt, double& x, double& y, double& z) {
     const double t = (jd_tt - J2000) / DAYS_PER_CENTURY;
     const double t2 = t * t, t3 = t2 * t, t4 = t3 * t;
 
+    const double pscale = TWO_PI / 1073741824.0; /* 30-bit phase -> radians */
+    const unsigned int pmask = 0x3FFFFFFFu;
+
     double r[3] = {0.0, 0.0, 0.0};
     for (int iv = 0; iv < 3; ++iv) {
         const elp::Coord& c = elp::coords[iv];
         double sum = 0.0;
         for (int n = 0; n < c.nmain; ++n) {
             const elp::MainTerm& term = c.main[n];
-            const double ph = term.ph[0] + term.ph[1] * t + term.ph[2] * t2 +
-                              term.ph[3] * t3 + term.ph[4] * t4;
+            const double ph0 = (term.packed & pmask) * pscale;
+            const double ph = ph0 + term.ph1 * t + term.ph2 * t2 +
+                              term.ph3 * t3 + term.ph4 * t4;
             sum += term.amp * std::sin(ph);
         }
         for (int n = 0; n < c.npert; ++n) {
             const elp::PertTerm& term = c.pert[n];
+            const double ph0 = (term.packed & pmask) * pscale;
+            const int tpow = term.packed >> 30;
             double a = term.amp;
-            if (term.tpow == 1)
+            if (tpow == 1)
                 a *= t;
-            else if (term.tpow == 2)
+            else if (tpow == 2)
                 a *= t2;
-            sum += a * std::sin(term.ph0 + term.ph1 * t);
+            sum += a * std::sin(ph0 + term.ph1 * t);
         }
         r[iv] = sum;
     }

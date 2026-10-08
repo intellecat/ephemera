@@ -4,9 +4,9 @@
 namespace eph {
 namespace elp {
 
-struct MainTerm { double amp; double ph[5]; };
-struct PertTerm { float amp; unsigned char tpow;
-                  double ph0, ph1; };
+struct MainTerm { double ph1, ph2, ph3, ph4; float amp;
+                  unsigned int packed; };
+struct PertTerm { double ph1; float amp; unsigned int packed; };
 struct Coord { const MainTerm* main; int nmain;
                const PertTerm* pert; int npert; };
 
