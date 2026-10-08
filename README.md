@@ -143,6 +143,24 @@ JPL DE440s kernel with Skyfield (reduced with ERFA/IAU-1976); the kernel is **no
 and is never shipped.  See `tools/make_reference.py` and
 `tools/gen_reference.py` if you want to regenerate it.
 
+## Compact encoding
+
+The compiled tables use a quantized layout to keep the binary small
+without measurable loss:
+
+* **VSOP87D** — the secular (`C == 0`) terms are folded into an exact
+  `double` polynomial (their amplitudes reach ~10⁴ rad/millennium and must
+  not be float32); the small periodic terms are stored as
+  `{float amplitude, uint32 phase, double frequency}` — 24 → 16 bytes/term.
+* **ELP2000-82B** — the bounded phase (mod 2π) is stored in 30 bits, with
+  the time power packed into the top 2 bits and only the rate kept as
+  `double` — 48/24 → 40/16 bytes/term.
+* **Pluto** — kept as `double`; its least-squares fit has large cancelling
+  coefficients that float32 cannot represent.
+
+Together these cut the tables roughly in half: a stripped, self-contained
+binary is now **~670 KB** (down from ~1.15 MB) with identical accuracy.
+
 ## Layout
 
 ```
