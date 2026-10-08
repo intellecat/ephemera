@@ -1,0 +1,8 @@
+/build/
+*.o
+*.a
+*.so
+*.dSYM/
+
+# Raw IMCCE downloads; regenerate with tools/gen_vsop87.py
+/data/vsop87d/
