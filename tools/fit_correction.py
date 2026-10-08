@@ -1,0 +1,173 @@
+#!/usr/bin/env python3
+"""Fit small DE440s corrections for the outer planets.
+
+VSOP87 is fitted to DE200, so Uranus and Neptune drift from DE440 by up to
+~1" and ~2.3" over 1850-2140 (oscillatory, not a frame offset).  This tool
+samples the residual in heliocentric ecliptic-of-date spherical coordinates
+and represents it as a Chebyshev polynomial in T (centuries from J2000),
+which is compact and numerically well conditioned for a finite window.
+
+Emits data/corr_data.{h,cpp}; the correction is applied in src/vsop87.cpp
+and clamped to the fitted window.
+
+Development tool: requires numpy, skyfield and pyerfa, plus the VSOP87D
+files under data/vsop87d/ (run tools/gen_vsop87.py first).
+
+    /tmp/eph/bin/python tools/fit_correction.py
+"""
+from __future__ import annotations
+
+import math
+import os
+import sys
+
+import erfa
+import numpy as np
+from skyfield.api import load
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+J2000 = 2451545.0
+DEGREE = 40  # Chebyshev terms per coordinate (0..40)
+
+# (C++ tag, VSOP87D file suffix, DE440s body key)
+PLANETS = [
+    ("URANUS", "ura", "uranus barycenter"),
+    ("NEPTUNE", "nep", "neptune barycenter"),
+]
+
+
+def parse_vsop87d(path):
+    series = [[[] for _ in range(6)] for _ in range(3)]
+    with open(path, errors="ignore") as f:
+        for line in f:
+            if "VSOP87" in line or len(line) < 131:
+                continue
+            try:
+                ic, it = int(line[3]), int(line[4])
+                A = float(line[79:97])
+                B = float(line[97:111])
+                C = float(line[111:131])
+            except ValueError:
+                continue
+            if 1 <= ic <= 3 and 0 <= it <= 5:
+                series[ic - 1][it].append((A, B, C))
+    return series
+
+
+def vsop87(series, jd):
+    T = (jd - J2000) / 365250.0
+    out = []
+    for i in range(3):
+        v = 0.0
+        for a in range(5, -1, -1):
+            v = v * T + sum(x * math.cos(y + z * T) for x, y, z in series[i][a])
+        out.append(v)
+    return out
+
+
+def de440s(kernel, key, jds):
+    eph = load(kernel)
+    ts = load.timescale()
+    sun = eph["sun"]
+    body = eph[key]
+    t = ts.tt_jd(jds)
+    h = body.at(t) - sun.at(t)
+    ra, dec, dist = h.radec()  # ICRS
+    ra = np.asarray(ra.radians)
+    dec = np.asarray(dec.radians)
+    r = np.asarray(dist.au)
+
+    # Reduce ICRS -> mean ecliptic/equinox of date (IAU 1976), matching
+    # VSOP87D.  (Without the precession step this lands in the J2000
+    # ecliptic, which is ~2 deg away at 1850.)
+    v = np.array([np.cos(dec) * np.cos(ra),
+                  np.cos(dec) * np.sin(ra),
+                  np.sin(dec)])
+    lon = np.empty(len(jds))
+    lat = np.empty(len(jds))
+    for k, jd in enumerate(jds):
+        dt = jd - J2000
+        vd = erfa.pmat76(J2000, dt) @ v[:, k]
+        eps = erfa.obl80(J2000, dt)
+        y = vd[1] * math.cos(eps) + vd[2] * math.sin(eps)
+        z = -vd[1] * math.sin(eps) + vd[2] * math.cos(eps)
+        lon[k] = math.atan2(y, vd[0])
+        lat[k] = math.asin(z)
+    return lon, lat, r
+
+
+def main():
+    kernel = sys.argv[1] if len(sys.argv) > 1 else "de440s.bsp"
+    ts = load.timescale()
+    jd0 = float(ts.utc(1850, 1, 1).tt)
+    jd1 = float(ts.utc(2140, 1, 1).tt)
+    jds = np.arange(jd0, jd1, 10.0)
+    T = (jds - J2000) / 36525.0
+    tmin, tmax = float(T.min()), float(T.max())
+    u = (2.0 * T - (tmin + tmax)) / (tmax - tmin)
+    V = np.polynomial.chebyshev.chebvander(u, DEGREE)
+
+    models = {}
+    for tag, suffix, key in PLANETS:
+        series = parse_vsop87d(os.path.join(ROOT, "data", "vsop87d",
+                                            f"VSOP87D.{suffix}"))
+        lonDE, latDE, rDE = de440s(kernel, key, jds)
+        Vv = np.array([vsop87(series, jd) for jd in jds])
+        dlon = (lonDE - Vv[:, 0] + math.pi) % (2 * math.pi) - math.pi
+        dlat = latDE - Vv[:, 1]
+        dr = rDE - Vv[:, 2]
+
+        train = np.zeros(len(T), bool)
+        train[::2] = True
+        test = ~train
+        coefs = {}
+        for name, target in (("lon", dlon), ("lat", dlat), ("rad", dr)):
+            c, _, _, _ = np.linalg.lstsq(V[train], target[train], rcond=None)
+            tr = np.abs(V[train] @ c - target[train]).max()
+            te = np.abs(V[test] @ c - target[test]).max()
+            unit = 3600.0 if name != "rad" else 1.0
+            print(f"{tag:8s} {name}: train {tr*unit:9.4f} test {te*unit:9.4f} "
+                  f"{'\"' if name != 'rad' else 'AU'}")
+            coefs[name] = c
+        models[tag] = (coefs, tmin, tmax)
+
+    emit(models)
+    sys.stderr.write(f"window T=[{tmin:.6f}, {tmax:.6f}] centuries\n")
+
+
+def c_float(x):
+    return f"{x:.17g}"
+
+
+def emit(models):
+    h = os.path.join(ROOT, "data", "corr_data.h")
+    cpp = os.path.join(ROOT, "data", "corr_data.cpp")
+    n = DEGREE + 1
+    with open(h, "w") as f:
+        f.write("/* Generated by tools/fit_correction.py -- do not edit. */\n")
+        f.write("#pragma once\n\nnamespace eph {\nnamespace corr {\n\n")
+        f.write("struct Series {\n    double tmin, tmax;\n"
+                "    const double *lon, *lat, *rad;\n    int n;\n};\n\n")
+        f.write("extern const Series uranus, neptune;\n\n")
+        f.write("}  // namespace corr\n}  // namespace eph\n")
+    with open(cpp, "w") as f:
+        f.write("/* Generated by tools/fit_correction.py -- do not edit. */\n")
+        f.write('#include "corr_data.h"\n\nnamespace eph {\nnamespace corr {\n\n')
+        entries = []
+        for tag, (coefs, tmin, tmax) in models.items():
+            for name, key in (("lon", "lon"), ("lat", "lat"), ("rad", "rad")):
+                c = coefs[key]
+                f.write(f"static const double {tag}_{name}[{n}] = {{\n    ")
+                f.write(", ".join(c_float(x) for x in c))
+                f.write("\n};\n\n")
+            entries.append((tag, tmin, tmax))
+        for tag, tmin, tmax in entries:
+            f.write(f"const Series {tag.lower()} = {{{c_float(tmin)}, "
+                    f"{c_float(tmax)}, {tag}_lon, {tag}_lat, {tag}_rad, {n}}};\n")
+        f.write("\n}  // namespace corr\n}  // namespace eph\n")
+    sys.stderr.write(f"wrote {h}\nwrote {cpp}\n")
+
+
+if __name__ == "__main__":
+    main()

@@ -35,9 +35,12 @@ void vsop87_heliocentric(int planet, double jd_tt, double& lon, double& lat,
     }
     const double T = (jd_tt - J2000) / DAYS_PER_MILLENNIUM;
     const vsop87d::Body& body = vsop87d::bodies[planet];
-    lon = normalize(eval_coordinate(body.l, body.nl, T));
+    lon = eval_coordinate(body.l, body.nl, T);
     lat = eval_coordinate(body.b, body.nb, T);
     r = eval_coordinate(body.r, body.nr, T);
+
+    apply_correction(planet, jd_tt, lon, lat, r);
+    lon = normalize(lon);
 }
 
 }  // namespace eph

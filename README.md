@@ -13,7 +13,8 @@ Internally it evaluates:
 * **ELP2000-82B** (Chapront-Touze & Chapront) full lunar theory for the
   Moon; ~0.1" near J2000, growing to a few arcseconds at the range edges
   because its constants are fitted to DE200/LE200.
-* A compact Poisson series for Pluto fitted to JPL DE440s over 1850-2140.
+* A compact Poisson series for Pluto fitted to JPL DE440s over 1850-2140,
+  and small Chebyshev DE440 corrections for Uranus and Neptune.
 * **IAU 1980** nutation (63 terms), the IAU 1980 mean obliquity, and the
   Espenak–Meeus ΔT polynomials for the UT↔TT conversion.
 
@@ -33,8 +34,8 @@ reflect the theories, not a frame-model difference:
 | Mars    | 0.09″     | 0.10″    |                                |
 | Jupiter | 0.49″     | 0.49″    | DE barycenter reference        |
 | Saturn  | 0.37″     | 0.35″    | DE barycenter reference        |
-| Uranus  | 1.14″     | 1.16″    | DE barycenter reference        |
-| Neptune | 2.33″     | 2.31″    | VSOP87 limit over this span    |
+| Uranus  | 0.01″     | 0.05″    | VSOP87 + DE440 correction      |
+| Neptune | 0.01″     | 0.05″    | VSOP87 + DE440 correction      |
 | Pluto   | 0.04″     | 0.07″    | Poisson fit to DE440s          |
 | Sun     | 0.13″     | 0.13″    |                                |
 | Moon    | 2.76″     | 3.50″    | full ELP2000-82B (DE200 fit)   |
@@ -45,11 +46,11 @@ J2000 (up to a few arcseconds at the edges, reflecting its DE200 fit).
 
 ### Where the remaining error comes from
 
-* **Outer planets (Uranus ~1.1", Neptune ~2.3").**  This is the VSOP87
-  theory (fitted to DE200) versus DE440, and it is oscillatory rather than
-  a frame offset: comparing heliocentric *planet centres* with DE *system
-  barycenters* contributes <0.1".  Removing it would require fitting
-  corrections, which would no longer be VSOP87.
+* **Uranus/Neptune.**  VSOP87 is fitted to DE200 and drifts from DE440 by
+  ~1-2" over 1850-2140.  This is absorbed by a small Chebyshev correction
+  (`tools/fit_correction.py`), so both are now ~0.01-0.05".  The
+  correction is clamped to its 1850-2140 fit window; outside it freezes at
+  the boundary value.
 * **Moon range edges (~3").**  ELP2000-82B constants are fitted to
   DE200/LE200; the residual grows ~1.2"/century away from J2000.  Near
   J2000 it is ~0.1".

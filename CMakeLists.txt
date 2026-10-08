@@ -18,11 +18,13 @@ add_library(ephemeris STATIC
     src/vsop87.cpp
     src/moon.cpp
     src/elp.cpp
+    src/correction.cpp
     src/pluto.cpp
     src/ephemeris.cpp
     data/vsop87d_data.cpp
     data/pluto_data.cpp
     data/elp_data.cpp
+    data/corr_data.cpp
 )
 
 target_include_directories(ephemeris
