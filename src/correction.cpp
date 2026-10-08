@@ -44,4 +44,9 @@ void apply_correction(int planet, double jd_tt, double& lon, double& lat,
         apply(corr::neptune, jd_tt, lon, lat, r);
 }
 
+/* DE440 correction for the ELP2000-82B (DE200) lunar drift. */
+void apply_moon_correction(double jd_tt, double& lon, double& lat, double& r) {
+    apply(corr::moon, jd_tt, lon, lat, r);
+}
+
 }  // namespace eph

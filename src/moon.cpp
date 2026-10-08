@@ -18,9 +18,12 @@ void moon_position(double jd_tt, double& lon, double& lat, double& dist_au) {
     double b = std::asin(z / r_km);
     precess_ecliptic_j2000_to_date(jd_tt, l, b);
 
+    double dist = r_km / AU_KM;
+    apply_moon_correction(jd_tt, l, b, dist);
+
     lon = normalize(l);
     lat = b;
-    dist_au = r_km / AU_KM;
+    dist_au = dist;
 }
 
 }  // namespace eph

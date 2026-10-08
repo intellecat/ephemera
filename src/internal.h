@@ -40,6 +40,9 @@ void vsop87_heliocentric(int planet, double jd_tt, double& lon, double& lat,
 void apply_correction(int planet, double jd_tt, double& lon, double& lat,
                       double& r);
 
+/* DE440 correction for the Moon (geocentric of date, AU); src/correction.cpp. */
+void apply_moon_correction(double jd_tt, double& lon, double& lat, double& r);
+
 /* Frame helpers (src/frames.cpp). */
 Vec3 spherical_to_cartesian(double lon, double lat, double r);
 void cartesian_to_spherical(const Vec3& v, double& lon, double& lat, double& r);

@@ -25,6 +25,7 @@ add_library(ephemeris STATIC
     data/pluto_data.cpp
     data/elp_data.cpp
     data/corr_data.cpp
+    data/corr_moon.cpp
 )
 
 target_include_directories(ephemeris

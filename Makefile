@@ -9,7 +9,7 @@ BUILD     = build
 LIB_SRC = src/time.cpp src/frames.cpp src/vsop87.cpp src/moon.cpp \
           src/elp.cpp src/pluto.cpp src/ephemeris.cpp src/correction.cpp \
           data/vsop87d_data.cpp data/pluto_data.cpp data/elp_data.cpp \
-          data/corr_data.cpp
+          data/corr_data.cpp data/corr_moon.cpp
 LIB_OBJ = $(patsubst %.cpp,$(BUILD)/%.o,$(LIB_SRC))
 LIB     = $(BUILD)/libephemeris.a
 

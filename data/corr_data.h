@@ -10,7 +10,7 @@ struct Series {
     int n;
 };
 
-extern const Series uranus, neptune;
+extern const Series uranus, neptune, moon;
 
 }  // namespace corr
 }  // namespace eph
