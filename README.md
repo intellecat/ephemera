@@ -161,6 +161,24 @@ without measurable loss:
 Together these cut the tables roughly in half: a stripped, self-contained
 binary is now **~670 KB** (down from ~1.15 MB) with identical accuracy.
 
+## Optional compressed backend (~0.01 arcsec)
+
+For near-mas accuracy the library can load a Chebyshev table generated
+from JPL DE440s:
+
+```c
+eph_load_compressed("data/ephem.bin");
+```
+
+When loaded, positions for dates in 1850-2140 come from the table
+(**~0.01" geometric, <0.2" apparent**); outside that range, or if it is
+not loaded, the analytical engine is used.  The table (`data/ephem.bin`,
+~5.7 MB) is our own format -- int32-quantized piecewise Chebyshev
+polynomials of the geocentric ecliptic-J2000 positions -- built from
+public-domain JPL data, so no third-party license applies.  Regenerate
+with `python3 tools/pack_ephemeris.py` (needs numpy + skyfield + a DE440s
+kernel).
+
 ## Layout
 
 ```
