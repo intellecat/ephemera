@@ -17,7 +17,7 @@ struct Entry {
     int ncoef;
     const double* tstart;
     const float* scale;
-    const int32_t* coef;
+    const unsigned char* coef;  /* 24-bit little-endian */
 };
 
 unsigned char* g_data = nullptr;
@@ -26,6 +26,7 @@ Entry g_entries[16];
 int g_nentries = 0;
 double g_jd0 = 0.0, g_jd1 = 0.0;      /* advertised range */
 double g_data0 = 0.0, g_data1 = 0.0;  /* actual stored range (with margin) */
+int g_cbytes = 3;                     /* coefficient width: 3 (int24) or 4 (int32) */
 
 template <typename T>
 T load_at(const unsigned char* p, long off) {
@@ -73,10 +74,11 @@ extern "C" int eph_load_compressed(const char* path) {
     }
     const uint32_t version = load_at<uint32_t>(g_data, 4);
     const uint32_t nindex = load_at<uint32_t>(g_data, 28);
-    if (version != 1 || nindex > 16) {
+    if (version < 1 || version > 2 || nindex > 16) {
         eph_unload_compressed();
         return -1;
     }
+    g_cbytes = (version == 1) ? 4 : 3;
     g_jd0 = load_at<double>(g_data, 12);
     g_jd1 = load_at<double>(g_data, 20);
     const uint32_t idxlen = load_at<uint32_t>(g_data, 32);
@@ -91,7 +93,7 @@ extern "C" int eph_load_compressed(const char* path) {
         const long co = load_at<uint64_t>(g_data, off + 32);
         e.tstart = reinterpret_cast<const double*>(g_data + to);
         e.scale = reinterpret_cast<const float*>(g_data + so);
-        e.coef = reinterpret_cast<const int32_t*>(g_data + co);
+        e.coef = g_data + co;
         off += 40;
     }
     (void)idxlen;
@@ -134,11 +136,21 @@ bool eval_entry(const Entry* e, double jd, Vec3& v) {
 
     double out[3];
     for (int c = 0; c < 3; ++c) {
-        const int32_t* q = e->coef + (i * 3 + c) * e->ncoef;
+        const unsigned char* q =
+            e->coef + (i * 3 + c) * e->ncoef * g_cbytes;
         double cc[24];
         const int n = e->ncoef;
-        for (int k = 0; k < n; ++k)
-            cc[k] = q[k] * (double)e->scale[i * 3 + c];
+        for (int k = 0; k < n; ++k) {
+            int32_t v;
+            if (g_cbytes == 4) {
+                v = (int32_t)(q[4 * k] | (q[4 * k + 1] << 8) |
+                              (q[4 * k + 2] << 16) | (uint32_t)(q[4 * k + 3] << 24));
+            } else {
+                v = q[3 * k] | (q[3 * k + 1] << 8) | (q[3 * k + 2] << 16);
+                if (v & 0x800000) v |= ~0xFFFFFF; /* sign-extend */
+            }
+            cc[k] = v * (double)e->scale[i * 3 + c];
+        }
         out[c] = chebyshev(cc, n, u);
     }
     v = {out[0], out[1], out[2]};

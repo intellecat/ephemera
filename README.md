@@ -171,13 +171,15 @@ eph_load_compressed("data/ephem.bin");
 ```
 
 When loaded, positions for dates in 1850-2140 come from the table
-(**~0.01" geometric, <0.2" apparent**); outside that range, or if it is
+(**~0.02" geometric, <0.2" apparent**); outside that range, or if it is
 not loaded, the analytical engine is used.  The table (`data/ephem.bin`,
-~5.7 MB) is our own format -- int32-quantized piecewise Chebyshev
-polynomials of the geocentric ecliptic-J2000 positions -- built from
-public-domain JPL data, so no third-party license applies.  Regenerate
-with `python3 tools/pack_ephemeris.py` (needs numpy + skyfield + a DE440s
-kernel).
+~3.3 MB) is our own format -- piecewise Chebyshev polynomials of the
+geocentric ecliptic-J2000 positions with **adaptive intervals** (long
+where the body moves slowly) and int32 per-segment quantization -- built
+from public-domain JPL data, so no third-party license applies.
+Regenerate with `python3 tools/pack_ephemeris.py` (needs numpy + skyfield
++ pyerfa + a DE440s kernel); add `--bits 24` for a ~2.6 MB table at
+~0.05-0.1" (int24's precision floor).
 
 ## Layout
 
