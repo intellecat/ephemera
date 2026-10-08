@@ -12,7 +12,7 @@ Internally it evaluates:
   coordinates in the *mean ecliptic and equinox of date*.
 * **Meeus / ELP2000** truncated lunar theory (Astronomical Algorithms,
   ch. 47) for the Moon, good to a few arcseconds.
-* **Meeus** analytic Pluto series (ch. 37) for Pluto.
+* A compact Poisson series for Pluto fitted to JPL DE440s over 1850-2140.
 * **IAU 1980** nutation (63 terms), the IAU 1980 mean obliquity, and the
   Espenak–Meeus ΔT polynomials for the UT↔TT conversion.
 
@@ -20,25 +20,27 @@ Angles are radians, distances are AU, and time is Julian Date (TT or UT).
 
 ## Accuracy
 
-Measured against JPL DE421 over 1900–2050 (see `tests/`), maximum error in
-geocentric ecliptic longitude/latitude:
+Measured against JPL DE440s over 1850–2140 (see `tests/`), maximum error in
+geocentric ecliptic longitude/latitude.  The reference is reduced to the
+library's frame (mean ecliptic/equinox of date, IAU 1976), so these numbers
+reflect the theories, not a frame-model difference:
 
-| Body    | geometric | apparent | notes                         |
-|---------|-----------|----------|-------------------------------|
-| Mercury | 0.21″     | 0.20″    |                               |
-| Venus   | 0.21″     | 0.28″    |                               |
-| Mars    | 0.21″     | 0.29″    |                               |
-| Jupiter | 0.57″     | 0.57″    | DE barycenter reference       |
-| Saturn  | 0.44″     | 0.41″    | DE barycenter reference       |
-| Uranus  | 1.16″     | 1.18″    | DE barycenter reference       |
-| Neptune | 2.45″     | 2.43″    | DE barycenter reference       |
-| Pluto   | 53.9″     | 53.9″    | Meeus fit to DE200, ~1 arcmin |
-| Sun     | 0.21″     | 0.21″    |                               |
-| Moon    | 4.2″      | 4.9″     | Meeus truncated ELP2000       |
+| Body    | geometric | apparent | notes                          |
+|---------|-----------|----------|--------------------------------|
+| Mercury | 0.12″     | 0.13″    |                                |
+| Venus   | 0.14″     | 0.21″    |                                |
+| Mars    | 0.09″     | 0.10″    |                                |
+| Jupiter | 0.49″     | 0.49″    | DE barycenter reference        |
+| Saturn  | 0.37″     | 0.35″    | DE barycenter reference        |
+| Uranus  | 1.14″     | 1.16″    | DE barycenter reference        |
+| Neptune | 2.33″     | 2.31″    | VSOP87 limit over this span    |
+| Pluto   | 0.04″     | 0.07″    | Poisson fit to DE440s          |
+| Sun     | 0.13″     | 0.13″    |                                |
+| Moon    | 4.28″     | 4.96″    | Meeus truncated ELP2000        |
 
 Inner planets are one to three arcseconds as advertised; the outer planets
-are better than that for 1900–2050, and Pluto stays within about one
-arcminute.
+are better than that over the fitted span, and Pluto is now sub-arcsecond
+over 1850–2140 (the full-ELP Moon upgrade is still pending).
 
 ## Building
 
@@ -47,7 +49,7 @@ With CMake:
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
-ctest --test-dir build            # run the DE421 validation
+ctest --test-dir build            # run the DE440s validation
 ./build/ephcliapp 2026 1 1 12     # year month day [UT fraction]
 ```
 
@@ -113,7 +115,7 @@ python3 tools/gen_vsop87.py        # downloads data/vsop87d/* and regenerates th
 ```
 
 The test reference file `tests/reference_data.h` is generated once from a
-JPL DE421 kernel with Skyfield; the kernel is **not** part of the library
+JPL DE440s kernel with Skyfield (reduced with ERFA/IAU-1976); the kernel is **not** part of the library
 and is never shipped.  See `tools/make_reference.py` and
 `tools/gen_reference.py` if you want to regenerate it.
 
@@ -124,7 +126,7 @@ include/ephemeris/ephemeris.h   public C API
 src/                            VSOP87 evaluator, Moon, Pluto, frames, time
 data/vsop87d_data.{h,cpp}       generated coefficient tables
 tools/                          coefficient and reference generators
-tests/                          DE421 validation + time/calendar checks
+tests/                          DE440s validation + time/calendar checks
 examples/positions.c            CLI that prints a chart
 ```
 

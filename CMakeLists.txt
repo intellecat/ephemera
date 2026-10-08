@@ -20,6 +20,7 @@ add_library(ephemeris STATIC
     src/pluto.cpp
     src/ephemeris.cpp
     data/vsop87d_data.cpp
+    data/pluto_data.cpp
 )
 
 target_include_directories(ephemeris

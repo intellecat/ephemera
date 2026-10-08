@@ -6,3 +6,10 @@
 
 # Raw IMCCE downloads; regenerate with tools/gen_vsop87.py
 /data/vsop87d/
+
+# JPL DE kernels (dev/test only, never shipped)
+*.bsp
+
+# Python caches
+__pycache__/
+*.pyc

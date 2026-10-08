@@ -1,11 +1,9 @@
-/* Validation of the analytical engine against a JPL DE421 reference.
+/* Validation of the analytical engine against a JPL DE440s reference.
  *
  * Reference values (tests/reference_data.h) were generated with Skyfield +
- * DE421 for a spread of dates 1900-2050 and are compared here.  Tolerances
- * are chosen to reflect the documented accuracy of VSOP87D (~1-3 arcsec for
- * the inner planets, ~1 arcmin for the outer) and the truncated
- * Meeus/ELP2000 lunar theory (~10 arcsec).
- */
+ * DE440s for dates spanning 1850-2140 and are compared here.  The reference
+ * is reduced to the library's frame (mean ecliptic/equinox of date, IAU
+ * 1976) so the test measures the dynamics rather than a frame difference. */
 #include <cmath>
 #include <cstdio>
 
@@ -73,14 +71,9 @@ int main() {
         const double glon = g.longitude * R2D, glat = g.latitude * R2D;
         const double alon = a.longitude * R2D, alat = a.latitude * R2D;
 
-        /* Skyfield's epoch='date' ecliptic frame is the *true* equator/equinox
-         * of date, i.e. it includes nutation, whereas VSOP87D computes the
-         * mean ecliptic of date.  Remove the nutation in longitude from the
-         * reference so the geometric comparison is in matching frames. */
-        double dpsi, deps;
-        eph_nutation(r.tt_jd, &dpsi, &deps);
-        const double e_glon =
-            std::fabs(wrap180(glon - (r.geom_lon - dpsi * R2D))) * 3600.0;
+        /* Reference geometric is the mean ecliptic/equinox of date under the
+         * IAU-1976 reduction, matching VSOP87D and this library. */
+        const double e_glon = std::fabs(wrap180(glon - r.geom_lon)) * 3600.0;
         const double e_glat = std::fabs(glat - r.geom_lat) * 3600.0;
         const double e_alon = std::fabs(wrap180(alon - r.app_lon)) * 3600.0;
         const double e_alat = std::fabs(alat - r.app_lat) * 3600.0;
@@ -104,7 +97,7 @@ int main() {
         }
     }
 
-    std::printf("\nMaximum angular residuals vs DE421 (arcsec)\n");
+    std::printf("\nMaximum angular residuals vs DE440s (arcsec)\n");
     std::printf("%-8s %14s %14s\n", "Body", "geometric", "apparent");
     for (int i = 0; i < EPH_BODY_COUNT; ++i) {
         if (gcount[i] == 0) continue;
@@ -120,8 +113,8 @@ int main() {
 
     /* Accuracy gates.  Inner planets are tight; outer planets and the Moon
      * are looser because of the theories used. */
-    static const double glimit[11] = {5, 5, 5, 10, 15, 20, 15, 15, 90, 5, 30};
-    static const double alimit[11] = {5, 5, 5, 10, 15, 20, 15, 15, 90, 5, 30};
+    static const double glimit[11] = {5, 5, 5, 10, 15, 20, 15, 15, 2, 5, 30};
+    static const double alimit[11] = {5, 5, 5, 10, 15, 20, 15, 15, 2, 5, 30};
     int failures = 0;
     for (int i = 0; i < EPH_BODY_COUNT; ++i) {
         if (gcount[i] == 0) continue;
