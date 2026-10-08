@@ -4,8 +4,9 @@
 *.so
 *.dSYM/
 
-# Raw IMCCE downloads; regenerate with tools/gen_vsop87.py
+# Raw IMCCE downloads; regenerate with tools/gen_vsop87.py / gen_elp.py
 /data/vsop87d/
+/data/elp/
 
 # JPL DE kernels (dev/test only, never shipped)
 *.bsp

@@ -45,6 +45,9 @@ void nutation(double jd_tt, double& dpsi, double& deps);
 void ecliptic_to_equatorial(double lon, double lat, double jd_tt, double* ra,
                             double* dec);
 
+/* ELP2000-82B geocentric rectangular, J2000 ecliptic, km (src/elp.cpp). */
+void elp_moon_j2000(double jd_tt, double& x, double& y, double& z);
+
 /* Lunar position, geocentric mean ecliptic of date (src/moon.cpp). */
 void moon_position(double jd_tt, double& lon, double& lat, double& dist_au);
 

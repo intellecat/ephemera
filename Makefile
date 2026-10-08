@@ -7,8 +7,8 @@ INCLUDES  = -Iinclude -Isrc -Idata
 BUILD     = build
 
 LIB_SRC = src/time.cpp src/frames.cpp src/vsop87.cpp src/moon.cpp \
-          src/pluto.cpp src/ephemeris.cpp data/vsop87d_data.cpp \
-          data/pluto_data.cpp
+          src/elp.cpp src/pluto.cpp src/ephemeris.cpp data/vsop87d_data.cpp \
+          data/pluto_data.cpp data/elp_data.cpp
 LIB_OBJ = $(patsubst %.cpp,$(BUILD)/%.o,$(LIB_SRC))
 LIB     = $(BUILD)/libephemeris.a
 

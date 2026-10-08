@@ -10,8 +10,9 @@ Internally it evaluates:
 * **VSOP87D** (Bretagnon & Francou, 1988) for Mercury…Neptune — the full
   IMCCE coefficient tables (31,577 terms) for heliocentric spherical
   coordinates in the *mean ecliptic and equinox of date*.
-* **Meeus / ELP2000** truncated lunar theory (Astronomical Algorithms,
-  ch. 47) for the Moon, good to a few arcseconds.
+* **ELP2000-82B** (Chapront-Touze & Chapront) full lunar theory for the
+  Moon; ~0.1" near J2000, growing to a few arcseconds at the range edges
+  because its constants are fitted to DE200/LE200.
 * A compact Poisson series for Pluto fitted to JPL DE440s over 1850-2140.
 * **IAU 1980** nutation (63 terms), the IAU 1980 mean obliquity, and the
   Espenak–Meeus ΔT polynomials for the UT↔TT conversion.
@@ -36,11 +37,11 @@ reflect the theories, not a frame-model difference:
 | Neptune | 2.33″     | 2.31″    | VSOP87 limit over this span    |
 | Pluto   | 0.04″     | 0.07″    | Poisson fit to DE440s          |
 | Sun     | 0.13″     | 0.13″    |                                |
-| Moon    | 4.28″     | 4.96″    | Meeus truncated ELP2000        |
+| Moon    | 2.76″     | 3.50″    | full ELP2000-82B (DE200 fit)   |
 
 Inner planets are one to three arcseconds as advertised; the outer planets
-are better than that over the fitted span, and Pluto is now sub-arcsecond
-over 1850–2140 (the full-ELP Moon upgrade is still pending).
+are better than that over the fitted span, Pluto is sub-arcsecond over 1850–2140, and the Moon is ~0.1" near
+J2000 (up to a few arcseconds at the edges, reflecting its DE200 fit).
 
 ## Building
 
