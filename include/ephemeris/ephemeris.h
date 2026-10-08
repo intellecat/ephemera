@@ -62,6 +62,10 @@ void eph_calendar_date(double jd, int* year, int* month, double* day);
 /* Approximate Delta-T = TT - UT in seconds (Espenak & Meeus polynomials). */
 double eph_delta_t(double year);
 
+/* TDB - TT in seconds (Fairhead & Bretagnon periodic series, ~1 us).
+ * Dynamical theories such as VSOP87/ELP2000 are functions of TDB. */
+double eph_tdb_minus_tt(double jd_tt);
+
 /* Convert between Universal Time and Terrestrial Time.  The argument is a
  * calendar year with fraction (used only to evaluate Delta-T). */
 double eph_ut_to_tt(double jd_ut, double year);

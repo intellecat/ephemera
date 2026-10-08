@@ -129,6 +129,19 @@ void eph_calendar_date(double jd, int* year, int* month, double* day) {
 
 double eph_delta_t(double year) { return delta_t_seconds(year); }
 
+double eph_tdb_minus_tt(double jd_tt) {
+    /* Fairhead & Bretagnon (1990), as in USNO Circular 179; T in Julian
+     * centuries from J2000.  Dominant terms, good to about 1 microsecond. */
+    const double T = (jd_tt - 2451545.0) / 36525.0;
+    return 0.001657 * std::sin(628.3076 * T + 6.2401) +
+           0.000022 * std::sin(575.3385 * T + 4.2970) +
+           0.000014 * std::sin(1256.6152 * T + 6.1969) +
+           0.000005 * std::sin(606.9777 * T + 4.0212) +
+           0.000005 * std::sin(52.9691 * T + 0.4444) +
+           0.000002 * std::sin(21.3299 * T + 5.5431) +
+           0.000010 * T * std::sin(628.3076 * T + 4.2490);
+}
+
 double eph_ut_to_tt(double jd_ut, double year) {
     return jd_ut + delta_t_seconds(year) / 86400.0;
 }

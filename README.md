@@ -43,6 +43,25 @@ Inner planets are one to three arcseconds as advertised; the outer planets
 are better than that over the fitted span, Pluto is sub-arcsecond over 1850–2140, and the Moon is ~0.1" near
 J2000 (up to a few arcseconds at the edges, reflecting its DE200 fit).
 
+### Where the remaining error comes from
+
+* **Outer planets (Uranus ~1.1", Neptune ~2.3").**  This is the VSOP87
+  theory (fitted to DE200) versus DE440, and it is oscillatory rather than
+  a frame offset: comparing heliocentric *planet centres* with DE *system
+  barycenters* contributes <0.1".  Removing it would require fitting
+  corrections, which would no longer be VSOP87.
+* **Moon range edges (~3").**  ELP2000-82B constants are fitted to
+  DE200/LE200; the residual grows ~1.2"/century away from J2000.  Near
+  J2000 it is ~0.1".
+* **Apparent place.**  Uses IAU-1976 precession, IAU-1980 nutation, the
+  IAU-1980 obliquity, iterated light-time and first-order annual
+  aberration.  Relativistic light deflection (<0.02" except within a few
+  degrees of the Sun) and higher-order aberration are omitted.  The
+  frames deliberately follow VSOP87D (IAU-1976); migrating the whole
+  library to IAU-2000/2006 is possible but would require transforming the
+  VSOP87 series as well.  `eph_tdb_minus_tt()` is provided for callers
+  that want the TDB timescale used by the dynamical theories.
+
 ## Building
 
 With CMake:
