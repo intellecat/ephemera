@@ -48,6 +48,14 @@ bool geocentric_vector(eph_body body, double jd, bool light_time, Vec3& out,
         moon_position(jd, l, b, r);
         out = spherical_to_cartesian(l, b, r);
         dist = r;
+        if (light_time) {
+            for (int i = 0; i < 2; ++i) {
+                const double t_emit = jd - dist / AU_PER_LIGHT_DAY;
+                moon_position(t_emit, l, b, r);
+                out = spherical_to_cartesian(l, b, r);
+                dist = r;
+            }
+        }
         return true;
     }
     if (body == EPH_SUN) {
@@ -90,7 +98,10 @@ bool compute(eph_body body, double jd_tt, Kind kind, eph_position* out) {
     if (body < 0 || body >= EPH_BODY_COUNT) return false;
 
     const bool apparent = (kind == Kind::Apparent);
-    const bool light_time = apparent && body != EPH_SUN && body != EPH_MOON;
+    /* Light-time applies to everything except the Sun (at the origin).  The
+     * Moon gets light-time but no annual aberration: as a geocentric body
+     * its apparent place is dominated by the ~1.3 s retarded position. */
+    const bool light_time = apparent && body != EPH_SUN;
 
     Vec3 v;
     double dist;

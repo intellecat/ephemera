@@ -114,7 +114,7 @@ int main() {
     /* Accuracy gates.  Inner planets are tight; outer planets and the Moon
      * are looser because of the theories used. */
     static const double glimit[11] = {5, 5, 5, 10, 15, 20, 2, 2, 2, 5, 1};
-    static const double alimit[11] = {5, 5, 5, 10, 15, 20, 2, 2, 2, 5, 2};
+    static const double alimit[11] = {5, 5, 5, 10, 15, 20, 2, 2, 2, 5, 1};
     int failures = 0;
     for (int i = 0; i < EPH_BODY_COUNT; ++i) {
         if (gcount[i] == 0) continue;

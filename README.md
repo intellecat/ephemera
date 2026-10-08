@@ -38,7 +38,7 @@ reflect the theories, not a frame-model difference:
 | Neptune | 0.01″     | 0.05″    | VSOP87 + DE440 correction      |
 | Pluto   | 0.04″     | 0.07″    | Poisson fit to DE440s          |
 | Sun     | 0.13″     | 0.13″    |                                |
-| Moon    | 0.20″     | 0.94″    | full ELP2000-82B + DE440 corr  |
+| Moon    | 0.20″     | 0.20″    | full ELP2000-82B + DE440 corr  |
 
 Inner planets are one to three arcseconds as advertised; the outer planets
 are better than that over the fitted span, Pluto is sub-arcsecond over 1850–2140, and the Moon is ~0.1" near
@@ -54,8 +54,9 @@ J2000 (up to a few arcseconds at the edges, reflecting its DE200 fit).
 * **Moon.**  ELP2000-82B is fitted to DE200/LE200 and drifts ~1.2"/
   century from DE440; this is absorbed by a Chebyshev correction
   (`tools/fit_moon_correction.py`), leaving ~0.2" at the 1850/2140 edges
-  and ~0.01" near J2000.  The residual apparent figure (~0.9") is set by
-  the first-order nutation handling, not the lunar theory.
+  and ~0.01" near J2000.  The Moon's apparent place applies light-time
+  (~0.7") and nutation but no annual aberration, matching the reference to
+  ~0.001".
 * **Apparent place.**  Uses IAU-1976 precession, IAU-1980 nutation, the
   IAU-1980 obliquity, iterated light-time and first-order annual
   aberration.  Relativistic light deflection (<0.02" except within a few

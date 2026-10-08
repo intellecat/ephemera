@@ -22,6 +22,7 @@ $(BUILD)/%.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 $(LIB): $(LIB_OBJ)
+	rm -f $@
 	ar rcs $@ $^
 
 $(BUILD)/ephcliapp: examples/positions.c $(LIB)
