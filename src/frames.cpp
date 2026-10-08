@@ -203,4 +203,26 @@ void ecliptic_to_equatorial(double lon, double lat, double jd_tt, double* ra,
     *dec = std::asin(z);
 }
 
+void equatorial_to_ecliptic(double ra, double dec, double jd_tt, double* lon,
+                            double* lat) {
+    double dpsi, deps;
+    nutation(jd_tt, dpsi, deps);
+    const double eps = mean_obliquity(jd_tt) + deps;
+    const double ce = std::cos(eps), se = std::sin(eps);
+    const double x = std::cos(dec) * std::cos(ra);
+    const double y = std::cos(dec) * std::sin(ra);
+    const double z = std::sin(dec);
+    const double yl = y * ce + z * se;
+    const double zl = -y * se + z * ce;
+    *lon = normalize(std::atan2(yl, x));
+    *lat = std::asin(zl);
+}
+
+double gmst_degrees(double jd_ut) {
+    const double d = jd_ut - J2000;
+    const double T = d / DAYS_PER_CENTURY;
+    return 280.46061837 + 360.98564736629 * d + 0.000387933 * T * T -
+           T * T * T / 38710000.0;
+}
+
 }  // namespace eph

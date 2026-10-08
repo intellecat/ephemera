@@ -178,6 +178,50 @@ bool compute(eph_body body, double jd_tt, Kind kind, eph_position* out) {
     return true;
 }
 
+/* Diurnal parallax: geocentric apparent RA/Dec -> topocentric. */
+void topocentric_correct(double ra, double dec, double dist_au, double jd_ut,
+                         const eph_observer* obs, double* ra2, double* dec2,
+                         double* dist2) {
+    const double phi = obs->latitude;
+    const double u = std::atan(0.99664719 * std::tan(phi));
+    const double rs =
+        0.99664719 * std::sin(u) + obs->elevation / 6378140.0 * std::sin(phi);
+    const double rc =
+        std::cos(u) + obs->elevation / 6378140.0 * std::cos(phi);
+    const double sinpi = 6378.14 / (dist_au * AU_KM);
+    const double theta = gmst_degrees(jd_ut) * DEG + obs->longitude;
+    const double H = theta - ra;
+    const double da = std::atan2(-rc * sinpi * std::sin(H),
+                                 std::cos(dec) - rc * sinpi * std::cos(H));
+    *ra2 = ra + da;
+    *dec2 = std::atan2((std::sin(dec) - rs * sinpi) * std::cos(da),
+                       std::cos(dec) - rc * sinpi * std::cos(H));
+
+    /* Topocentric distance: body minus the observer's geocentric vector
+     * (Earth equatorial radius 6378.14 km, in AU). */
+    const double re = 6378.14 / AU_KM;
+    const double xo = rc * re * std::cos(theta), yo = rc * re * std::sin(theta);
+    const double zo = rs * re;
+    const double xb = dist_au * std::cos(dec) * std::cos(ra);
+    const double yb = dist_au * std::cos(dec) * std::sin(ra);
+    const double zb = dist_au * std::sin(dec);
+    const double dx = xb - xo, dy = yb - yo, dz = zb - zo;
+    *dist2 = std::sqrt(dx * dx + dy * dy + dz * dz);
+}
+
+bool topocentric_eval(eph_body body, double jd_tt, double jd_ut,
+                      const eph_observer* obs, double* lon, double* lat,
+                      double* dist) {
+    eph_position g;
+    if (eph_position_apparent_tt(body, jd_tt, &g) != 0) return false;
+    double ra, dec;
+    ecliptic_to_equatorial(g.longitude, g.latitude, jd_tt, &ra, &dec);
+    double ra2, dec2;
+    topocentric_correct(ra, dec, g.distance, jd_ut, obs, &ra2, &dec2, dist);
+    equatorial_to_ecliptic(ra2, dec2, jd_tt, lon, lat);
+    return true;
+}
+
 }  // namespace
 
 extern "C" {
@@ -213,6 +257,37 @@ int eph_heliocentric_tt(eph_body body, double jd_tt, double* lon, double* lat,
     if (lat) *lat = b;
     if (distance) *distance = r;
     return 0;
+}
+
+int eph_position_topocentric_tt(eph_body body, double jd_tt, double jd_ut,
+                                const eph_observer* observer,
+                                eph_position* out) {
+    if (!observer || !out) return -1;
+    double lon, lat, dist;
+    if (!topocentric_eval(body, jd_tt, jd_ut, observer, &lon, &lat, &dist))
+        return -1;
+    out->longitude = lon;
+    out->latitude = lat;
+    out->distance = dist;
+
+    const double dt = (body == EPH_MOON) ? 0.001 : 0.1;
+    double l1, b1, d1, l2, b2, d2;
+    if (topocentric_eval(body, jd_tt - dt, jd_ut - dt, observer, &l1, &b1, &d1) &&
+        topocentric_eval(body, jd_tt + dt, jd_ut + dt, observer, &l2, &b2, &d2)) {
+        out->longitude_speed = angle_diff(l2, l1) / (2 * dt);
+        out->latitude_speed = (b2 - b1) / (2 * dt);
+        out->distance_speed = (d2 - d1) / (2 * dt);
+    } else {
+        out->longitude_speed = out->latitude_speed = out->distance_speed = 0.0;
+    }
+    return 0;
+}
+
+int eph_position_topocentric_ut(eph_body body, double jd_ut, double year,
+                                const eph_observer* observer,
+                                eph_position* out) {
+    return eph_position_topocentric_tt(body, eph_ut_to_tt(jd_ut, year), jd_ut,
+                                       observer, out);
 }
 
 }  // extern "C"

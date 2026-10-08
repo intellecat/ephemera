@@ -53,4 +53,8 @@ if(EPHEMERIS_BUILD_TESTS)
     add_executable(test_compressed tests/test_compressed.cpp)
     target_link_libraries(test_compressed PRIVATE ephemeris)
     add_test(NAME compressed COMMAND test_compressed ${CMAKE_CURRENT_SOURCE_DIR}/data/ephem.bin)
+
+    add_executable(test_topocentric tests/test_topocentric.cpp)
+    target_link_libraries(test_topocentric PRIVATE ephemeris)
+    add_test(NAME topocentric COMMAND test_topocentric)
 endif()

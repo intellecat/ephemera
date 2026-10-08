@@ -16,7 +16,7 @@ LIB     = $(BUILD)/libephemeris.a
 
 .PHONY: all test clean
 
-all: $(LIB) $(BUILD)/ephcliapp $(BUILD)/test_ephemeris $(BUILD)/test_compressed
+all: $(LIB) $(BUILD)/ephcliapp $(BUILD)/test_ephemeris $(BUILD)/test_compressed $(BUILD)/test_topocentric
 
 $(BUILD)/%.o: %.cpp
 	@mkdir -p $(dir $@)
@@ -32,11 +32,15 @@ $(BUILD)/ephcliapp: examples/positions.c $(LIB)
 $(BUILD)/test_ephemeris: tests/test_ephemeris.cpp $(LIB)
 	$(CXX) $(CXXFLAGS) -Iinclude -Itests $< $(LIB) -lm -o $@
 
-test: $(BUILD)/test_ephemeris $(BUILD)/test_compressed
+test: $(BUILD)/test_ephemeris $(BUILD)/test_compressed $(BUILD)/test_topocentric
 	$(BUILD)/test_ephemeris
 	$(BUILD)/test_compressed data/ephem.bin
+	$(BUILD)/test_topocentric
 
 $(BUILD)/test_compressed: tests/test_compressed.cpp $(LIB)
+	$(CXX) $(CXXFLAGS) -Iinclude -Itests $< $(LIB) -lm -o $@
+
+$(BUILD)/test_topocentric: tests/test_topocentric.cpp tests/topo_ref.h $(LIB)
 	$(CXX) $(CXXFLAGS) -Iinclude -Itests $< $(LIB) -lm -o $@
 
 clean:

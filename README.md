@@ -118,6 +118,19 @@ eph_ecliptic_to_equatorial(moon.longitude, moon.latitude, jd_tt, &ra, &dec);
 Heliocentric coordinates are available for the planets and Pluto via
 `eph_heliocentric_tt`.
 
+For an observer at a specific location, apply diurnal parallax:
+
+```c
+eph_observer obs = { lon_rad, lat_rad, elevation_m };  /* east-positive */
+eph_position p;
+eph_position_topocentric_ut(EPH_MOON, jd_ut, year, &obs, &p);
+```
+
+Validated to ~0.4" vs Skyfield/DE440s (1987-2005; limited by the frame
+model).  The Moon's ~1 degree parallax is the dominant effect.  Refraction
+is not applied (it affects altitude, not the ecliptic longitude used in
+charts).
+
 ## Conventions
 
 * VSOP87D is referred to the **mean dynamical ecliptic and equinox of

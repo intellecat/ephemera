@@ -60,6 +60,11 @@ double mean_obliquity(double jd_tt);
 void nutation(double jd_tt, double& dpsi, double& deps);
 void ecliptic_to_equatorial(double lon, double lat, double jd_tt, double* ra,
                             double* dec);
+void equatorial_to_ecliptic(double ra, double dec, double jd_tt, double* lon,
+                            double* lat);
+
+/* Greenwich mean sidereal time in degrees, from UT. */
+double gmst_degrees(double jd_ut);
 
 /* ELP2000-82B geocentric rectangular, J2000 ecliptic, km (src/elp.cpp). */
 void elp_moon_j2000(double jd_tt, double& x, double& y, double& z);

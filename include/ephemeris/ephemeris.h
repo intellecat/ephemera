@@ -103,6 +103,27 @@ int eph_position_apparent_ut(eph_body body, double jd_ut, double year,
 int eph_heliocentric_tt(eph_body body, double jd_tt,
                         double* lon, double* lat, double* distance);
 
+/* ---- topocentric (observer) positions ------------------------------- */
+
+typedef struct {
+    double longitude; /* geographic, radians, east positive */
+    double latitude;  /* geodetic, radians */
+    double elevation; /* metres above the reference ellipsoid */
+} eph_observer;
+
+/* Apparent topocentric position (geocentric apparent place with diurnal
+ * parallax applied).  The UT is needed for the sidereal time; `year` is
+ * the fractional calendar year for Delta-T.  Atmospheric refraction is not
+ * applied (it affects altitude, not the ecliptic longitude used in charts). */
+int eph_position_topocentric_ut(eph_body body, double jd_ut, double year,
+                                const eph_observer* observer,
+                                eph_position* out);
+
+/* As above with an explicit TT for the ephemeris and UT for sidereal time. */
+int eph_position_topocentric_tt(eph_body body, double jd_tt, double jd_ut,
+                                const eph_observer* observer,
+                                eph_position* out);
+
 const char* eph_body_name(eph_body body);
 
 /* ---- optional compressed ephemeris backend -------------------------- *
