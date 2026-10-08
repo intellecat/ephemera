@@ -4,8 +4,8 @@
 namespace eph {
 namespace vsop87d {
 
-struct Term { double a; double b; double c; };
-struct Series { const Term* terms; int count; };
+struct Term { float a; unsigned int b; double c; };
+struct Series { double poly; const Term* terms; int count; };
 struct Body {
     const Series* l; int nl;
     const Series* b; int nb;
