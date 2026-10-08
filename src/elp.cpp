@@ -19,16 +19,20 @@ void elp_moon_j2000(double jd_tt, double& x, double& y, double& z) {
     for (int iv = 0; iv < 3; ++iv) {
         const elp::Coord& c = elp::coords[iv];
         double sum = 0.0;
-        for (int n = 0; n < c.count; ++n) {
-            const elp::Term& term = c.terms[n];
+        for (int n = 0; n < c.nmain; ++n) {
+            const elp::MainTerm& term = c.main[n];
             const double ph = term.ph[0] + term.ph[1] * t + term.ph[2] * t2 +
                               term.ph[3] * t3 + term.ph[4] * t4;
+            sum += term.amp * std::sin(ph);
+        }
+        for (int n = 0; n < c.npert; ++n) {
+            const elp::PertTerm& term = c.pert[n];
             double a = term.amp;
             if (term.tpow == 1)
                 a *= t;
             else if (term.tpow == 2)
                 a *= t2;
-            sum += a * std::sin(ph);
+            sum += a * std::sin(term.ph0 + term.ph1 * t);
         }
         r[iv] = sum;
     }

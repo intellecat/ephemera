@@ -4,8 +4,11 @@
 namespace eph {
 namespace elp {
 
-struct Term { double amp; double ph[5]; int tpow; };
-struct Coord { const Term* terms; int count; };
+struct MainTerm { double amp; double ph[5]; };
+struct PertTerm { float amp; unsigned char tpow;
+                  double ph0, ph1; };
+struct Coord { const MainTerm* main; int nmain;
+               const PertTerm* pert; int npert; };
 
 extern const Coord coords[3];
 
