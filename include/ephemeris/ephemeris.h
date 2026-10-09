@@ -292,6 +292,73 @@ typedef struct {
 int eph_phenomena_tt(eph_body body, double jd_tt, eph_phenomena* out);
 int eph_phenomena_ut(eph_body body, double jd_ut, double year, eph_phenomena* out);
 
+/* ---- eclipses -------------------------------------------------------- *
+ * From the apparent Sun and Moon (any data file with them).  Times are TT
+ * Julian days; 0 marks a phase that does not occur.  `direction` is +1
+ * (next) or -1 (previous); the searches return 0, or -1 without data. */
+
+enum {
+    EPH_ECLIPSE_TOTAL = 1,
+    EPH_ECLIPSE_ANNULAR = 2,
+    EPH_ECLIPSE_HYBRID = 4,      /* annular-total                       */
+    EPH_ECLIPSE_PARTIAL = 8,
+    EPH_ECLIPSE_PENUMBRAL = 16,  /* lunar only                          */
+    EPH_ECLIPSE_NONCENTRAL = 32  /* with TOTAL/ANNULAR: axis misses Earth */
+};
+
+typedef struct {
+    int type;                  /* EPH_ECLIPSE_* flags                       */
+    double maximum;            /* greatest eclipse (axis nearest Earth)     */
+    double gamma;              /* axis distance from Earth's centre, Earth
+                                  radii (negative: south)                   */
+    double magnitude;          /* at greatest eclipse                       */
+    double latitude, longitude;/* where greatest eclipse is seen, radians   */
+    int saros;
+    double partial_begin, partial_end;          /* penumbra on the Earth   */
+    double central_begin, central_end;          /* umbra/antumbra on Earth */
+    double center_line_begin, center_line_end;  /* axis on the Earth       */
+} eph_solar_eclipse;
+
+typedef struct {
+    int type;           /* as seen at this place and time (0: none)       */
+    double magnitude;   /* fraction of the Sun's diameter covered          */
+    double obscuration; /* fraction of the Sun's disc area covered         */
+    double altitude;    /* of the Sun, radians (below 0: not visible)      */
+} eph_local_eclipse_state;
+
+typedef struct {
+    int type;
+    double maximum;
+    double first_contact, second_contact, third_contact, fourth_contact;
+    double magnitude, obscuration, altitude; /* at maximum */
+    int saros;
+} eph_local_solar_eclipse;
+
+typedef struct {
+    int type;                    /* TOTAL, PARTIAL or PENUMBRAL           */
+    double maximum;
+    double gamma;                /* Moon from the shadow axis, Earth radii */
+    double umbral_magnitude, penumbral_magnitude;
+    int saros;
+    double penumbral_begin, penumbral_end;
+    double partial_begin, partial_end;
+    double total_begin, total_end;
+} eph_lunar_eclipse;
+
+/* The next/previous solar eclipse anywhere on the Earth. */
+int eph_solar_eclipse_next(double jd_tt, int direction, eph_solar_eclipse* out);
+/* Where the shadow axis meets the Earth at jd_tt: 0, or 1 if it misses. */
+int eph_solar_eclipse_where(double jd_tt, double* latitude, double* longitude);
+/* The eclipse as seen from a place at jd_tt. */
+int eph_solar_eclipse_how(double jd_tt, const eph_observer* observer,
+                          eph_local_eclipse_state* out);
+/* The next/previous solar eclipse seen from a place (the Sun may be below
+ * the horizon: check `altitude`). */
+int eph_solar_eclipse_local(double jd_tt, const eph_observer* observer,
+                            int direction, eph_local_solar_eclipse* out);
+/* The next/previous lunar eclipse (penumbral ones included). */
+int eph_lunar_eclipse_next(double jd_tt, int direction, eph_lunar_eclipse* out);
+
 /* ---- event searches -------------------------------------------------- *
  * Search forward (direction +1) or backward (-1) from a date for at most
  * max_days.  Return -1 if there is no event in that window or a position

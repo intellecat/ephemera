@@ -63,6 +63,10 @@ export const HouseSystem = Object.freeze({
   EqualAries: 11, Meridian: 12, Morinus: 13,
 });
 
+export const EclipseType = Object.freeze({
+  Total: 1, Annular: 2, Hybrid: 4, Partial: 8, Penumbral: 16, NonCentral: 32,
+});
+
 const DEG = 180 / Math.PI;
 
 // source: an ArrayBuffer / typed array with the .wasm bytes, or a
@@ -188,6 +192,53 @@ export async function createEphemeris(source) {
     station(body, jdTt, direction = 1, maxDays = 800) {
       const rc = e.eph_station(body, jdTt, direction, maxDays, scratch);
       return rc < 1 ? null : { jd: f64(scratch, 1)[0], turns: rc === 1 ? 'retrograde' : 'direct' };
+    },
+    // Eclipses (TT Julian days in and out; 0 marks a phase that does not
+    // occur; null if not found).  type: EclipseType flags.
+    solarEclipse(jdTt, direction = 1) {
+      const p = e.malloc(104);
+      const rc = e.eph_solar_eclipse_next(jdTt, direction, p);
+      const type = new Int32Array(e.memory.buffer, p, 1)[0];
+      const saros = new Int32Array(e.memory.buffer, p + 48, 1)[0];
+      const [maximum, gamma, magnitude, lat, lon] = f64(p + 8, 5);
+      const [partialBegin, partialEnd, centralBegin, centralEnd, centerLineBegin,
+             centerLineEnd] = f64(p + 56, 6);
+      e.free(p);
+      return rc !== 0 ? null : {
+        type, maximum, gamma, magnitude, latitude: lat * DEG, longitude: lon * DEG, saros,
+        partialBegin, partialEnd, centralBegin, centralEnd, centerLineBegin, centerLineEnd,
+      };
+    },
+    // The next/previous solar eclipse seen from a place (check altitude:
+    // the Sun may be below the horizon).
+    solarEclipseLocal(jdTt, lonDeg, latDeg, elevationM = 0, direction = 1) {
+      const obs = observer(lonDeg, latDeg, elevationM);
+      const p = e.malloc(80);
+      const rc = e.eph_solar_eclipse_local(jdTt, obs, direction, p);
+      const type = new Int32Array(e.memory.buffer, p, 1)[0];
+      const saros = new Int32Array(e.memory.buffer, p + 72, 1)[0];
+      const [maximum, firstContact, secondContact, thirdContact, fourthContact, magnitude,
+             obscuration, altitude] = f64(p + 8, 8);
+      e.free(p);
+      e.free(obs);
+      return rc !== 0 ? null : {
+        type, maximum, firstContact, secondContact, thirdContact, fourthContact,
+        magnitude, obscuration, altitude: altitude * DEG, saros,
+      };
+    },
+    lunarEclipse(jdTt, direction = 1) {
+      const p = e.malloc(96);
+      const rc = e.eph_lunar_eclipse_next(jdTt, direction, p);
+      const type = new Int32Array(e.memory.buffer, p, 1)[0];
+      const saros = new Int32Array(e.memory.buffer, p + 40, 1)[0];
+      const [maximum, gamma, umbralMagnitude, penumbralMagnitude] = f64(p + 8, 4);
+      const [penumbralBegin, penumbralEnd, partialBegin, partialEnd, totalBegin,
+             totalEnd] = f64(p + 48, 6);
+      e.free(p);
+      return rc !== 0 ? null : {
+        type, maximum, gamma, umbralMagnitude, penumbralMagnitude, saros,
+        penumbralBegin, penumbralEnd, partialBegin, partialEnd, totalBegin, totalEnd,
+      };
     },
     // Fixed stars (load eph-stars.bin): index by name, "alf Leo" or "HIP n".
     starFind(name) {

@@ -267,6 +267,41 @@ date, distance 0, no parallax; the apparent functions add nutation):
   The node magnifies the Moon's latitude error ~11x and the apogee its
   velocity error ~20x.  (Swiss Ephemeris' Moshier mode is 37" / 233" off.)
 
+## Eclipses
+
+Solar and lunar eclipses from the Sun and Moon positions, so any data file
+works (no extra data):
+
+```c
+eph_solar_eclipse e;
+eph_solar_eclipse_next(jd_tt, +1, &e);   /* -1: previous */
+/* e.type: EPH_ECLIPSE_TOTAL / ANNULAR / HYBRID / PARTIAL (+ NONCENTRAL),
+ * e.maximum, e.gamma, e.magnitude, e.saros, where greatest eclipse is
+ * seen, and when the penumbra, umbra and axis touch the Earth. */
+```
+
+* `eph_solar_eclipse_next`: global circumstances, from Besselian elements
+  computed from the apparent positions (Explanatory Supplement, 1992),
+  with the Earth's flattening and NASA's lunar radii (k = 0.272488
+  penumbra, 0.272281 umbra).
+* `eph_solar_eclipse_local`: the next eclipse seen from a place: contacts,
+  magnitude, obscuration and the Sun's altitude; `eph_solar_eclipse_how`
+  gives the same at any instant, and `eph_solar_eclipse_where` the point
+  under the shadow axis.
+* `eph_lunar_eclipse_next`: total, partial and penumbral eclipses, with
+  the umbral and penumbral magnitudes and the contacts; the shadow is
+  enlarged for the atmosphere by Danjon's rule.
+
+Against NASA's *Five Millennium Canon* for all 909 eclipses of 1901–2100,
+types and saros series agree everywhere. Gamma and magnitudes agree within
+0.0002, the greatest eclipse within 0.6 s (lunar 3 s), and lunar phase
+durations within 0.5 min.  Contacts agree
+with Swiss Ephemeris (1850–2150) within 2.5 s for local circumstances and
+~45 s for the global ones, where NASA's own figures lie within 2 s of
+ours. With the 1″ file the only change is 1986 Oct 3, a hybrid of
+magnitude 1.0000 that becomes annular.  A search takes ~8 ms with the full
+series and ~1 ms with the 1″ file.
+
 ## Fixed stars
 
 `data/eph-stars.bin` (26 KB) holds the 410 stars with IAU-approved names
@@ -432,7 +467,8 @@ third-party license applies.
 include/ephemeris/ephemeris.h   public C API
 src/                            VSOP87, ELP2000 Moon, Pluto, asteroids,
                                 DE440 corrections, data loader, DE440
-                                table, frames, time, houses
+                                table, frames, time, houses, searches,
+                                phenomena, stars, eclipses
 data/*_data.{h,cpp}             generated coefficient tables (sources of
                                 the data files; only delta_t is compiled in)
 data/*.bin                      data files
@@ -447,4 +483,8 @@ examples/positions.c            CLI that prints a chart
 
 * P. Bretagnon, G. Francou, *Astron. Astrophys.* **202**, 309 (1988).
 * J. Meeus, *Astronomical Algorithms*, 2nd ed. (Willmann-Bell, 1998).
-* F. Espenak, J. Meeus, *Five Millennium Canon of Solar Eclipses*, NASA/TP-2006-214141.
+* F. Espenak, J. Meeus, *Five Millennium Canon of Solar Eclipses*, NASA/TP-2006-214141;
+  *Five Millennium Canon of Lunar Eclipses*, NASA/TP-2009-214172 (the
+  catalogues are the eclipse test reference, `tools/make_nasa_eclipse_reference.py`).
+* P. K. Seidelmann (ed.), *Explanatory Supplement to the Astronomical
+  Almanac* (University Science Books, 1992), ch. 8.

@@ -2,7 +2,7 @@
 // Usage: node tests/test_wasm.mjs <build dir> <data dir>
 import { readFileSync } from 'fs';
 import { execFileSync } from 'child_process';
-import { createEphemeris, Body, HouseSystem } from '../examples/wasm/ephemeris.mjs';
+import { createEphemeris, Body, EclipseType, HouseSystem } from '../examples/wasm/ephemeris.mjs';
 
 const [build, data] = process.argv.slice(2);
 let fails = 0;
@@ -51,6 +51,21 @@ check(builtIn.positionTT(Body.Chiron, 2451545.0) === null, 'ephemeris-1as.wasm h
 const withChiron = await createEphemeris(readFileSync(`${build}/wasm/ephemeris-1as-chiron.wasm`));
 check(withChiron.positionTT(Body.Chiron, 2451545.0) !== null, 'ephemeris-1as-chiron.wasm: Chiron');
 compare(withChiron, 'ephemeris-1as-chiron.wasm');
+
+// Eclipses: 2024 Apr 8 (total, saros 139, gamma 0.3431 in NASA's canon),
+// 2025 Mar 14 (total lunar), and the 2024 Apr 8 eclipse seen from Mazatlan.
+{
+  const s = core.solarEclipse(2460400.0);
+  check(s && s.type === EclipseType.Total && s.saros === 139 &&
+        Math.abs(s.gamma - 0.3431) < 2e-4 && Math.abs(s.maximum - 2460409.262836) < 2e-5,
+        `solar eclipse ${JSON.stringify(s)}`);
+  const l = core.lunarEclipse(2460740.0);
+  check(l && l.type === EclipseType.Total && l.saros === 123 &&
+        Math.abs(l.umbralMagnitude - 1.1784) < 1e-3, `lunar eclipse ${JSON.stringify(l)}`);
+  const loc = core.solarEclipseLocal(2460400.0, -106.42, 23.22);
+  check(loc && loc.type === EclipseType.Total && loc.secondContact > 0 &&
+        loc.altitude > 60, `local eclipse ${JSON.stringify(loc)}`);
+}
 
 // The table and asteroids load into the core as well.
 check(core.loadData(readFileSync(`${data}/eph-asteroids.bin`)), 'asteroids');
