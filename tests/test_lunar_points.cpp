@@ -18,7 +18,9 @@ int main(int argc, char** argv) {
     int fails = 0;
     eph_position p;
 
-    /* The mean points need no data file. */
+    /* The mean points need no data file (a build with embedded data has
+     * loaded it already). */
+    eph_unload_data();
     if (eph_position_apparent_tt(EPH_MEAN_NODE, 2451545.0, &p) != 0 ||
         eph_position_apparent_tt(EPH_MEAN_LILITH, 2451545.0, &p) != 0) {
         std::printf("FAIL: mean points without data\n");
