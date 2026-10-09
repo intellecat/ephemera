@@ -1,7 +1,8 @@
 /* Eclipses against NASA's Five Millennium Canon 1901-2100 (types,
  * greatest eclipse, gamma, magnitudes, lunar phase durations;
- * tests/eclipse_nasa_ref.h) and Swiss Ephemeris 1850-2150 (contact times,
- * local circumstances; tests/eclipse_ref.h). */
+ * tests/eclipse_nasa_ref.h) and circumstances computed from JPL DE440
+ * without Besselian elements (contacts, local circumstances;
+ * tests/eclipse_ref.h, tools/make_eclipse_reference.py). */
 #include <cmath>
 #include <cstdio>
 
@@ -115,69 +116,91 @@ int main(int argc, char** argv) {
               15841.5 / sec, 3, sec);
     }
 
-    for (const SolarRef& r : kSolar) {
+    /* Global contacts from DE440, found by minimising over the Earth's
+     * surface (tests/eclipse_ref.h): within 0.3 s, or 2 s where the shadow
+     * only grazes the Earth and a contact moves by seconds for 1e-6 Earth
+     * radii. */
+    for (const GlobalRef& r : kGlobal) {
         eph_solar_eclipse e;
-        if (eph_solar_eclipse_next(r.max - 5, 1, &e) != 0) {
-            std::printf("FAIL: no solar eclipse after %.1f\n", r.max - 5);
+        if (eph_solar_eclipse_next(r.global_max - 1, 1, &e) != 0) {
+            std::printf("FAIL: no solar eclipse after %.1f\n", r.global_max - 1);
             return 1;
         }
-        /* Swiss Ephemeris' global contacts differ from NASA's by up to
-         * ~25 s (see the figures below), more where the shadow only grazes
-         * the Earth and the contacts are ill-conditioned. */
-        if (std::fabs(e.gamma) < 1.45) {
-            check(r.max, 1, "solar begin/end (s)", e.partial_begin, r.begin, 60, sec);
-            check(r.max, 1, "solar begin/end (s)", e.partial_end, r.end, 60, sec);
-        }
-        if (std::fabs(e.gamma) < 0.99) {
-            check(r.max, 2, "solar central (s)", e.central_begin, r.central_begin, 60, sec);
-            check(r.max, 2, "solar central (s)", e.central_end, r.central_end, 60, sec);
-            check(r.max, 3, "solar center line (s)", e.center_line_begin, r.center_begin,
-                  60, sec);
-            check(r.max, 3, "solar center line (s)", e.center_line_end, r.center_end, 60,
-                  sec);
-        }
+        const bool grazing = std::fabs(e.gamma) > 1.4;
+        const bool noncentral = e.type & EPH_ECLIPSE_NONCENTRAL;
+        const int p = grazing ? 4 : 1, u = noncentral ? 5 : 2;
+        check(r.global_max, p, grazing ? "global P1/P4, grazing (s)" : "global P1/P4 (s)",
+              e.partial_begin, r.begin, grazing ? 2.0 : 0.3, sec);
+        check(r.global_max, p, grazing ? "global P1/P4, grazing (s)" : "global P1/P4 (s)",
+              e.partial_end, r.end, grazing ? 2.0 : 0.3, sec);
+        const char* un = noncentral ? "global U1/U4, non-central (s)" : "global U1/U4 (s)";
+        check(r.global_max, u, un, e.central_begin, r.central_begin, noncentral ? 2.0 : 0.3,
+              sec);
+        check(r.global_max, u, un, e.central_end, r.central_end, noncentral ? 2.0 : 0.3, sec);
+        check(r.global_max, 3, "global centre line (s)", e.center_line_begin,
+              r.center_begin, 0.3, sec);
+        check(r.global_max, 3, "global centre line (s)", e.center_line_end, r.center_end,
+              0.3, sec);
     }
 
+    /* Lunar contacts from DE440 with the same shadow (Danjon's rule). */
     for (const LunarRef& r : kLunar) {
         eph_lunar_eclipse e;
-        if (eph_lunar_eclipse_next(r.max - 5, 1, &e) != 0) {
-            std::printf("FAIL: no lunar eclipse after %.1f\n", r.max - 5);
+        if (eph_lunar_eclipse_next(r.nasa_max - 1, 1, &e) != 0) {
+            std::printf("FAIL: no lunar eclipse after %.1f\n", r.nasa_max - 1);
             return 1;
         }
-        check(r.max, 5, "lunar maximum (s)", e.maximum, r.max, 30, sec);
-        check(r.max, 6, "lunar penumbral (s)", e.penumbral_begin, r.pen_begin, 60, sec);
-        check(r.max, 6, "lunar penumbral (s)", e.penumbral_end, r.pen_end, 60, sec);
-        check(r.max, 7, "lunar partial (s)", e.partial_begin, r.par_begin, 60, sec);
-        check(r.max, 7, "lunar partial (s)", e.partial_end, r.par_end, 60, sec);
-        check(r.max, 8, "lunar total (s)", e.total_begin, r.tot_begin, 60, sec);
-        check(r.max, 8, "lunar total (s)", e.total_end, r.tot_end, 60, sec);
+        check(r.max, 7, "lunar maximum (s)", e.maximum, r.max, 0.1, sec);
+        check(r.max, 8, "lunar contacts (s)", e.penumbral_begin, r.pen_begin, 1.0, sec);
+        check(r.max, 8, "lunar contacts (s)", e.penumbral_end, r.pen_end, 1.0, sec);
+        check(r.max, 8, "lunar contacts (s)", e.partial_begin, r.par_begin, 1.0, sec);
+        check(r.max, 8, "lunar contacts (s)", e.partial_end, r.par_end, 1.0, sec);
+        check(r.max, 8, "lunar contacts (s)", e.total_begin, r.tot_begin, 1.0, sec);
+        check(r.max, 8, "lunar contacts (s)", e.total_end, r.tot_end, 1.0, sec);
     }
 
+    /* Local circumstances from DE440 topocentric positions. */
     for (const LocalRef& r : kLocal) {
         const eph_observer o = {kPlaces[r.place][0] * kDeg, kPlaces[r.place][1] * kDeg,
                                 kPlaces[r.place][2]};
         eph_local_solar_eclipse e;
-        if (eph_solar_eclipse_local(r.max - 5, &o, 1, &e) != 0) {
-            std::printf("FAIL: no local eclipse after %.1f\n", r.max - 5);
+        if (eph_solar_eclipse_local(r.global_max - 1, &o, 1, &e) != 0) {
+            std::printf("FAIL: no local eclipse after %.1f\n", r.global_max - 1);
             return 1;
         }
-        /* Swiss Ephemeris gives the maximum while the Sun is up. */
-        if (r.altitude > 0.0) {
-            check(r.max, 11, "local maximum (s)", e.maximum, r.max, 10, sec);
-            check(r.max, 14, "local magnitude", e.magnitude, r.mag, 0.002);
-            check(r.max, 15, "local obscuration", e.obscuration, r.obscuration, 0.002);
+        const int type = r.c2 == 0.0    ? EPH_ECLIPSE_PARTIAL
+                         : r.mag >= 1.0 ? EPH_ECLIPSE_TOTAL
+                                        : EPH_ECLIPSE_ANNULAR;
+        if (e.type != type) {
+            ++failures;
+            std::printf("FAIL local type at %.5f: %d vs %d\n", r.max, e.type, type);
         }
-        check(r.max, 12, "local 1st/4th contact (s)", e.first_contact, r.c1, 10, sec);
-        check(r.max, 12, "local 1st/4th contact (s)", e.fourth_contact, r.c4, 10, sec);
-        check(r.max, 13, "local 2nd/3rd contact (s)", e.second_contact, r.c2, 10, sec);
-        check(r.max, 13, "local 2nd/3rd contact (s)", e.third_contact, r.c3, 10, sec);
+        /* The maximum is flat for a partial eclipse: definitions that
+         * differ by 1e-4 (plane vs angles) move it by seconds. */
+        check(r.max, type == EPH_ECLIPSE_PARTIAL ? 10 : 11,
+              type == EPH_ECLIPSE_PARTIAL ? "local maximum, partial (s)"
+                                          : "local maximum, central (s)",
+              e.maximum, r.max, type == EPH_ECLIPSE_PARTIAL ? 6.0 : 0.5, sec);
+        check(r.max, 12, "local contacts (s)", e.first_contact, r.c1, 0.5, sec);
+        check(r.max, 12, "local contacts (s)", e.second_contact, r.c2, 0.5, sec);
+        check(r.max, 12, "local contacts (s)", e.third_contact, r.c3, 0.5, sec);
+        check(r.max, 12, "local contacts (s)", e.fourth_contact, r.c4, 0.5, sec);
+        /* At the reference's maximum: the Besselian magnitude and
+         * obscuration mix the two lunar radii (as NASA's), ~3e-4 and 1e-3. */
+        eph_local_eclipse_state st;
+        if (eph_solar_eclipse_how(r.max, &o, &st) != 0) return 1;
+        check(r.max, 13, "local magnitude", st.magnitude, r.mag, 0.0005);
+        check(r.max, 14, "local obscuration", st.obscuration, r.obscuration, 0.002);
+        check(r.max, 15, "local Sun altitude (deg)", st.altitude, r.altitude * kDeg, 0.002,
+              1 / kDeg);
     }
 
     for (int i = 0; i < 32; ++i)
         if (names[i]) std::printf("  %-28s worst %.4f\n", names[i], worst[i]);
     std::printf("%s (%zu + %zu solar, %zu + %zu lunar, %zu local eclipses).\n",
-                failures ? "Eclipse checks FAILED" : "All eclipse checks passed", sizeof kNasaSolar / sizeof *kNasaSolar,
-                sizeof kSolar / sizeof *kSolar, sizeof kNasaLunar / sizeof *kNasaLunar,
-                sizeof kLunar / sizeof *kLunar, sizeof kLocal / sizeof *kLocal);
+                failures ? "Eclipse checks FAILED" : "All eclipse checks passed",
+                sizeof kNasaSolar / sizeof *kNasaSolar, sizeof kGlobal / sizeof *kGlobal,
+                sizeof kNasaLunar / sizeof *kNasaLunar, sizeof kLunar / sizeof *kLunar,
+                sizeof kLocal / sizeof *kLocal);
     return failures ? 1 : 0;
 }
