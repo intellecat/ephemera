@@ -1,7 +1,7 @@
 /* positions.c -- print apparent geocentric positions of all bodies.
  *
  * Build:  cmake -S . -B build && cmake --build build
- * Run:    ./build/ephcliapp 2026 1 1 12
+ * Run:    ./build/ephcliapp 2026 1 1 12      (year month day [UT hours])
  */
 #include <math.h>
 #include <stdio.h>
@@ -32,12 +32,15 @@ int main(int argc, char** argv) {
         year = atoi(argv[1]);
         month = atoi(argv[2]);
         day = atof(argv[3]);
+        if (argc >= 5) day += atof(argv[4]) / 24.0;
     }
     double jd_ut = eph_julian_date(year, month, day);
-    double y = year + (month - 0.5) / 12.0;
+    double y = year + (jd_ut - eph_julian_date(year, 1, 1.0)) / 365.25;
 
-    printf("Apparent geocentric positions for %04d-%02d-%g UT\n", year, month,
-           day);
+    int d = (int)day;
+    int minutes = (int)((day - d) * 1440.0 + 0.5);
+    printf("Apparent geocentric positions for %04d-%02d-%02d %02d:%02d UT\n",
+           year, month, d, minutes / 60, minutes % 60);
     printf("JD(UT) = %.6f   Delta-T = %.1f s\n\n", jd_ut, eph_delta_t(y));
     printf("%-8s %-24s %12s %14s %10s\n", "Body", "Ecliptic longitude",
            "Latitude", "Distance(AU)", "Speed/day");
