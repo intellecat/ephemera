@@ -8,6 +8,8 @@
 //   const moon = eph.position(Body.Moon, jd);   // degrees, AU, per day
 //
 // With ephemeris-1as.wasm the 1" data is built in and loadData is optional.
+// ephemeris-lite.wasm leaves out eclipses and fixed stars (those calls
+// return null / -1).
 // Angles are in degrees here (the C API uses radians).
 
 export const Body = Object.freeze({

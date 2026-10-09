@@ -12,6 +12,8 @@ endif()
 option(EPHEMERIS_BUILD_TESTS "Build the test suite" ON)
 option(EPHEMERIS_BUILD_EXAMPLES "Build the example programs" ON)
 option(EPHEMERIS_BUILD_TOOLS "Build tools/pack_series (data file generator)" OFF)
+option(EPHEMERIS_ECLIPSES "Include solar and lunar eclipses" ON)
+option(EPHEMERIS_STARS "Include fixed stars (and the star-based ayanamsas)" ON)
 set(EPHEMERIS_EMBED_DATA "" CACHE FILEPATH
     "Data file to compile into the library (e.g. data/eph-1as.bin)")
 
@@ -45,6 +47,7 @@ add_library(ephemeris STATIC
     src/search.cpp
     src/phenomena.cpp
     src/stars.cpp
+    src/eclipses.cpp
     ${EMBED_SRC}
     data/delta_t_data.cpp
 )
@@ -53,6 +56,14 @@ target_include_directories(ephemeris
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/data
 )
+
+# Left-out features keep their functions as stubs returning -1.
+if(NOT EPHEMERIS_ECLIPSES)
+    target_compile_definitions(ephemeris PRIVATE EPHEMERIS_NO_ECLIPSES)
+endif()
+if(NOT EPHEMERIS_STARS)
+    target_compile_definitions(ephemeris PRIVATE EPHEMERIS_NO_STARS)
+endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(ephemeris PRIVATE -Wall -Wextra -O2)
@@ -118,7 +129,15 @@ if(EPHEMERIS_BUILD_TESTS)
     add_test(NAME phenomena COMMAND test_phenomena ${DATA}/eph-full.bin
              ${DATA}/eph-asteroids.bin)
 
-    add_executable(test_stars tests/test_stars.cpp)
-    target_link_libraries(test_stars PRIVATE ephemeris)
-    add_test(NAME stars COMMAND test_stars ${DATA}/eph-full.bin ${DATA}/eph-stars.bin)
+    if(EPHEMERIS_STARS)
+        add_executable(test_stars tests/test_stars.cpp)
+        target_link_libraries(test_stars PRIVATE ephemeris)
+        add_test(NAME stars COMMAND test_stars ${DATA}/eph-full.bin ${DATA}/eph-stars.bin)
+    endif()
+
+    if(EPHEMERIS_ECLIPSES)
+        add_executable(test_eclipses tests/test_eclipses.cpp)
+        target_link_libraries(test_eclipses PRIVATE ephemeris)
+        add_test(NAME eclipses COMMAND test_eclipses ${DATA}/eph-full.bin)
+    endif()
 endif()

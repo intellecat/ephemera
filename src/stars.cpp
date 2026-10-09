@@ -10,7 +10,12 @@
 /* Fixed stars from the catalogue in a data file (data/eph-stars.bin, made
  * by tools/make_stars.py and pack_series): space motion from the J2000.0
  * epoch, annual parallax, light deflection by the Sun, aberration with the
- * Earth's barycentric velocity, precession and nutation. */
+ * Earth's barycentric velocity, precession and nutation.
+ *
+ * Built with EPHEMERIS_NO_STARS, the functions are stubs that report no
+ * stars (the star-based ayanamsas then return NaN). */
+
+#ifndef EPHEMERIS_NO_STARS
 
 namespace eph {
 
@@ -245,3 +250,20 @@ int eph_star_position_apparent_ut(int index, double jd_ut, double year,
 }
 
 }  // extern "C"
+
+#else /* EPHEMERIS_NO_STARS */
+
+extern "C" {
+
+int eph_star_count(void) { return 0; }
+int eph_star_find(const char*) { return -1; }
+const char* eph_star_name(int) { return nullptr; }
+const char* eph_star_designation(int) { return nullptr; }
+double eph_star_magnitude(int) { return std::nan(""); }
+int eph_star_position_tt(int, double, eph_position*) { return -1; }
+int eph_star_position_apparent_tt(int, double, eph_position*) { return -1; }
+int eph_star_position_apparent_ut(int, double, double, eph_position*) { return -1; }
+
+}  // extern "C"
+
+#endif /* EPHEMERIS_NO_STARS */

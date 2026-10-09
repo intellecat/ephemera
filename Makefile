@@ -14,6 +14,10 @@ CORE_SRC = src/time.cpp src/frames.cpp src/vsop87.cpp src/moon.cpp \
            data/delta_t_data.cpp
 LIB_SRC = $(CORE_SRC)
 
+# make NO_ECLIPSES=1 and/or NO_STARS=1 leave those features out (their
+# functions become stubs returning -1); use a separate BUILD directory.
+FEATURES = $(if $(NO_ECLIPSES),-DEPHEMERIS_NO_ECLIPSES) $(if $(NO_STARS),-DEPHEMERIS_NO_STARS)
+
 # make EMBED=data/eph-1as.bin BUILD=build-1as compiles that data file into
 # the library (loaded at start-up; cmake generates the source).  Use a
 # separate BUILD directory per EMBED setting.
@@ -34,14 +38,15 @@ DE440_1800_2200 = $(foreach y,1800 1900 2000 2100,data/de440/de440-$(y).bin)
 TESTS = $(BUILD)/test_ephemeris $(BUILD)/test_compressed $(BUILD)/test_topocentric \
         $(BUILD)/test_houses $(BUILD)/test_asteroids $(BUILD)/test_data \
         $(BUILD)/test_lunar_points $(BUILD)/test_time $(BUILD)/test_search \
-        $(BUILD)/test_phenomena $(BUILD)/test_stars $(BUILD)/test_eclipses
+        $(BUILD)/test_phenomena $(if $(NO_STARS),,$(BUILD)/test_stars) \
+        $(if $(NO_ECLIPSES),,$(BUILD)/test_eclipses)
 
 all: $(LIB) $(BUILD)/ephcliapp $(TESTS)
 
 # -MMD -MP: rebuild objects when a header they include changes.
 $(BUILD)/%.o: %.cpp
 	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -MMD -MP -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(FEATURES) $(INCLUDES) -MMD -MP -c $< -o $@
 
 $(BUILD)/embedded_data.cpp: $(EMBED) tools/embed.cmake
 	@mkdir -p $(BUILD)
@@ -71,8 +76,8 @@ test: $(TESTS)
 	$(BUILD)/test_time data/eph-full.bin
 	$(BUILD)/test_search data/eph-full.bin
 	$(BUILD)/test_phenomena data/eph-full.bin data/eph-asteroids.bin
-	$(BUILD)/test_stars data/eph-full.bin data/eph-stars.bin
-	$(BUILD)/test_eclipses data/eph-full.bin
+	$(if $(NO_STARS),,$(BUILD)/test_stars data/eph-full.bin data/eph-stars.bin)
+	$(if $(NO_ECLIPSES),,$(BUILD)/test_eclipses data/eph-full.bin)
 
 $(BUILD)/test_compressed: tests/test_compressed.cpp $(LIB)
 	$(CXX) $(CXXFLAGS) -Iinclude -Itests $< $(LIB) -lm -o $@
@@ -138,6 +143,7 @@ data: $(BUILD)/pack_series
 # WebAssembly (wasm32-wasi reactor modules exporting the C API plus
 # malloc/free; no file I/O, data comes from JavaScript as bytes):
 #   build/wasm/ephemeris.wasm              core only
+#   build/wasm/ephemeris-lite.wasm         core without eclipses and stars
 #   build/wasm/ephemeris-1as.wasm          core with data/eph-1as.bin built in
 #   build/wasm/ephemeris-1as-chiron.wasm   ... with data/eph-1as-chiron.bin
 # WASM_CXX can also be a wasi-sdk clang, e.g.
@@ -151,12 +157,18 @@ WASM_API   := $(shell sed -n 's/^[a-z].*[ *]\(eph_[a-z0-9_]*\)$(lparen).*/\1/p' 
                 include/ephemeris/ephemeris.h)
 WASM_LINK   = $(addprefix -Wl$(comma)--export=,$(WASM_API) malloc free)
 
-wasm: $(BUILD)/wasm/ephemeris.wasm $(BUILD)/wasm/ephemeris-1as.wasm \
+wasm: $(BUILD)/wasm/ephemeris.wasm $(BUILD)/wasm/ephemeris-lite.wasm \
+      $(BUILD)/wasm/ephemeris-1as.wasm \
       $(BUILD)/wasm/ephemeris-1as-chiron.wasm
 
 $(BUILD)/wasm/ephemeris.wasm: $(CORE_SRC) src/embedded_none.cpp
 	@mkdir -p $(dir $@)
 	$(WASM_CXX) $(WASM_FLAGS) $^ $(WASM_LINK) -o $@
+
+$(BUILD)/wasm/ephemeris-lite.wasm: $(CORE_SRC) src/embedded_none.cpp
+	@mkdir -p $(dir $@)
+	$(WASM_CXX) $(WASM_FLAGS) -DEPHEMERIS_NO_ECLIPSES -DEPHEMERIS_NO_STARS $^ \
+	    $(WASM_LINK) -o $@
 
 .PRECIOUS: $(BUILD)/wasm/embedded_%.cpp
 $(BUILD)/wasm/embedded_%.cpp: data/eph-%.bin tools/embed.cmake

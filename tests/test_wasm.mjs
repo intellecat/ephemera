@@ -67,6 +67,18 @@ compare(withChiron, 'ephemeris-1as-chiron.wasm');
         loc.altitude > 60, `local eclipse ${JSON.stringify(loc)}`);
 }
 
+// The lite core: everything but eclipses and stars.
+{
+  const lite = await createEphemeris(readFileSync(`${build}/wasm/ephemeris-lite.wasm`));
+  check(lite.loadData(readFileSync(`${data}/eph-1as.bin`)), 'lite: loadData');
+  compare(lite, 'ephemeris-lite.wasm + eph-1as.bin');
+  check(lite.houses(2451545.0, 10, 50, HouseSystem.Placidus) !== null, 'lite: houses');
+  check(lite.solarEclipse(2460400.0) === null && lite.lunarEclipse(2460400.0) === null,
+        'lite: no eclipses');
+  lite.loadData(readFileSync(`${data}/eph-stars.bin`));
+  check(lite.starFind('Regulus') === -1, 'lite: no stars');
+}
+
 // The table and asteroids load into the core as well.
 check(core.loadData(readFileSync(`${data}/eph-asteroids.bin`)), 'asteroids');
 check(core.positionTT(Body.Ceres, 2451545.0) !== null, 'Ceres');

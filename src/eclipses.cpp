@@ -24,7 +24,11 @@
  * contacts need.
  *
  * All times are TT (Julian days).
+ *
+ * Built with EPHEMERIS_NO_ECLIPSES, the functions are stubs returning -1.
  */
+
+#ifndef EPHEMERIS_NO_ECLIPSES
 
 namespace {
 
@@ -631,3 +635,21 @@ int eph_lunar_eclipse_next(double jd_tt, int direction, eph_lunar_eclipse* out) 
 }
 
 }  // extern "C"
+
+#else /* EPHEMERIS_NO_ECLIPSES */
+
+extern "C" {
+
+int eph_solar_eclipse_next(double, int, eph_solar_eclipse*) { return -1; }
+int eph_solar_eclipse_where(double, double*, double*) { return -1; }
+int eph_solar_eclipse_how(double, const eph_observer*, eph_local_eclipse_state*) {
+    return -1;
+}
+int eph_solar_eclipse_local(double, const eph_observer*, int, eph_local_solar_eclipse*) {
+    return -1;
+}
+int eph_lunar_eclipse_next(double, int, eph_lunar_eclipse*) { return -1; }
+
+}  // extern "C"
+
+#endif /* EPHEMERIS_NO_ECLIPSES */

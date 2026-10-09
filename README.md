@@ -3,7 +3,8 @@
 A small, dependency-free C/C++ library that computes positions of the Sun,
 Moon, Pluto, the eight planets, Chiron and the four largest asteroids
 (Ceres, Pallas, Juno, Vesta) from analytical series.  No JPL kernel and no SPICE:
-a ~51 KB core (as WebAssembly; ~22 KB brotli) loads one small data file
+a ~111 KB core (as WebAssembly; ~46 KB brotli; 93 KB / 39 KB without
+eclipses and fixed stars) loads one small data file
 with the series coefficients at the accuracy you need -- from 145 KB for
 ~0.5" to DE440 tables at ~320 KB per century for ~0.002", over 1550–2650
 (see [Data files](#data-files)).
@@ -149,14 +150,15 @@ make wasm          # needs zig, or WASM_CXX="clang++ --target=wasm32-wasi --sysr
 make wasm-test     # compares the modules with the native library (needs node)
 ```
 
-builds two modules that need **no imports** (no WASI, no Emscripten
+builds modules that need **no imports** (no WASI, no Emscripten
 runtime: `WebAssembly.instantiate(bytes, {})` is enough):
 
 | Module                                 | Size   | brotli | Data built in               |
 |----------------------------------------|--------|--------|-----------------------------|
-| `build/wasm/ephemeris.wasm`            | 51 KB  | 22 KB  | none: load a file           |
-| `build/wasm/ephemeris-1as.wasm`        | 196 KB | 134 KB | `eph-1as.bin`               |
-| `build/wasm/ephemeris-1as-chiron.wasm` | 255 KB | 190 KB | `eph-1as-chiron.bin`        |
+| `build/wasm/ephemeris.wasm`            | 111 KB | 46 KB  | none: load a file           |
+| `build/wasm/ephemeris-lite.wasm`       | 93 KB  | 39 KB  | none; no eclipses or stars  |
+| `build/wasm/ephemeris-1as.wasm`        | 256 KB | 159 KB | `eph-1as.bin`               |
+| `build/wasm/ephemeris-1as-chiron.wasm` | 315 KB | 214 KB | `eph-1as-chiron.bin`        |
 
 `examples/wasm/ephemeris.mjs` wraps them for browsers and Node (angles in
 degrees), and `examples/wasm/index.html` is a small demo page:
@@ -168,6 +170,11 @@ const jd = eph.julianDate(2026, 1, 1.5);            // UT
 const moon = eph.position(Body.Moon, jd);           // { longitude, latitude, ..., longitudeSpeed }
 const { asc, mc } = eph.ascMc(jd, -0.1278, 51.5074); // observer lon, lat (degrees)
 ```
+
+The lite core leaves out eclipses and fixed stars: those functions stay
+but return -1 (null in the wrapper).  Native builds do the same with
+`make NO_ECLIPSES=1 NO_STARS=1` or CMake's `-DEPHEMERIS_ECLIPSES=OFF
+-DEPHEMERIS_STARS=OFF`.
 
 With the core module, fetch a data file and pass it to
 `eph.loadData(bytes)` first; the asteroid file and the DE440 table load
