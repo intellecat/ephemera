@@ -2,24 +2,32 @@
 """Regenerate tests/lunar_points_ref.h (development only).
 
 Apparent geocentric ecliptic longitude/latitude of date (IAU-2006/2000A)
-of the lunar nodes and apogee:
+of the lunar nodes and apogee, computed independently of the library:
   * true node and osculating apogee from the osculating (two-body) orbit of
     the DE440 Moon (geometric geocentric position and velocity, G(M_Earth +
-    M_Moon) from DE440), computed independently of the library;
-  * mean node and mean apogee from Swiss Ephemeris (pyswisseph), as an
-    independent check of the ELP polynomials (no code is shared).
+    M_Moon) from DE440);
+  * mean node and mean apogee from the ELP2000-82B mean arguments
+    (Chapront-Touze & Chapront 1983), W3 (node) and W2 (perigee), which
+    refer to the fixed ecliptic and equinox J2000, carried to the equinox
+    of date by the IAU 2006 general precession in longitude (ERFA); the
+    apogee (perigee + 180 deg) on the mean orbit, inclined 5.145396 deg;
+    nutation in longitude from ERFA (IAU 2000A).
 
-    python3 tools/make_lunar_points_reference.py
+    python3 tools/make_lunar_points_reference.py      (DE440=path/to/de440.bsp)
 """
+import math
 import os
 
 import erfa
 import numpy as np
-import swisseph as swe
 from skyfield.api import load
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MU = 403503.235502 * 86400.0 ** 2 / 149597870.7 ** 3  # AU^3/day^2
+# ELP2000-82B mean arguments (arcseconds; T in Julian centuries from J2000).
+W2 = [(83 * 60 + 21) * 60 + 11.67475, 14643420.2632, -38.2776, -0.45047e-1, 0.21301e-3]
+W3 = [(125 * 60 + 2) * 60 + 40.39816, -6967919.3622, 6.3622, 0.7625e-2, -0.3586e-4]
+INCLINATION = math.radians(5.145396)
 
 
 def true_ecliptic(x, jd):
@@ -36,8 +44,24 @@ def lonlat(u):
             np.degrees(np.arcsin(u[2] / np.linalg.norm(u))))
 
 
+def mean_points(jd):
+    """Apparent mean node longitude and mean apogee longitude, latitude
+    (degrees)."""
+    T = (jd - 2451545.0) / 36525.0
+    poly = lambda c: sum(a * T ** k for k, a in enumerate(c))
+    pa = erfa.p06e(2451545.0, jd - 2451545.0)[12]  # p_A, radians
+    dpsi, _ = erfa.nut06a(2451545.0, jd - 2451545.0)
+    node = math.radians(poly(W3) / 3600.0) + pa
+    apogee = math.radians(poly(W2) / 3600.0) + pa + math.pi
+    u = apogee - node  # argument from the node along the mean orbit
+    lon = node + math.atan2(math.sin(u) * math.cos(INCLINATION), math.cos(u))
+    lat = math.asin(math.sin(u) * math.sin(INCLINATION))
+    return (math.degrees(node + dpsi) % 360.0, math.degrees(lon + dpsi) % 360.0,
+            math.degrees(lat))
+
+
 def main():
-    eph = load(os.path.join(ROOT, "de440.bsp"))
+    eph = load(os.environ.get("DE440", os.path.join(ROOT, "de440.bsp")))
     ts = load.timescale()
     jds = np.sort(np.random.default_rng(4).uniform(2396759.5, 2502700.5, 48))
     rows = []
@@ -48,9 +72,8 @@ def main():
         h = np.cross(r, v)
         node = lonlat(np.array([-h[1], h[0], 0.0]))
         apogee = lonlat(-(np.cross(v, h) / MU - r / np.linalg.norm(r)))
-        mean_node = swe.calc(jd, swe.MEAN_NODE, swe.FLG_MOSEPH)[0]
-        mean_apogee = swe.calc(jd, swe.MEAN_APOG, swe.FLG_MOSEPH)[0]
-        rows.append((jd, mean_node[0], node[0], mean_apogee[0], mean_apogee[1],
+        mean_node, apogee_lon, apogee_lat = mean_points(jd)
+        rows.append((jd, mean_node, node[0], apogee_lon, apogee_lat,
                      apogee[0], apogee[1]))
     out = os.path.join(ROOT, "tests", "lunar_points_ref.h")
     with open(out, "w") as f:

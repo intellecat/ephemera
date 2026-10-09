@@ -53,28 +53,23 @@ int main(int argc, char** argv) {
     std::printf("stars vs ERFA + Skyfield: max %.4f\"\n", worst);
     check(worst < 0.05, "star positions");
 
-    /* Star-based ayanamsas vs Swiss Ephemeris (1600, 1900, 2000, 2050,
-     * 2500): the stars within 0.02", the Galactic Center within 0.3". */
-    const double dates[5] = {2305448.0, 2415020.5, 2451545.0, 2469807.5, 2634000.0};
-    const double ref[7][5] = {
-        {18.262795595, 22.444754617, 23.840014948, 24.537915331, 30.821438879},
-        {14.449309485, 18.645296224, 20.045164650, 20.745308082, 27.045732220},
-        {17.139975634, 21.329379683, 22.727091551, 23.426200381, 29.708319887},
-        {18.998723986, 23.183675868, 24.579972884, 25.278381288, 31.575776475},
-        {21.263884081, 25.449546030, 26.846045806, 27.544548218, 33.842483732},
-        {16.886943064, 21.072605013, 22.469104789, 23.167607201, 29.465542715},
-        {-8.736115919, -4.550453970, -3.153954194, -2.455451782, 3.842483732},
-    };
+    /* Star-based ayanamsas (1600, 1900, 2000, 2050, 2500) from their
+     * definitions: the star's apparent longitude (ERFA + Skyfield/DE440)
+     * minus nutation minus its defined sidereal longitude. */
+    double worst_ayan = 0.0;
     for (int m = 0; m < 7; ++m)
         for (int k = 0; k < 5; ++k) {
             const eph_ayanamsa_system s =
                 (eph_ayanamsa_system)(EPH_AYANAMSA_TRUE_CITRA + m);
-            const double d = std::fabs(eph_ayanamsa(s, dates[k]) * R2D - ref[m][k]) * 3600.0;
-            if (d > (m < 4 ? 0.02 : 0.3)) {
+            const double d = std::fabs(eph_ayanamsa(s, kStarAyanamsaDates[k]) * R2D -
+                                       kStarAyanamsaRef[m][k]) * 3600.0;
+            worst_ayan = std::fmax(worst_ayan, d);
+            if (d > 0.05) {
                 std::printf("FAIL: %s off by %.3f\"\n", eph_ayanamsa_name(s), d);
                 g_fails++;
             }
         }
+    std::printf("star-based ayanamsas: max %.4f\"\n", worst_ayan);
     eph_unload_data();
     check(std::isnan(eph_ayanamsa(EPH_AYANAMSA_TRUE_CITRA, 2451545.0)),
           "star-based ayanamsa without data is NaN");

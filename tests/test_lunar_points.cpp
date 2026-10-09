@@ -32,17 +32,18 @@ int main(int argc, char** argv) {
     }
     if (!load_data_args(argc, argv)) return 1;
 
-    /* Limits (arcsec): the mean points against another implementation of
-     * the same polynomials; the osculating ones against DE440, where the
-     * node magnifies the Moon's latitude error ~11x and the apogee its
-     * velocity error ~20x. */
+    /* Limits (arcsec): the mean points against the ELP2000-82B mean
+     * arguments with IAU 2006 precession (ours are Meeus' polynomials,
+     * 0.12" / 0.54" apart over 1850-2140); the osculating ones against
+     * DE440, where the node magnifies the Moon's latitude error ~11x and
+     * the apogee its velocity error ~20x. */
     struct {
         eph_body body;
         const char* name;
         double limit;
-    } points[] = {{EPH_MEAN_NODE, "mean node", 0.5},
+    } points[] = {{EPH_MEAN_NODE, "mean node", 0.25},
                   {EPH_TRUE_NODE, "true node", 1.5},
-                  {EPH_MEAN_LILITH, "mean Lilith", 2.0},
+                  {EPH_MEAN_LILITH, "mean Lilith", 1.0},
                   {EPH_OSCU_LILITH, "osc. Lilith", 5.0}};
     for (const auto& pt : points) {
         double worst = 0.0;
