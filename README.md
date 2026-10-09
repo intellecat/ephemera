@@ -234,6 +234,10 @@ charts).
   passages); `eph_station`: when a planet turns retrograde or direct.
 * Results are refined to ~1e-8 day; solar and lunar crossings agree with
   Swiss Ephemeris within its own few-second error.
+* `eph_phenomena_tt/_ut`: phase angle, illuminated fraction, elongation,
+  apparent diameter and visual magnitude (Mallama & Hilton 2018 for the
+  planets, Allen for the Moon to phase angle ~150°, the H-G system for the
+  minor bodies); within 0.12 mag and 23" of Swiss Ephemeris.
 * `eph_utc_to_jd` (leap seconds; exact TT from 1972), `eph_sidereal_time`
   (IAU 2006), `eph_equation_of_time`, `eph_midpoint` and
   `eph_split_longitude`.

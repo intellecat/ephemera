@@ -267,6 +267,22 @@ double eph_house_position(const double cusps[12], double longitude);
 
 const char* eph_body_name(eph_body body);
 
+/* ---- phenomena ------------------------------------------------------- */
+
+typedef struct {
+    double phase_angle; /* Sun-body-Earth angle, radians                     */
+    double phase;       /* illuminated fraction of the disc, 0..1            */
+    double elongation;  /* angle from the Sun as seen from the Earth, radians */
+    double diameter;    /* apparent diameter, radians (mean radius)           */
+    double magnitude;   /* visual magnitude (Mallama & Hilton 2018 for the
+                           planets, H-G system for the minor bodies)         */
+} eph_phenomena;
+
+/* Apparent phenomena of the Sun, Moon, planets, Pluto and minor bodies
+ * (not the lunar points).  Returns -1 without the needed data. */
+int eph_phenomena_tt(eph_body body, double jd_tt, eph_phenomena* out);
+int eph_phenomena_ut(eph_body body, double jd_ut, double year, eph_phenomena* out);
+
 /* ---- event searches -------------------------------------------------- *
  * Search forward (direction +1) or backward (-1) from a date for at most
  * max_days.  Return -1 if there is no event in that window or a position

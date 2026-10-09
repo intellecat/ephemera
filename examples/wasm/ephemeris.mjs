@@ -162,6 +162,13 @@ export async function createEphemeris(source) {
       e.free(p);
       return h;
     },
+    // { phaseAngle, phase (0..1), elongation, diameter (degrees), magnitude }.
+    phenomena(body, jdTt) {
+      if (e.eph_phenomena_tt(body, jdTt, scratch) !== 0) return null;
+      const [phaseAngle, phase, elongation, diameter, magnitude] = f64(scratch, 5);
+      return { phaseAngle: phaseAngle * DEG, phase, elongation: elongation * DEG,
+               diameter: diameter * DEG, magnitude };
+    },
     // Event searches (UT in and out; null if none within maxDays).
     longitudeCrossing(body, lonDeg, jdUt, direction = 1, maxDays = 400) {
       const out = scratch;
