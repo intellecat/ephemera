@@ -116,99 +116,86 @@ double speed_dt(eph_body body) {
 
 enum class Kind { Geometric, Apparent };
 
-bool compute(eph_body body, double jd_tt, Kind kind, eph_position* out) {
-    if (body < 0 || body >= EPH_BODY_COUNT) return false;
+Vec3 scale(const Vec3& v, double k) { return {v.x * k, v.y * k, v.z * k}; }
 
-    const bool apparent = (kind == Kind::Apparent);
+double dot(const Vec3& a, const Vec3& b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+/* Relativistic light deflection by the Sun for a body at finite distance
+ * (Explanatory Supplement):
+ *   p' = p + 2GM/(c^2 E) [(p.q) e - (e.p) q] / (1 + q.e)
+ * p: geocentric, q: heliocentric body, e: heliocentric Earth (unit vectors).
+ * Far behind the Sun this is 2GM/(c^2 E) cot(psi/2); it vanishes for a body
+ * in front of the Sun (the Moon, inferior conjunctions). */
+Vec3 deflect(const Vec3& p, const Vec3& q, const Vec3& e, double earth_sun_au) {
+    const double denom = 1.0 + dot(q, e);
+    if (denom < 1e-9) return p;
+    const double gm = 1.32712440018e20; /* m^3/s^2 */
+    const double c = 2.99792458e8;      /* m/s     */
+    const double f = 2.0 * gm / (c * c * earth_sun_au * 1.495978707e11);
+    const double pq = dot(p, q), ep = dot(e, p);
+    return normalize_vec(Vec3{p.x + f * (pq * e.x - ep * q.x) / denom,
+                              p.y + f * (pq * e.y - ep * q.y) / denom,
+                              p.z + f * (pq * e.z - ep * q.z) / denom});
+}
+
+/* Geocentric ecliptic-of-date place (IAU-2006 frame).  Apparent adds
+ * light-time, deflection, annual aberration and nutation. */
+bool place(eph_body body, double jd_tt, bool apparent, double& lon,
+           double& lat, double& dist) {
     /* Light-time applies to everything except the Sun (at the origin).  The
      * Moon gets light-time but no annual aberration: as a geocentric body
      * its apparent place is dominated by the ~1.3 s retarded position. */
     const bool light_time = apparent && body != EPH_SUN;
 
     Vec3 v;
-    double dist;
     if (!geocentric_vector(body, jd_tt, light_time, v, dist)) return false;
 
     if (apparent) {
+        Vec3 u = normalize_vec(v);
+        if (body != EPH_SUN) {
+            const Vec3 eh = earth_heliocentric(jd_tt);
+            const Vec3 q = normalize_vec(Vec3{eh.x + v.x, eh.y + v.y, eh.z + v.z});
+            u = deflect(u, q, normalize_vec(eh), length(eh));
+        }
         if (body != EPH_MOON) {
             const Vec3 vel = earth_velocity(jd_tt);
-            const Vec3 u = normalize_vec(v);
-            v = normalize_vec(
-                Vec3{u.x + vel.x / AU_PER_LIGHT_DAY,
-                     u.y + vel.y / AU_PER_LIGHT_DAY,
-                     u.z + vel.z / AU_PER_LIGHT_DAY});
-            v = Vec3{v.x * dist, v.y * dist, v.z * dist};
+            u = normalize_vec(Vec3{u.x + vel.x / AU_PER_LIGHT_DAY,
+                                   u.y + vel.y / AU_PER_LIGHT_DAY,
+                                   u.z + vel.z / AU_PER_LIGHT_DAY});
         }
-        /* Relativistic light deflection by the Sun (not for the Sun itself).
-         * The apparent place is displaced away from the Sun by
-         * 2GM/(c^2 d) * cot(psi/2). */
-        if (body != EPH_SUN) {
-            Vec3 eh = earth_heliocentric(jd_tt);
-            const double d_au = length(eh);
-            const Vec3 e = normalize_vec(Vec3{-eh.x, -eh.y, -eh.z});
-            Vec3 u = normalize_vec(v);
-            const double q = u.x * e.x + u.y * e.y + u.z * e.z;
-            const double denom = 1.0 - q;
-            if (denom > 1e-9) {
-                const double gm = 1.32712440018e20;   /* m^3/s^2 */
-                const double c = 2.99792458e8;        /* m/s     */
-                const double d_m = d_au * 1.495978707e11;
-                const double f = 2.0 * gm / (c * c * d_m);
-                u = normalize_vec(
-                    Vec3{u.x - f * (e.x - q * u.x) / denom,
-                         u.y - f * (e.y - q * u.y) / denom,
-                         u.z - f * (e.z - q * u.z) / denom});
-            }
-            v = Vec3{u.x * dist, u.y * dist, u.z * dist};
-        }
+        v = scale(u, dist);
     }
 
-    double lon, lat;
-    cartesian_to_spherical(v, lon, lat, dist);
+    double r;
+    cartesian_to_spherical(frame_1976_to_2006(jd_tt, v), lon, lat, r);
     if (apparent) {
         double dpsi, deps;
         nutation(jd_tt, dpsi, deps);
         lon = normalize(lon + dpsi);
     }
-    /* IAU-1976 -> IAU-2006 frame (general precession difference). */
-    lon = normalize(lon + precession_frame_correction(jd_tt));
+    return true;
+}
 
-    out->longitude = lon;
-    out->latitude = lat;
-    out->distance = dist;
+bool compute(eph_body body, double jd_tt, Kind kind, eph_position* out) {
+    if (body < 0 || body >= EPH_BODY_COUNT) return false;
+    const bool apparent = (kind == Kind::Apparent);
+
+    if (!place(body, jd_tt, apparent, out->longitude, out->latitude,
+               out->distance))
+        return false;
 
     /* Speeds by central difference of the same quantity. */
     const double dt = speed_dt(body);
-    eph_position a, b;
-    auto eval = [&](double j, eph_position& p) -> bool {
-        Vec3 vv;
-        double dd;
-        if (!geocentric_vector(body, j, light_time, vv, dd)) return false;
-        if (apparent && body != EPH_MOON) {
-            const Vec3 vel = earth_velocity(j);
-            const Vec3 u = normalize_vec(vv);
-            vv = normalize_vec(
-                Vec3{u.x + vel.x / AU_PER_LIGHT_DAY,
-                     u.y + vel.y / AU_PER_LIGHT_DAY,
-                     u.z + vel.z / AU_PER_LIGHT_DAY});
-        }
-        double lo, la;
-        cartesian_to_spherical(vv, lo, la, dd);
-        if (apparent) {
-            double dp, de;
-            nutation(j, dp, de);
-            lo = normalize(lo + dp);
-        }
-        p.longitude = lo;
-        p.latitude = la;
-        p.distance = dd;
-        return true;
-    };
-    if (!eval(jd_tt - dt, a) || !eval(jd_tt + dt, b)) return false;
+    double l1, b1, d1, l2, b2, d2;
+    if (!place(body, jd_tt - dt, apparent, l1, b1, d1) ||
+        !place(body, jd_tt + dt, apparent, l2, b2, d2))
+        return false;
 
-    out->longitude_speed = angle_diff(b.longitude, a.longitude) / (2 * dt);
-    out->latitude_speed = (b.latitude - a.latitude) / (2 * dt);
-    out->distance_speed = (b.distance - a.distance) / (2 * dt);
+    out->longitude_speed = angle_diff(l2, l1) / (2 * dt);
+    out->latitude_speed = (b2 - b1) / (2 * dt);
+    out->distance_speed = (d2 - d1) / (2 * dt);
     return true;
 }
 
@@ -223,7 +210,7 @@ void topocentric_correct(double ra, double dec, double dist_au, double jd_ut,
     const double rc =
         std::cos(u) + obs->elevation / 6378140.0 * std::cos(phi);
     const double sinpi = 6378.14 / (dist_au * AU_KM);
-    const double theta = gmst_degrees(jd_ut) * DEG + obs->longitude;
+    const double theta = gast_degrees(jd_ut) * DEG + obs->longitude;
     const double H = theta - ra;
     const double da = std::atan2(-rc * sinpi * std::sin(H),
                                  std::cos(dec) - rc * sinpi * std::cos(H));
@@ -285,7 +272,7 @@ int eph_heliocentric_tt(eph_body body, double jd_tt, double* lon, double* lat,
     const bool planet = (body >= EPH_MERCURY && body <= EPH_PLUTO);
     const bool asteroid = (body >= EPH_CERES && body <= EPH_VESTA);
     if (!planet && !asteroid) return -1;
-    Vec3 v = body_heliocentric(body, jd_tt);
+    const Vec3 v = frame_1976_to_2006(jd_tt, body_heliocentric(body, jd_tt));
     double r;
     double l, b;
     cartesian_to_spherical(v, l, b, r);

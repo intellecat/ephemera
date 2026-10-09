@@ -56,20 +56,21 @@ bool compressed_geocentric(int body, double jd, bool light_time, Vec3& out,
 Vec3 spherical_to_cartesian(double lon, double lat, double r);
 void cartesian_to_spherical(const Vec3& v, double& lon, double& lat, double& r);
 void precess_ecliptic_j2000_to_date(double jd_tt, double& lon, double& lat);
-double mean_obliquity(double jd_tt);
+double obliquity_iau1980(double jd_tt); /* native frame of the series */
+double mean_obliquity(double jd_tt);    /* IAU 2006, output frame       */
 void nutation(double jd_tt, double& dpsi, double& deps);
 void ecliptic_to_equatorial(double lon, double lat, double jd_tt, double* ra,
                             double* dec);
 void equatorial_to_ecliptic(double ra, double dec, double jd_tt, double* lon,
                             double* lat);
 
-/* Greenwich mean sidereal time in degrees, from UT. */
+/* Greenwich mean / apparent sidereal time in degrees, from UT. */
 double gmst_degrees(double jd_ut);
+double gast_degrees(double jd_ut);
 
-/* General precession in longitude: IAU-2006 minus IAU-1976 (radians).
- * Added to ecliptic-of-date longitudes to bring the library from its
- * native IAU-1976 frame to the modern IAU-2006 frame. */
-double precession_frame_correction(double jd_tt);
+/* Rotate a vector from the series' native IAU-1976 mean ecliptic of date
+ * to the IAU-2006 mean ecliptic of date used for all output. */
+Vec3 frame_1976_to_2006(double jd_tt, const Vec3& v);
 
 /* ELP2000-82B geocentric rectangular, J2000 ecliptic, km (src/elp.cpp). */
 void elp_moon_j2000(double jd_tt, double& x, double& y, double& z);

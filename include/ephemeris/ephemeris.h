@@ -10,7 +10,7 @@
  * Conventions:
  *   - Angles are radians on output.
  *   - Ecliptic coordinates are heliocentric/geocentric, referred to the
- *     mean dynamical ecliptic and equinox of date (i.e. tropical).
+ *     mean ecliptic and equinox of date (i.e. tropical), IAU 2006 frame.
  *   - Distances are astronomical units (the Moon too, for consistency;
  *     1 AU = 149597870.7 km).
  *   - Time arguments are Julian dates.  Functions suffixed _tt take
@@ -78,7 +78,7 @@ double eph_tt_to_ut(double jd_tt, double year);
 
 /* ---- reference frames ---------------------------------------------- */
 
-/* Mean obliquity of the ecliptic (radians), IAU 1980. */
+/* Mean obliquity of the ecliptic (radians), IAU 2006. */
 double eph_mean_obliquity(double jd_tt);
 
 /* Nutation in longitude and obliquity (radians), IAU 1980, 63 terms. */

@@ -59,6 +59,28 @@ int main() {
         }
     }
 
+    /* Asc/MC vs Swiss Ephemeris 2.10 (swe_houses_ex), UT. */
+    struct {
+        double jd, lat, lon, asc, mc;
+    } ref[] = {
+        {2451545.0, 51.5, 0.0, 24.2873051, 279.6110878},
+        {2460676.5, 40.7, -74.0, 130.3345811, 28.9401645},
+        {2447892.75, -33.9, 151.2, 59.7829494, 340.3196221},
+        {2469807.3, 64.1, -21.9, 133.0235458, 7.3529408},
+    };
+    for (const auto& r : ref) {
+        eph_observer ob = {r.lon * D2R, r.lat * D2R, 0.0};
+        double asc, mc;
+        eph_asc_mc(r.jd, &ob, &asc, &mc);
+        const double da = std::fabs(std::remainder(asc * R2D - r.asc, 360.0));
+        const double dm = std::fabs(std::remainder(mc * R2D - r.mc, 360.0));
+        if (da * 3600.0 > 1.0 || dm * 3600.0 > 1.0) {
+            std::printf("FAIL: asc/mc off by %.2f\"/%.2f\" (jd %.2f)\n",
+                        da * 3600.0, dm * 3600.0, r.jd);
+            fails++;
+        }
+    }
+
     if (fails == 0) std::printf("All house checks passed.\n");
     return fails == 0 ? 0 : 1;
 }

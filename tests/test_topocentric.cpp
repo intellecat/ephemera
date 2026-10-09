@@ -33,8 +33,8 @@ int main() {
     }
     std::printf("\nTopocentric vs Skyfield/DE440s: max angular %.3f\", "
                 "max distance %.2e AU\n", maxang, maxdist);
-    if (maxang > 2.0) {
-        std::printf("FAIL: angular error %.3f\" > 2\"\n", maxang);
+    if (maxang > 0.5) {
+        std::printf("FAIL: angular error %.3f\" > 0.5\"\n", maxang);
         return 1;
     }
     std::printf("All topocentric checks passed.\n");

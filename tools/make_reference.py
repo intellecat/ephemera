@@ -82,6 +82,16 @@ def main():
         (1930, 3, 3, 3.0), (2100, 1, 1, 0.0), (2140, 1, 1, 0.0),
         (2064, 3, 20, 0.0), (2088, 7, 4, 0.0),
     ]
+    # Within ~1 degree of the Sun, in front of and behind it, to exercise
+    # the light-deflection model.
+    dates += [
+        (2023, 5, 2, 6.0),     # Mercury, inferior conjunction
+        (2021, 11, 28, 24.0),  # Mercury, superior conjunction
+        (2028, 6, 1, 12.0),    # Venus, inferior conjunction
+        (2026, 1, 6, 6.0),     # Venus, superior conjunction
+        (2026, 8, 12, 18.0),   # Moon, new moon
+        (2026, 7, 30, 6.0),    # Jupiter, conjunction
+    ]
 
     ref = {
         "dates": [{"utc": list(d), "tt_jd": ts.utc(*d).tt} for d in dates],

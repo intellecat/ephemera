@@ -111,21 +111,22 @@ int main() {
                     gdist[i], adist[i]);
     }
 
-    /* Accuracy gates.  Inner planets are tight; outer planets and the Moon
-     * are looser because of the theories used. */
-    static const double glimit[15] = {5, 5, 5, 10, 15, 20, 2, 2, 2, 5, 1};
-    static const double alimit[15] = {5, 5, 5, 10, 15, 20, 2, 2, 2, 5, 1};
+    /* Accuracy gates (arcsec), ~2x the measured maxima, indexed by
+     * eph_body: Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus,
+     * Neptune, Pluto, Sun, Moon. */
+    static const double limit[15] = {0.1, 0.12, 0, 0.1, 0.15, 0.08,
+                                     0.08, 0.08, 0.15, 0.1, 0.4};
     int failures = 0;
     for (int i = 0; i < EPH_BODY_COUNT; ++i) {
         if (gcount[i] == 0) continue;
-        if (gmax[i] > glimit[i]) {
-            std::printf("FAIL: %s geometric residual %.3f\" > %.0f\"\n",
-                        eph_body_name((eph_body)i), gmax[i], glimit[i]);
+        if (gmax[i] > limit[i]) {
+            std::printf("FAIL: %s geometric residual %.3f\" > %.2f\"\n",
+                        eph_body_name((eph_body)i), gmax[i], limit[i]);
             failures++;
         }
-        if (amax[i] > alimit[i]) {
-            std::printf("FAIL: %s apparent residual %.3f\" > %.0f\"\n",
-                        eph_body_name((eph_body)i), amax[i], alimit[i]);
+        if (amax[i] > limit[i]) {
+            std::printf("FAIL: %s apparent residual %.3f\" > %.2f\"\n",
+                        eph_body_name((eph_body)i), amax[i], limit[i]);
             failures++;
         }
     }

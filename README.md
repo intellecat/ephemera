@@ -17,38 +17,42 @@ Internally it evaluates:
 * Compact Chebyshev series for Ceres/Pallas/Juno/Vesta fitted to JPL
   Horizons (public data), heliocentric fit error <0.02" over 1850-2140.
   (`tests/test_asteroids` compares *apparent UT* positions with Horizons and
-  shows up to ~0.3"; that is ΔT plus the IAU-1976/1980 vs IAU-2006/2000A
-  frame difference, not the fit -- Mars shows the same offsets.)
+  shows up to ~0.3"; that is the ΔT polynomial, not the fit.)
 * A compact Poisson series for Pluto fitted to JPL DE440s over 1850-2140,
   and small Chebyshev DE440 corrections for Uranus and Neptune.
-* **IAU 1980** nutation (63 terms), the IAU 1980 mean obliquity, and the
-  Espenak–Meeus ΔT polynomials for the UT↔TT conversion.
+* **IAU 1980** nutation (63 terms), a rotation from the series' native
+  IAU-1976 frame to the **IAU-2006** ecliptic of date (the frame Swiss
+  Ephemeris and JPL Horizons use), and the Espenak–Meeus ΔT polynomials
+  for the UT↔TT conversion.
 
 Angles are radians, distances are AU, and time is Julian Date (TT or UT).
 
 ## Accuracy
 
 Measured against JPL DE440s over 1850–2140 (see `tests/`), maximum error in
-geocentric ecliptic longitude/latitude.  The reference is reduced to the
-library's frame (mean ecliptic/equinox of date, IAU 1976), so these numbers
-reflect the theories, not a frame-model difference:
+geocentric ecliptic longitude/latitude.  The reference is DE440s via
+Skyfield, reduced with ERFA to the IAU-2006/2000A ecliptic of date -- the
+same frame Swiss Ephemeris and Horizons report -- and includes dates
+within ~1° of the Sun:
 
-| Body    | geometric | apparent | notes                          |
-|---------|-----------|----------|--------------------------------|
-| Mercury | 0.04″     | 0.05″    | VSOP87 + DE440 correction      |
-| Venus   | 0.05″     | 0.16″    | VSOP87 + DE440 correction      |
-| Mars    | 0.09″     | 0.11″    | VSOP87 + DE440 correction      |
-| Jupiter | 0.07″     | 0.07″    | VSOP87 + DE440 correction      |
-| Saturn  | 0.02″     | 0.03″    | VSOP87 + DE440 correction      |
-| Uranus  | 0.01″     | 0.06″    | VSOP87 + DE440 correction      |
-| Neptune | 0.01″     | 0.05″    | VSOP87 + DE440 correction      |
-| Pluto   | 0.04″     | 0.08″    | Poisson fit to DE440s          |
-| Sun     | 0.05″     | 0.05″    | VSOP87 + DE440 correction      |
-| Moon    | 0.20″     | 0.20″    | full ELP2000-82B + DE440 corr  |
+| Body    | geometric | apparent | compressed (int32) | notes                         |
+|---------|-----------|----------|--------------------|-------------------------------|
+| Mercury | 0.05″     | 0.05″    | 0.02″              | VSOP87 + DE440 correction     |
+| Venus   | 0.06″     | 0.06″    | 0.02″              | VSOP87 + DE440 correction     |
+| Mars    | 0.05″     | 0.05″    | 0.04″              | VSOP87 + DE440 correction     |
+| Jupiter | 0.07″     | 0.08″    | 0.02″              | VSOP87 + DE440 correction     |
+| Saturn  | 0.02″     | 0.03″    | 0.01″              | VSOP87 + DE440 correction     |
+| Uranus  | 0.01″     | 0.03″    | 0.02″              | VSOP87 + DE440 correction     |
+| Neptune | 0.01″     | 0.04″    | 0.01″              | VSOP87 + DE440 correction     |
+| Pluto   | 0.04″     | 0.07″    | 0.01″              | Poisson fit to DE440s         |
+| Sun     | 0.05″     | 0.05″    | 0.02″              | VSOP87 + DE440 correction     |
+| Moon    | 0.20″     | 0.20″    | 0.02″              | full ELP2000-82B + DE440 corr |
 
-Every planet, the Sun and Pluto are now sub-0.1" over 1850–2140 (VSOP87
-plus small DE440 corrections); the Moon is ~0.1" near J2000 and ~0.2"
-across the span.  Add the optional compressed backend for ~0.01".
+Every planet, the Sun and Pluto are sub-0.1" over 1850–2140; the Moon is
+~0.05" typical and ~0.2" at the range edges.  With the optional compressed
+backend the typical error is ~0.005".  On 3000 random dates, where Swiss
+Ephemeris (.se1 files) itself agrees with DE440s to ~0.001", the analytic
+median is 0.01–0.05" and the compressed median ~0.005".
 
 ### Where the remaining error comes from
 
@@ -63,16 +67,18 @@ across the span.  Add the optional compressed backend for ~0.01".
   and ~0.01" near J2000.  The Moon's apparent place applies light-time
   (~0.7") and nutation but no annual aberration, matching the reference to
   ~0.001".
-* **Apparent place.**  Uses IAU-1976 precession and IAU-1980 nutation
-  internally, then a general-precession correction to the modern IAU-2006
-  frame, so longitudes match Swiss Ephemeris/Horizons to ~0.01-0.05"
-  typical (vs ~0.2" in the raw IAU-1976 frame).  Applies iterated
-  light-time, first-order annual aberration, and relativistic light
-  deflection by the Sun (the latter removes up to ~1.5" near solar
-  conjunctions).  The Moon uses light-time without the annual-aberration
-  term (which would double-count for a nearby body).  `eph_tdb_minus_tt()`
-  is provided for callers that want the TDB timescale used by the
-  dynamical theories.
+* **Frame.**  The series are evaluated in their native IAU-1976 frame and
+  rotated to the IAU-2006 ecliptic of date (`frame_1976_to_2006`, checked
+  against ERFA to <0.001 mas).  Without it longitudes drift by 0.3"/century
+  and the ecliptic is tilted by 0.04".  Nutation is still IAU 1980 (a few
+  mas from IAU 2000A).
+* **Apparent place.**  Iterated light-time, relativistic light deflection
+  by the Sun (finite-distance form: up to ~1.7" for a body behind the Sun,
+  ~0 for one in front of it), first-order annual aberration and nutation.
+  The Moon uses light-time without the annual-aberration term (the two
+  cancel to first order for a body moving with the Earth).
+  `eph_tdb_minus_tt()` is provided for callers that want the TDB timescale
+  used by the dynamical theories.
 
 ## Building
 
@@ -134,8 +140,8 @@ eph_position p;
 eph_position_topocentric_ut(EPH_MOON, jd_ut, year, &obs, &p);
 ```
 
-Validated to ~0.4" vs Skyfield/DE440s (1987-2005; limited by the frame
-model).  The Moon's ~1 degree parallax is the dominant effect.  Refraction
+Validated to ~0.3" vs Skyfield/DE440s (1987-2005).  Uses apparent
+sidereal time.  The Moon's ~1 degree parallax is the dominant effect.  Refraction
 is not applied (it affects altitude, not the ecliptic longitude used in
 charts).
 
@@ -150,15 +156,16 @@ eph_houses(jd_ut, &obs, EPH_HOUSES_PORPHYRY, cusps);
 ```
 
 House systems: Whole Sign, Equal, Porphyry (Placidus/Koch are future work).
-Asc/MC are validated geometrically (the Ascendant lies on the horizon to
-<0.01 degree); the Lahiri ayanamsa uses the IAU-1976 general precession.
+Asc/MC use apparent sidereal time and match Swiss Ephemeris to <1"
+(median 0.07"); the Lahiri ayanamsa uses the IAU-2006 general precession,
+consistent with the output frame.
 
 ## Conventions
 
-* VSOP87D is referred to the **mean dynamical ecliptic and equinox of
-  date**, which is exactly the tropical frame used in astrology.  The
-  `_apparent_` functions additionally apply light-time (iterated), annual
-  aberration from the Earth's velocity, and nutation in longitude.
+* Outputs are referred to the **ecliptic and equinox of date** in the
+  IAU-2006 frame, which is the tropical frame used in astrology.  The
+  `_apparent_` functions additionally apply light-time (iterated), solar
+  light deflection, annual aberration and nutation in longitude.
 * The Moon uses the mean-equinox-of-date series; nutation is applied for
   apparent positions.
 * The `year` argument to the `_ut` functions is only used to evaluate the
@@ -174,7 +181,7 @@ python3 tools/gen_vsop87.py        # downloads data/vsop87d/* and regenerates th
 ```
 
 The test reference file `tests/reference_data.h` is generated once from a
-JPL DE440s kernel with Skyfield (reduced with ERFA/IAU-1976); the kernel is **not** part of the library
+JPL DE440s kernel with Skyfield (reduced with ERFA/IAU-2006); the kernel is **not** part of the library
 and is never shipped.  See `tools/make_reference.py` and
 `tools/gen_reference.py` if you want to regenerate it.
 
@@ -206,7 +213,7 @@ eph_load_compressed("data/ephem.bin");
 ```
 
 When loaded, positions for dates in 1850-2140 come from the table
-(**~0.02" geometric, <0.2" apparent**); outside that range, or if it is
+(**~0.005" typical, <0.07" max**); outside that range, or if it is
 not loaded, the analytical engine is used.  The table (`data/ephem.bin`,
 ~3.3 MB) is our own format -- piecewise Chebyshev polynomials of the
 geocentric ecliptic-J2000 positions with **adaptive intervals** (long

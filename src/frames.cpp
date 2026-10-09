@@ -40,7 +40,7 @@ void precess_ecliptic_j2000_to_date(double jd_tt, double& lon, double& lat) {
 
     /* Ecliptic J2000 -> equatorial J2000 (unit vector). */
     const double cb = std::cos(lat), sb = std::sin(lat);
-    const double e0 = mean_obliquity(J2000);
+    const double e0 = obliquity_iau1980(J2000);
     const double c0 = std::cos(e0), s0 = std::sin(e0);
     double x = cb * std::cos(lon);
     double y = cb * std::sin(lon) * c0 - sb * s0;
@@ -68,7 +68,7 @@ void precess_ecliptic_j2000_to_date(double jd_tt, double& lon, double& lat) {
     y = t2;
 
     /* Equatorial of date -> ecliptic of date. */
-    const double e = mean_obliquity(jd_tt);
+    const double e = obliquity_iau1980(jd_tt);
     const double ce = std::cos(e), se = std::sin(e);
     const double yl = y * ce + zz * se;
     const double zl = -y * se + zz * ce;
@@ -77,10 +77,20 @@ void precess_ecliptic_j2000_to_date(double jd_tt, double& lon, double& lat) {
     lat = std::asin(zl);
 }
 
-double mean_obliquity(double jd_tt) {
+double obliquity_iau1980(double jd_tt) {
     const double T = (jd_tt - J2000) / DAYS_PER_CENTURY;
     const double seconds =
         84381.448 + T * (-46.8150 + T * (-0.00059 + T * 0.001813));
+    return seconds * ARCSEC;
+}
+
+double mean_obliquity(double jd_tt) {
+    const double T = (jd_tt - J2000) / DAYS_PER_CENTURY;
+    const double seconds =
+        84381.406 +
+        T * (-46.836769 +
+             T * (-0.0001831 +
+                  T * (0.00200340 + T * (-0.000000576 - T * 0.0000000434))));
     return seconds * ARCSEC;
 }
 
@@ -218,15 +228,86 @@ void equatorial_to_ecliptic(double ra, double dec, double jd_tt, double* lon,
     *lat = std::asin(zl);
 }
 
-double precession_frame_correction(double jd_tt) {
-    const double T = (jd_tt - J2000) / DAYS_PER_CENTURY;
-    const double p1976 =
-        (5029.0966 * T + 1.11113 * T * T - 0.000006 * T * T * T) * ARCSEC;
-    const double p2006 =
-        (5028.796195 * T + 1.1054348 * T * T + 0.00007964 * T * T * T -
-         0.000023857 * T * T * T * T - 0.0000000383 * T * T * T * T * T) *
+namespace {
+
+struct Mat3 {
+    double m[3][3];
+};
+
+Mat3 mul(const Mat3& a, const Mat3& b) {
+    Mat3 r{};
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j)
+            for (int k = 0; k < 3; ++k) r.m[i][j] += a.m[i][k] * b.m[k][j];
+    return r;
+}
+
+/* Frame rotations, ERFA convention (positive angle rotates the axes). */
+Mat3 rot1(double a) {
+    const double c = std::cos(a), s = std::sin(a);
+    return {{{1, 0, 0}, {0, c, s}, {0, -s, c}}};
+}
+Mat3 rot2(double a) {
+    const double c = std::cos(a), s = std::sin(a);
+    return {{{c, 0, -s}, {0, 1, 0}, {s, 0, c}}};
+}
+Mat3 rot3(double a) {
+    const double c = std::cos(a), s = std::sin(a);
+    return {{{c, s, 0}, {-s, c, 0}, {0, 0, 1}}};
+}
+
+Mat3 transpose(const Mat3& a) {
+    Mat3 r;
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j) r.m[i][j] = a.m[j][i];
+    return r;
+}
+
+}  // namespace
+
+/*
+ * IAU-1976 mean ecliptic of date -> IAU-2006 mean ecliptic of date.
+ *
+ * The 1976 frame is R1(eps80) P76 applied to the J2000 mean equator (which
+ * the IAU-1976 reduction takes as the ICRS, i.e. no frame bias).  The 2006
+ * ecliptic of date is R3(-psib) R1(phib) R3(gamb) applied to the GCRS, with
+ * the Fukushima-Williams angles (ERFA pfw06), which include the frame bias.
+ * The rotation is ~0.04" plus the 0.3"/century general precession change.
+ */
+Vec3 frame_1976_to_2006(double jd_tt, const Vec3& v) {
+    const double t = (jd_tt - J2000) / DAYS_PER_CENTURY;
+
+    const double zeta = (2306.2181 + (0.30188 + 0.017998 * t) * t) * t * ARCSEC;
+    const double z = (2306.2181 + (1.09468 + 0.018203 * t) * t) * t * ARCSEC;
+    const double theta =
+        (2004.3109 + (-0.42665 - 0.041833 * t) * t) * t * ARCSEC;
+    const Mat3 p76 = mul(rot3(-z), mul(rot2(theta), rot3(-zeta)));
+    const Mat3 ecl76 = mul(rot1(obliquity_iau1980(jd_tt)), p76);
+
+    const double gamb =
+        (-0.052928 +
+         t * (10.556378 +
+              t * (0.4932044 +
+                   t * (-0.00031238 + t * (-0.000002788 + t * 0.0000000260))))) *
         ARCSEC;
-    return p2006 - p1976;
+    const double phib =
+        (84381.412819 +
+         t * (-46.811016 +
+              t * (0.0511268 +
+                   t * (0.00053289 + t * (-0.000000440 - t * 0.0000000176))))) *
+        ARCSEC;
+    const double psib =
+        (-0.041775 +
+         t * (5038.481484 +
+              t * (1.5584175 +
+                   t * (-0.00018522 + t * (-0.000026452 - t * 0.0000000148))))) *
+        ARCSEC;
+    const Mat3 ecl06 = mul(rot3(-psib), mul(rot1(phib), rot3(gamb)));
+
+    const Mat3 r = mul(ecl06, transpose(ecl76));
+    return {r.m[0][0] * v.x + r.m[0][1] * v.y + r.m[0][2] * v.z,
+            r.m[1][0] * v.x + r.m[1][1] * v.y + r.m[1][2] * v.z,
+            r.m[2][0] * v.x + r.m[2][1] * v.y + r.m[2][2] * v.z};
 }
 
 double gmst_degrees(double jd_ut) {
@@ -234,6 +315,13 @@ double gmst_degrees(double jd_ut) {
     const double T = d / DAYS_PER_CENTURY;
     return 280.46061837 + 360.98564736629 * d + 0.000387933 * T * T -
            T * T * T / 38710000.0;
+}
+
+double gast_degrees(double jd_ut) {
+    double dpsi, deps;
+    nutation(jd_ut, dpsi, deps);
+    const double ee = dpsi * std::cos(mean_obliquity(jd_ut) + deps);
+    return gmst_degrees(jd_ut) + ee / DEG;
 }
 
 }  // namespace eph

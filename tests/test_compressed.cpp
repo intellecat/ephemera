@@ -49,8 +49,8 @@ int main(int argc, char** argv) {
         if (i == EPH_EARTH || gmax[i] == 0.0) continue;
         std::printf("%-8s %12.4f %12.4f\n", eph_body_name((eph_body)i),
                     gmax[i], amax[i]);
-        if (gmax[i] > 0.5 || amax[i] > 0.5) {
-            std::printf("FAIL: %s exceeds 0.5\"\n",
+        if (gmax[i] > 0.08 || amax[i] > 0.08) {
+            std::printf("FAIL: %s exceeds 0.08\"\n",
                         eph_body_name((eph_body)i));
             failures++;
         }

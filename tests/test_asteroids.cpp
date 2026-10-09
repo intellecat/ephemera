@@ -28,8 +28,8 @@ int main() {
     }
     std::printf("\nAsteroids vs Horizons: max dlon %.3f\", dlat %.3f\"\n",
                 maxlon, maxlat);
-    if (maxlon > 2.0 || maxlat > 2.0) {
-        std::printf("FAIL: exceeds 2\"\n");
+    if (maxlon > 0.5 || maxlat > 0.5) {
+        std::printf("FAIL: exceeds 0.5\"\n");
         return 1;
     }
     std::printf("All asteroid checks passed.\n");
