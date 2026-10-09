@@ -31,8 +31,9 @@ void apply(const corr::Series& s, double jd_tt, double& lon, double& lat,
 }  // namespace
 
 /*
- * Small DE440s corrections for the outer planets, whose VSOP87 (DE200)
- * series drift by ~1-2 arcsec over 1850-2140.  The Chebyshev argument is
+ * Small DE440s corrections for the planets and the Earth, whose VSOP87
+ * (DE200) series drift from DE440 (up to ~1-2 arcsec for Uranus/Neptune)
+ * over 1850-2140.  The Chebyshev argument is
  * clamped to the fitted window, so outside it the correction freezes at
  * the boundary value rather than diverging.
  */

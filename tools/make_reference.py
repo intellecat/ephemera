@@ -40,13 +40,14 @@ def icrs_to_ecliptic_date(ra, dec, jd_tt, apparent=False):
                   math.cos(dec) * math.sin(ra),
                   math.sin(dec)])
     dt = jd_tt - J2000
+    # Modern IAU-2006/2000A frame (what Swiss Ephemeris/Horizons use).
     if apparent:
-        v = erfa.pnm80(J2000, dt) @ v
-        _, deps = erfa.nut80(J2000, dt)
-        eps = erfa.obl80(J2000, dt) + deps
+        v = erfa.pnm06a(J2000, dt) @ v
+        _, deps = erfa.nut06a(J2000, dt)
+        eps = erfa.obl06(J2000, dt) + deps
     else:
-        v = erfa.pmat76(J2000, dt) @ v
-        eps = erfa.obl80(J2000, dt)
+        v = erfa.pmat06(J2000, dt) @ v
+        eps = erfa.obl06(J2000, dt)
     y = v[1] * math.cos(eps) + v[2] * math.sin(eps)
     z = -v[1] * math.sin(eps) + v[2] * math.cos(eps)
     lon = math.degrees(math.atan2(y, v[0])) % 360.0
@@ -72,12 +73,14 @@ def main():
         "Sun": "sun",
         "Moon": "moon",
     }
-    dates = [
-        (2000, 1, 1, 12.0), (1992, 4, 12, 0.0), (1900, 1, 1, 0.0),
-        (2026, 1, 1, 0.0), (1950, 6, 15, 6.0), (2000, 6, 1, 0.0),
-        (2050, 1, 1, 0.0), (1987, 4, 10, 0.0), (2020, 12, 21, 18.0),
-        (1930, 3, 3, 3.0), (1850, 1, 1, 0.0), (1875, 1, 1, 0.0),
-        (2100, 1, 1, 0.0), (2125, 1, 1, 0.0), (2140, 1, 1, 0.0),
+    # A dense spread plus assorted special dates; dense enough to catch
+    # near-solar-conjunction (light-bending) and other worst cases.
+    dates = [(y, 1, 1, 0.0) for y in range(1855, 2140, 8)]
+    dates += [
+        (2000, 1, 1, 12.0), (1992, 4, 12, 0.0), (2026, 1, 1, 0.0),
+        (1950, 6, 15, 6.0), (1987, 4, 10, 0.0), (2020, 12, 21, 18.0),
+        (1930, 3, 3, 3.0), (2100, 1, 1, 0.0), (2140, 1, 1, 0.0),
+        (2064, 3, 20, 0.0), (2088, 7, 4, 0.0),
     ]
 
     ref = {

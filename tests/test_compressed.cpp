@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    double gmax[11] = {0}, amax[11] = {0};
+    double gmax[EPH_BODY_COUNT] = {0}, amax[EPH_BODY_COUNT] = {0};
     for (const RefSample& r : kRefSamples) {
         eph_position g, a;
         eph_position_tt((eph_body)r.body, r.tt_jd, &g);

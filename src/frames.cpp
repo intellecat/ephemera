@@ -218,6 +218,17 @@ void equatorial_to_ecliptic(double ra, double dec, double jd_tt, double* lon,
     *lat = std::asin(zl);
 }
 
+double precession_frame_correction(double jd_tt) {
+    const double T = (jd_tt - J2000) / DAYS_PER_CENTURY;
+    const double p1976 =
+        (5029.0966 * T + 1.11113 * T * T - 0.000006 * T * T * T) * ARCSEC;
+    const double p2006 =
+        (5028.796195 * T + 1.1054348 * T * T + 0.00007964 * T * T * T -
+         0.000023857 * T * T * T * T - 0.0000000383 * T * T * T * T * T) *
+        ARCSEC;
+    return p2006 - p1976;
+}
+
 double gmst_degrees(double jd_ut) {
     const double d = jd_ut - J2000;
     const double T = d / DAYS_PER_CENTURY;

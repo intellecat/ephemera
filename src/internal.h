@@ -40,7 +40,7 @@ inline double normalize(double a) {
 void vsop87_heliocentric(int planet, double jd_tt, double& lon, double& lat,
                          double& r);
 
-/* Small fitted DE440 corrections (Uranus, Neptune); src/correction.cpp. */
+/* Small fitted DE440 corrections (Mercury..Neptune, Earth); src/correction.cpp. */
 void apply_correction(int planet, double jd_tt, double& lon, double& lat,
                       double& r);
 
@@ -65,6 +65,11 @@ void equatorial_to_ecliptic(double ra, double dec, double jd_tt, double* lon,
 
 /* Greenwich mean sidereal time in degrees, from UT. */
 double gmst_degrees(double jd_ut);
+
+/* General precession in longitude: IAU-2006 minus IAU-1976 (radians).
+ * Added to ecliptic-of-date longitudes to bring the library from its
+ * native IAU-1976 frame to the modern IAU-2006 frame. */
+double precession_frame_correction(double jd_tt);
 
 /* ELP2000-82B geocentric rectangular, J2000 ecliptic, km (src/elp.cpp). */
 void elp_moon_j2000(double jd_tt, double& x, double& y, double& z);

@@ -1,10 +1,11 @@
 /*
  * ephemeris.h -- lightweight analytical ephemeris engine.
  *
- * Pure-code positions of the Sun, Moon, Pluto and the eight planets using
- * the VSOP87D planetary theory (Bretagnon & Francou 1988) and the
- * Meeus/ELP2000 truncated lunar theory.  No external data file is needed:
- * the series coefficients are compiled into the library.
+ * Pure-code positions of the Sun, Moon, Pluto, the eight planets and
+ * Ceres/Pallas/Juno/Vesta using the VSOP87D planetary theory (Bretagnon &
+ * Francou 1988), the full ELP2000-82B lunar theory and compact series
+ * fitted to JPL data, with small DE440 corrections.  No external data file
+ * is needed: the series coefficients are compiled into the library.
  *
  * Conventions:
  *   - Angles are radians on output.

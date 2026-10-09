@@ -139,6 +139,28 @@ bool compute(eph_body body, double jd_tt, Kind kind, eph_position* out) {
                      u.z + vel.z / AU_PER_LIGHT_DAY});
             v = Vec3{v.x * dist, v.y * dist, v.z * dist};
         }
+        /* Relativistic light deflection by the Sun (not for the Sun itself).
+         * The apparent place is displaced away from the Sun by
+         * 2GM/(c^2 d) * cot(psi/2). */
+        if (body != EPH_SUN) {
+            Vec3 eh = earth_heliocentric(jd_tt);
+            const double d_au = length(eh);
+            const Vec3 e = normalize_vec(Vec3{-eh.x, -eh.y, -eh.z});
+            Vec3 u = normalize_vec(v);
+            const double q = u.x * e.x + u.y * e.y + u.z * e.z;
+            const double denom = 1.0 - q;
+            if (denom > 1e-9) {
+                const double gm = 1.32712440018e20;   /* m^3/s^2 */
+                const double c = 2.99792458e8;        /* m/s     */
+                const double d_m = d_au * 1.495978707e11;
+                const double f = 2.0 * gm / (c * c * d_m);
+                u = normalize_vec(
+                    Vec3{u.x - f * (e.x - q * u.x) / denom,
+                         u.y - f * (e.y - q * u.y) / denom,
+                         u.z - f * (e.z - q * u.z) / denom});
+            }
+            v = Vec3{u.x * dist, u.y * dist, u.z * dist};
+        }
     }
 
     double lon, lat;
@@ -148,6 +170,8 @@ bool compute(eph_body body, double jd_tt, Kind kind, eph_position* out) {
         nutation(jd_tt, dpsi, deps);
         lon = normalize(lon + dpsi);
     }
+    /* IAU-1976 -> IAU-2006 frame (general precession difference). */
+    lon = normalize(lon + precession_frame_correction(jd_tt));
 
     out->longitude = lon;
     out->latitude = lat;

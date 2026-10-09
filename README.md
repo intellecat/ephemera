@@ -15,7 +15,10 @@ Internally it evaluates:
   Moon; ~0.1" near J2000, growing to a few arcseconds at the range edges
   because its constants are fitted to DE200/LE200.
 * Compact Chebyshev series for Ceres/Pallas/Juno/Vesta fitted to JPL
-  Horizons (public data), ~0.02-0.03" over 1850-2140.
+  Horizons (public data), heliocentric fit error <0.02" over 1850-2140.
+  (`tests/test_asteroids` compares *apparent UT* positions with Horizons and
+  shows up to ~0.3"; that is ΔT plus the IAU-1976/1980 vs IAU-2006/2000A
+  frame difference, not the fit -- Mars shows the same offsets.)
 * A compact Poisson series for Pluto fitted to JPL DE440s over 1850-2140,
   and small Chebyshev DE440 corrections for Uranus and Neptune.
 * **IAU 1980** nutation (63 terms), the IAU 1980 mean obliquity, and the
@@ -60,14 +63,16 @@ across the span.  Add the optional compressed backend for ~0.01".
   and ~0.01" near J2000.  The Moon's apparent place applies light-time
   (~0.7") and nutation but no annual aberration, matching the reference to
   ~0.001".
-* **Apparent place.**  Uses IAU-1976 precession, IAU-1980 nutation, the
-  IAU-1980 obliquity, iterated light-time and first-order annual
-  aberration.  Relativistic light deflection (<0.02" except within a few
-  degrees of the Sun) and higher-order aberration are omitted.  The
-  frames deliberately follow VSOP87D (IAU-1976); migrating the whole
-  library to IAU-2000/2006 is possible but would require transforming the
-  VSOP87 series as well.  `eph_tdb_minus_tt()` is provided for callers
-  that want the TDB timescale used by the dynamical theories.
+* **Apparent place.**  Uses IAU-1976 precession and IAU-1980 nutation
+  internally, then a general-precession correction to the modern IAU-2006
+  frame, so longitudes match Swiss Ephemeris/Horizons to ~0.01-0.05"
+  typical (vs ~0.2" in the raw IAU-1976 frame).  Applies iterated
+  light-time, first-order annual aberration, and relativistic light
+  deflection by the Sun (the latter removes up to ~1.5" near solar
+  conjunctions).  The Moon uses light-time without the annual-aberration
+  term (which would double-count for a nearby body).  `eph_tdb_minus_tt()`
+  is provided for callers that want the TDB timescale used by the
+  dynamical theories.
 
 ## Building
 
@@ -215,10 +220,14 @@ Regenerate with `python3 tools/pack_ephemeris.py` (needs numpy + skyfield
 
 ```
 include/ephemeris/ephemeris.h   public C API
-src/                            VSOP87 evaluator, Moon, Pluto, frames, time
-data/vsop87d_data.{h,cpp}       generated coefficient tables
-tools/                          coefficient and reference generators
-tests/                          DE440s validation + time/calendar checks
+src/                            VSOP87, ELP2000 Moon, Pluto, asteroids,
+                                DE440 corrections, compressed backend,
+                                frames, time, houses
+data/*_data.{h,cpp}             generated coefficient tables
+data/ephem.bin                  optional compressed Chebyshev table
+tools/                          coefficient, fit and reference generators
+tests/                          DE440s / Skyfield / Horizons validation,
+                                topocentric, houses, compressed backend
 examples/positions.c            CLI that prints a chart
 ```
 

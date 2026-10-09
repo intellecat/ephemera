@@ -29,10 +29,11 @@ $(LIB): $(LIB_OBJ)
 $(BUILD)/ephcliapp: examples/positions.c $(LIB)
 	$(CC) $(CFLAGS) -Iinclude $< $(LIB) -lm -o $@
 
-$(BUILD)/test_ephemeris: tests/test_ephemeris.cpp $(LIB)
+$(BUILD)/test_ephemeris: tests/test_ephemeris.cpp tests/reference_data.h $(LIB)
 	$(CXX) $(CXXFLAGS) -Iinclude -Itests $< $(LIB) -lm -o $@
 
-test: $(BUILD)/test_ephemeris $(BUILD)/test_compressed $(BUILD)/test_topocentric
+test: $(BUILD)/test_ephemeris $(BUILD)/test_compressed $(BUILD)/test_topocentric \
+      $(BUILD)/test_houses $(BUILD)/test_asteroids
 	$(BUILD)/test_ephemeris
 	$(BUILD)/test_compressed data/ephem.bin
 	$(BUILD)/test_topocentric
