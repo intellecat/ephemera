@@ -44,10 +44,9 @@ int main(int argc, char** argv) {
             std::printf("FAIL: quantity %d exceeds %g\n", i, limit[i]);
             fails++;
         }
-    /* Saturn, Uranus and Neptune: ours use the Earth's sub-latitude only
-     * (Mallama & Hilton average it with the Sun's) and apply the phase
-     * term at all phase angles; up to 0.04 mag. */
-    if (worst_mag_outer > 0.05) {
+    /* Saturn, Uranus and Neptune: 0.0011 mag for Uranus, whose latitudes
+     * we take planetographic as the paper says (Skyfield: planetocentric). */
+    if (worst_mag_outer > 0.002) {
         std::printf("FAIL: Saturn-Neptune magnitudes\n");
         fails++;
     }
