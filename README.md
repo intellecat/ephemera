@@ -40,19 +40,19 @@ report:
 
 | Body    | full series | 0.1″ file | 1″ file | DE440 tables |
 |---------|-------------|-----------|---------|--------------|
-| Mercury | 0.04″       | 0.08″     | 0.48″   | 0.04″        |
-| Venus   | 0.05″       | 0.10″     | 0.58″   | 0.03″        |
-| Mars    | 0.11″       | 0.13″     | 0.55″   | 0.03″        |
+| Mercury | 0.04″       | 0.09″     | 0.50″   | 0.03″        |
+| Venus   | 0.05″       | 0.11″     | 0.58″   | 0.03″        |
+| Mars    | 0.14″       | 0.14″     | 0.55″   | 0.03″        |
 | Jupiter | 0.09″       | 0.10″     | 0.32″   | 0.03″        |
 | Saturn  | 0.04″       | 0.05″     | 0.49″   | 0.03″        |
 | Uranus  | 0.04″       | 0.07″     | 0.46″   | 0.03″        |
 | Neptune | 0.03″       | 0.04″     | 0.47″   | 0.03″        |
 | Pluto   | 0.04″       | 0.04″     | 0.04″   | 0.03″        |
-| Sun     | 0.03″       | 0.04″     | 0.11″   | 0.03″        |
-| Moon    | 0.12″       | 0.17″     | 0.47″   | 0.03″        |
-| median  | 0.004–0.03″ | 0.005–0.04″ | 0.01–0.11″ | 0.002″   |
+| Sun     | 0.04″       | 0.04″     | 0.11″   | 0.03″        |
+| Moon    | 0.15″       | 0.22″     | 0.47″   | 0.03″        |
+| median  | 0.004–0.03″ | 0.005–0.04″ | 0.01–0.12″ | 0.002″   |
 
-Within 1850–2140 the errors are smaller still: the DE440 tables reach
+(Maximum of two runs with different dates.)  Within 1850–2140 the errors are smaller still: the DE440 tables reach
 0.004" max / ~0.001" median there, on par with Swiss Ephemeris' .se1
 files (0.0005–0.0007" median, 0.002" for the Moon); towards 1550 and 2650
 their maximum grows to ~0.03" with the nutation model (below).  The 1″
@@ -292,10 +292,10 @@ without measurable loss:
 | File                       | Size   | brotli | Contents                                      |
 |----------------------------|--------|--------|-----------------------------------------------|
 | `data/eph-1as.bin`         | 145 KB | 112 KB | series truncated to ~0.5″ (4,719 terms)        |
-| `data/eph-01as.bin`        | 303 KB | 213 KB | series truncated to ~0.15″ (14,176 terms)      |
+| `data/eph-01as.bin`        | 303 KB | 213 KB | series truncated to ~0.2″ (14,176 terms)       |
 | `data/eph-full.bin`        | 649 KB | 420 KB | the full series (34,530 terms)                 |
 | `data/eph-asteroids.bin`   | 365 KB | 341 KB | Ceres, Pallas, Juno, Vesta, 1600–2500          |
-| `data/de440/de440-YEAR.bin`| ~325 KB each | ~305 KB | DE440 table for YEAR..YEAR+100, ~0.002″ |
+| `data/de440/de440-YEAR.bin`| ~330 KB each | ~310 KB | DE440 table for YEAR..YEAR+100, ~0.002″ |
 
 The series files cover 1550–2650 (Pluto and the corrections) and work,
 less accurately, outside it.  Load one series file, plus the asteroids if

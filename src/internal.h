@@ -93,16 +93,20 @@ bool elp_base_j2000(double jd_tt, double& x, double& y, double& z);
 bool moon_position(double jd_tt, double& lon, double& lat, double& dist_au);
 
 /* Pluto heliocentric J2000 ecliptic (src/pluto.cpp). */
-bool pluto_heliocentric_j2000(double jd_tt, double& lon, double& lat, double& r);
+bool pluto_heliocentric_j2000(double jd_tt, double anchor, double& lon,
+                              double& lat, double& r);
 
 /* Chebyshev intervals t[0..nseg] with ncoef coefficients per coordinate
- * (asteroids, Pluto): false outside the intervals.  src/asteroids.cpp. */
+ * (asteroids, Pluto), evaluated at jd_tt in the interval containing anchor
+ * (so finite differences around anchor do not straddle the small step
+ * between intervals): false if anchor is outside them.
+ * src/asteroids.cpp. */
 bool chebyshev_body(const double* t, const float* c, int nseg, int ncoef,
-                    double jd_tt, Vec3& v);
+                    double jd_tt, double anchor, Vec3& v);
 
 /* Asteroids: heliocentric J2000 ecliptic rectangular (AU), idx 0..3
  * (Ceres, Pallas, Juno, Vesta).  src/asteroids.cpp. */
-bool asteroid_heliocentric(int idx, double jd_tt, Vec3& v);
+bool asteroid_heliocentric(int idx, double jd_tt, double anchor, Vec3& v);
 
 }  // namespace eph
 

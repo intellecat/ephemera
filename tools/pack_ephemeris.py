@@ -47,14 +47,16 @@ ARCSEC = np.pi / 648000.0
 #  step (days), base series threshold in radians or None for no base).
 # The thresholds trade file size for speed: the residual of the dropped
 # terms costs table space.  For the slow outer planets a base saves little.
+# The sample step keeps a segment's degree well below its sample count, so
+# the fit cannot swing between samples (Runge) near the segment ends.
 # The Earth's entry is the Earth-Moon barycentre (smooth, unlike the Earth);
 # its error shows in every body, so it is held to Venus' closest distance.
 BODIES = [
     (10, "moon", "earth", 0.00236, 0.25, 1e-7),
-    (2, "earth barycenter", "sun", 0.264, 1.0, None),
-    (0, "mercury barycenter", "sun", 0.549, 1.0, 1e-7),
-    (1, "venus barycenter", "sun", 0.264, 1.0, 1e-7),
-    (3, "mars barycenter", "sun", 0.372, 1.0, 1e-7),
+    (2, "earth barycenter", "sun", 0.264, 0.5, None),
+    (0, "mercury barycenter", "sun", 0.549, 0.25, 1e-7),
+    (1, "venus barycenter", "sun", 0.264, 0.5, 1e-7),
+    (3, "mars barycenter", "sun", 0.372, 0.5, 1e-7),
     (4, "jupiter barycenter", "sun", 3.9, 4.0, None),
     (5, "saturn barycenter", "sun", 7.9, 4.0, None),
     (6, "uranus barycenter", "sun", 17.2, 8.0, None),

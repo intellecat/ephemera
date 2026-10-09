@@ -19,13 +19,13 @@ double chebyshev(const float* c, int n, double u) {
 }  // namespace
 
 bool chebyshev_body(const double* t, const float* c, int nseg, int ncoef,
-                    double jd_tt, Vec3& v) {
-    if (jd_tt < t[0] || jd_tt > t[nseg]) return false;
+                    double jd_tt, double anchor, Vec3& v) {
+    if (anchor < t[0] || anchor > t[nseg]) return false;
 
     int lo = 0, hi = nseg - 1;
     while (lo < hi) {
         const int mid = (lo + hi + 1) / 2;
-        if (jd_tt < t[mid])
+        if (anchor < t[mid])
             hi = mid - 1;
         else
             lo = mid;
@@ -39,10 +39,10 @@ bool chebyshev_body(const double* t, const float* c, int nseg, int ncoef,
     return true;
 }
 
-bool asteroid_heliocentric(int idx, double jd_tt, Vec3& v) {
+bool asteroid_heliocentric(int idx, double jd_tt, double anchor, Vec3& v) {
     if (idx < 0 || idx > 3 || !data().asteroid_ok[idx]) return false;
     const ast::Body& b = data().asteroid[idx];
-    return chebyshev_body(b.t, b.c, b.nseg, b.ncoef, jd_tt, v);
+    return chebyshev_body(b.t, b.c, b.nseg, b.ncoef, jd_tt, anchor, v);
 }
 
 }  // namespace eph

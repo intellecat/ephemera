@@ -13,9 +13,9 @@ bool planet_heliocentric(int planet, double jd, Vec3& out) {
     return true;
 }
 
-bool pluto_heliocentric(double jd, Vec3& out) {
+bool pluto_heliocentric(double jd, double anchor, Vec3& out) {
     double l, b, r;
-    if (!pluto_heliocentric_j2000(jd, l, b, r)) return false;
+    if (!pluto_heliocentric_j2000(jd, anchor, l, b, r)) return false;
     precess_ecliptic_j2000_to_date(jd, l, b);
     out = spherical_to_cartesian(l, b, r);
     return true;
@@ -28,11 +28,14 @@ Vec3 j2000_to_date(double jd, const Vec3& v) {
     return spherical_to_cartesian(l, b, r);
 }
 
-bool body_heliocentric(eph_body body, double jd, Vec3& out) {
-    if (body == EPH_PLUTO) return pluto_heliocentric(jd, out);
+/* anchor: the date whose Chebyshev interval is used for Pluto and the
+ * asteroids (see chebyshev_body). */
+bool body_heliocentric(eph_body body, double jd, Vec3& out, double anchor) {
+    if (body == EPH_PLUTO) return pluto_heliocentric(jd, anchor, out);
     if (body >= EPH_CERES && body <= EPH_VESTA) {
         Vec3 v;
-        if (!asteroid_heliocentric((int)body - EPH_CERES, jd, v)) return false;
+        if (!asteroid_heliocentric((int)body - EPH_CERES, jd, anchor, v))
+            return false;
         out = j2000_to_date(jd, v);
         return true;
     }
@@ -57,7 +60,7 @@ double angle_diff(double a, double b) { return normalize(a - b + PI) - PI; }
 /* Position of a body in the IAU-1976 ecliptic of date from the analytical
  * series: heliocentric for the planets and the Earth, geocentric for the
  * Moon, zero for the Sun. */
-bool source(eph_body body, double jd, Vec3& v) {
+bool source(eph_body body, double jd, double anchor, Vec3& v) {
     if (body == EPH_SUN) {
         v = {0.0, 0.0, 0.0};
         return true;
@@ -68,7 +71,7 @@ bool source(eph_body body, double jd, Vec3& v) {
         v = spherical_to_cartesian(l, b, r);
         return true;
     }
-    return body_heliocentric(body, jd, v);
+    return body_heliocentric(body, jd, v, anchor);
 }
 
 /* The truncated series under the residual table, same frame. */
@@ -162,8 +165,8 @@ bool state(eph_body body, double jd, bool table, State& s) {
         return true;
     }
     Vec3 m, c, pl;
-    if (!source(body, jd - h, m) || !source(body, jd, c) ||
-        !source(body, jd + h, pl))
+    if (!source(body, jd - h, jd, m) || !source(body, jd, jd, c) ||
+        !source(body, jd + h, jd, pl))
         return false;
     differentiate(m, c, pl, h, s);
     return true;
@@ -369,7 +372,7 @@ int eph_heliocentric_tt(eph_body body, double jd_tt, double* lon, double* lat,
     const bool asteroid = (body >= EPH_CERES && body <= EPH_VESTA);
     if (!planet && !asteroid) return -1;
     Vec3 h;
-    if (!body_heliocentric(body, jd_tt, h)) return -1;
+    if (!body_heliocentric(body, jd_tt, h, jd_tt)) return -1;
     const Vec3 v = frame_1976_to_2006(jd_tt, h);
     double r;
     double l, b;
