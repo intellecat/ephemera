@@ -62,7 +62,7 @@ endif()
 if(EPHEMERIS_BUILD_TOOLS)
     add_executable(pack_series tools/pack_series.cpp
         data/vsop87d_data.cpp data/elp_data.cpp data/pluto_data.cpp
-        data/corr_data.cpp data/corr_moon.cpp data/asteroid_data.cpp)
+        data/corr_data.cpp data/asteroid_data.cpp)
     target_include_directories(pack_series PRIVATE src data)
 endif()
 
@@ -75,7 +75,9 @@ if(EPHEMERIS_BUILD_TESTS)
 
     add_executable(test_compressed tests/test_compressed.cpp)
     target_link_libraries(test_compressed PRIVATE ephemeris)
-    add_test(NAME compressed COMMAND test_compressed ${DATA}/ephem.bin)
+    add_test(NAME compressed COMMAND test_compressed
+             ${DATA}/de440/de440-1800.bin ${DATA}/de440/de440-1900.bin
+             ${DATA}/de440/de440-2000.bin ${DATA}/de440/de440-2100.bin)
 
     add_executable(test_topocentric tests/test_topocentric.cpp)
     target_link_libraries(test_topocentric PRIVATE ephemeris)

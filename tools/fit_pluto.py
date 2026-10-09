@@ -1,181 +1,98 @@
 #!/usr/bin/env python3
-"""Fit a compact Poisson series for Pluto to a JPL DE kernel.
+"""Fit Pluto's heliocentric position to a JPL DE kernel.
 
-The original Meeus Pluto series is a two-body-style fit to DE200 valid only
-for ~1885-2099.  This tool replaces it with a wider-window fit directly to
-DE440s (1849-2150) using the same argument structure:
+Heliocentric rectangular coordinates in the mean ecliptic J2000 (IAU-1980
+obliquity, the frame precess_ecliptic_j2000_to_date() assumes) are packed
+as Chebyshev polynomials over adaptive intervals with float32
+coefficients, like the asteroids (tools/fit_asteroids.py).  Over 1100
+years this is far more compact than a Poisson series: ~37 KB for 0.03"
+over 1550-2650.
 
-    J = 34.35 + 3034.9057 T      (Jupiter mean longitude)
-    S = 50.08 + 1222.1138 T      (Saturn mean longitude)
-    P = 238.96 + 144.96 T        (Pluto mean longitude)
+Development tool: requires numpy, pyerfa and skyfield, and a kernel
+covering the window (de440.bsp).  Emits data/pluto_data.{h,cpp}, which
+`make data` packs into the data files.
 
-    l(T) = a0 + a1 T + sum [ s sin(iJ+jS+kP) + c cos(iJ+jS+kP) ]
-
-and likewise for b and r.  Coefficients are selected by correlation and a
-final least-squares solve, then validated on a held-out grid.
-
-Development tool: requires numpy and skyfield (with a DE440s kernel).
-It emits data/pluto_data.{h,cpp}, which are compiled into the library.
-
-    /tmp/eph/bin/python tools/fit_pluto.py
+    python3 tools/fit_pluto.py --kernel de440.bsp --start 1550 --end 2650
 """
 from __future__ import annotations
 
 import argparse
 import os
+import sys
 
+import erfa
 import numpy as np
+from skyfield.api import load
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-D2R = np.pi / 180.0
+sys.path.insert(0, HERE)
+import fit_asteroids  # noqa: E402  (adaptive Chebyshev packing)
 
 
-def sample(kernel, step_days=20.0, jd0=None, jd1=None):
-    import erfa
-    from skyfield.api import load
-
+def sample(kernel, jd0, jd1, step):
     eph = load(kernel)
     ts = load.timescale()
-    sun = eph["sun"]
-    pb = eph["pluto barycenter"]
-    if jd0 is None:
-        jd0 = float(ts.utc(1850, 1, 1).tt)
-    if jd1 is None:
-        jd1 = float(ts.utc(2150, 1, 1).tt)
-    jds = np.arange(jd0, jd1, step_days)
+    jds = np.arange(jd0, jd1 + step, step)
     t = ts.tt_jd(jds)
-    h = pb.at(t) - sun.at(t)
-    ra, dec, dist = h.radec()  # ICRS
-
-    # ICRS -> mean ecliptic/equinox J2000 with the IAU-1980 obliquity, which
-    # is the frame precess_ecliptic_j2000_to_date() assumes.  (Skyfield's own
-    # epoch=2451545 ecliptic differs from this by ~14 arcsec.)
-    ra = np.asarray(ra.radians)
-    dec = np.asarray(dec.radians)
-    eps = erfa.obl80(2451545.0, 0.0)
-    x = np.cos(dec) * np.cos(ra)
-    y = np.cos(dec) * np.sin(ra) * np.cos(eps) + np.sin(dec) * np.sin(eps)
-    z = -np.cos(dec) * np.sin(ra) * np.sin(eps) + np.sin(dec) * np.cos(eps)
-    lon = np.degrees(np.unwrap(np.arctan2(y, x)))
-    lat = np.degrees(np.arcsin(z))
-    return jds, lon, lat, np.asarray(dist.au)
+    x = (eph["pluto barycenter"].at(t) - eph["sun"].at(t)).position.au
+    e = erfa.obl80(2451545.0, 0.0)
+    c, s = np.cos(e), np.sin(e)
+    return jds, np.stack([x[0], c * x[1] + s * x[2], -s * x[1] + c * x[2]], axis=1)
 
 
-def basis(T):
-    J = 34.35 + 3034.9057 * T
-    S = 50.08 + 1222.1138 * T
-    P = 238.96 + 144.96 * T
-    # Canonical half-space: (i,j,k) and (-i,-j,-k) give the same cosine and
-    # opposite sine, so keeping only the first-nonzero-positive direction
-    # avoids exactly collinear columns in the least-squares design.
-    triples = []
-    for i in range(-4, 5):
-        for j in range(-3, 4):
-            for k in range(-8, 9):
-                if i > 0 or (i == 0 and j > 0) or (i == 0 and j == 0 and k >= 0):
-                    triples.append((i, j, k))
-    triples = np.array(triples)
-    args = (triples[:, 0][:, None] * J[None, :]
-            + triples[:, 1][:, None] * S[None, :]
-            + triples[:, 2][:, None] * P[None, :]) * D2R
-    return triples, np.sin(args), np.cos(args)
-
-
-def fit(target, T, triples, sinB, cosB, K):
-    A = np.vstack([np.ones_like(T), T]).T
-    p, _, _, _ = np.linalg.lstsq(A, target, rcond=None)
-    res = target - A @ p
-    corr = np.abs(sinB @ res)
-    corr2 = np.abs(cosB @ res)
-    allc = np.concatenate([corr, corr2])
-    idx = np.argsort(allc)[::-1][:K]
-    sel_sin = idx[idx < len(triples)]
-    sel_cos = idx[idx >= len(triples)] - len(triples)
-    X = np.vstack([np.ones_like(T), T, sinB[sel_sin], cosB[sel_cos]]).T
-    c, _, _, _ = np.linalg.lstsq(X, target, rcond=None)
-    terms = [(triples[t][0], triples[t][1], triples[t][2], c[2 + n], 0.0)
-             for n, t in enumerate(sel_sin)]
-    terms += [(triples[t][0], triples[t][1], triples[t][2], 0.0, c[2 + len(sel_sin) + n])
-              for n, t in enumerate(sel_cos)]
-    return c[0], c[1], terms
-
-
-def evaluate(T, a0, a1, terms, triples_lookup):
-    J = 34.35 + 3034.9057 * T
-    S = 50.08 + 1222.1138 * T
-    P = 238.96 + 144.96 * T
-    out = a0 + a1 * T
-    for (i, j, k, s, c) in terms:
-        arg = (i * J + j * S + k * P) * D2R
-        out = out + s * np.sin(arg) + c * np.cos(arg)
-    return out
-
-
-def c_float(x):
-    return f"{x:.17g}"
-
-
-def emit(models, out_h, out_cpp):
-    with open(out_h, "w") as h:
-        h.write("/* Generated by tools/fit_pluto.py -- do not edit. */\n")
-        h.write("#pragma once\n\nnamespace eph {\nnamespace pluto_fit {\n\n")
-        h.write("struct Term { int i, j, k; double s, c; };\n")
-        h.write("struct Model {\n    double a0, a1;\n    const Term* terms;\n"
-                "    int count;\n};\n\n")
-        h.write("extern const Model lon, lat, rad;\n\n")
-        h.write("}  // namespace pluto_fit\n}  // namespace eph\n")
-    with open(out_cpp, "w") as c:
-        c.write("/* Generated by tools/fit_pluto.py -- do not edit. */\n")
-        c.write('#include "pluto_data.h"\n\n'
-                "namespace eph {\nnamespace pluto_fit {\n\n")
-        for name, (a0, a1, terms) in models.items():
-            c.write(f"static const Term {name}_terms[] = {{\n")
-            for (i, j, k, s, cc) in terms:
-                c.write(f"    {{{i}, {j}, {k}, {c_float(s)}, {c_float(cc)}}},\n")
-            c.write("};\n\n")
-        c.write("const Model lon = {"
-                f"{c_float(models['lon'][0])}, {c_float(models['lon'][1])}, "
-                "lon_terms, sizeof(lon_terms)/sizeof(lon_terms[0])};\n")
-        c.write("const Model lat = {"
-                f"{c_float(models['lat'][0])}, {c_float(models['lat'][1])}, "
-                "lat_terms, sizeof(lat_terms)/sizeof(lat_terms[0])};\n")
-        c.write("const Model rad = {"
-                f"{c_float(models['rad'][0])}, {c_float(models['rad'][1])}, "
-                "rad_terms, sizeof(rad_terms)/sizeof(rad_terms[0])};\n")
-        c.write("\n}  // namespace pluto_fit\n}  // namespace eph\n")
+def emit(t, coef, args):
+    note = ("/* Generated by tools/fit_pluto.py (%s, %d-%d) -- do not edit. */\n"
+            % (os.path.basename(args.kernel), args.start, args.end))
+    with open(os.path.join(ROOT, "data", "pluto_data.h"), "w") as f:
+        f.write(note + "#pragma once\n\nnamespace eph {\nnamespace pluto_fit {\n\n")
+        f.write("/* Heliocentric x, y, z (AU, mean ecliptic J2000) per interval\n"
+                " * t[i]..t[i+1] (JD TT), ncoef Chebyshev coefficients each. */\n"
+                "struct Body { const double* t; const float* c;\n"
+                "              int nseg; int ncoef; };\n\n"
+                "extern const Body body;\n\n}  // namespace pluto_fit\n}  // namespace eph\n")
+    with open(os.path.join(ROOT, "data", "pluto_data.cpp"), "w") as f:
+        f.write(note + '#include "pluto_data.h"\n\nnamespace eph {\nnamespace pluto_fit {\n\n')
+        f.write("static const double kT[%d] = {\n" % len(t))
+        for i in range(0, len(t), 4):
+            f.write("    " + ", ".join(repr(float(x)) for x in t[i:i + 4]) + ",\n")
+        flat = coef.reshape(-1)
+        f.write("};\n\nstatic const float kC[%d] = {\n" % len(flat))
+        for i in range(0, len(flat), 6):
+            f.write("    " + ", ".join("%.9gf" % x for x in flat[i:i + 6]) + ",\n")
+        f.write("};\n\nconst Body body = {kT, kC, %d, %d};\n\n"
+                "}  // namespace pluto_fit\n}  // namespace eph\n"
+                % (len(t) - 1, coef.shape[2]))
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--kernel", default="de440s.bsp")
-    ap.add_argument("--K", type=int, default=300)
+    ap.add_argument("--kernel", default=os.path.join(ROOT, "de440.bsp"))
+    ap.add_argument("--start", type=int, default=1550)
+    ap.add_argument("--end", type=int, default=2650)
+    ap.add_argument("--degree", type=int, default=12)
+    ap.add_argument("--target", type=float, default=0.02, help="arcsec")
     args = ap.parse_args()
 
-    jds, lon, lat, r = sample(args.kernel, step_days=10.0)
-    T = (jds - 2451545.0) / 36525.0
-    triples, sinB, cosB = basis(T)
+    ts = load.timescale()
+    jd0, jd1 = float(ts.tt(args.start, 1, 1).tt), float(ts.tt(args.end, 1, 1).tt)
+    jds, X = sample(args.kernel, jd0, jd1, 10.0)
+    fit_asteroids.TARGET = args.target
+    t, coef = fit_asteroids.pack(jds, X, args.degree)
 
-    # Train on a 20-day grid, validate on the intervening points.
-    train = np.zeros(len(T), dtype=bool)
-    train[::2] = True
-    test = ~train
-    models = {}
-    names = {"lon": lon, "lat": lat, "rad": r}
-    scales = {"lon": ("\"", 3600.0), "lat": ("\"", 3600.0), "rad": (" AU", 1.0)}
-    for name, target in names.items():
-        a0, a1, terms = fit(target[train], T[train],
-                            triples, sinB[:, train], cosB[:, train], args.K)
-        models[name] = (a0, a1, terms)
-        tr = evaluate(T[train], a0, a1, terms, triples) - target[train]
-        te = evaluate(T[test], a0, a1, terms, triples) - target[test]
-        unit, sc = scales[name]
-        print(f"{name:4s} K={len(terms):3d} train max {np.abs(tr).max()*sc:9.4f}{unit} "
-              f"| test max {np.abs(te).max()*sc:9.4f}{unit} "
-              f"test rms {np.sqrt((te**2).mean())*sc:9.4f}{unit}")
-
-    emit(models, os.path.join(ROOT, "data", "pluto_data.h"),
-         os.path.join(ROOT, "data", "pluto_data.cpp"))
+    # Check every sample, with the float32 rounding.
+    err = 0.0
+    for i in range(len(t) - 1):
+        m = (jds >= t[i]) & (jds <= t[i + 1])
+        u = (2 * jds[m] - (t[i] + t[i + 1])) / (t[i + 1] - t[i])
+        rec = np.polynomial.chebyshev.chebvander(u, args.degree) @ \
+            coef[i].astype(np.float64).T
+        cr = np.linalg.norm(np.cross(rec, X[m]), axis=1) / (
+            np.linalg.norm(rec, axis=1) * np.linalg.norm(X[m], axis=1))
+        err = max(err, np.arcsin(np.clip(cr, 0, 1)).max() * 206264.806)
+    sys.stderr.write("Pluto: %d intervals, %.1f KB, max error %.4f\"\n"
+                     % (len(t) - 1, coef.size * 4 / 1e3, err))
+    emit(t, coef, args)
 
 
 if __name__ == "__main__":

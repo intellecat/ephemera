@@ -4,8 +4,8 @@
  * Run:    ./build/ephcliapp 2026 1 1 12      (year month day [UT hours])
  *
  * Data files come from $EPH_DATA (paths separated by ':'), or by default
- * data/eph-full.bin, data/eph-asteroids.bin and data/ephem.bin; a build
- * with embedded data needs none.
+ * data/eph-full.bin, data/eph-asteroids.bin and the DE440 tables
+ * data/de440/de440-YEAR.bin; a build with embedded data needs none.
  */
 #include <math.h>
 #include <stdio.h>
@@ -50,10 +50,14 @@ static int load_data(void) {
         }
         return n;
     }
-    const char* defaults[] = {"data/eph-full.bin", "data/eph-asteroids.bin",
-                              "data/ephem.bin"};
+    const char* defaults[] = {"data/eph-full.bin", "data/eph-asteroids.bin"};
     for (size_t i = 0; i < sizeof defaults / sizeof defaults[0]; ++i)
         if (eph_load_file(defaults[i]) == 0) n++;
+    for (int year = 1550; year < 2650; year += 100) {
+        char path[64];
+        snprintf(path, sizeof path, "data/de440/de440-%d.bin", year);
+        if (eph_load_file(path) == 0) n++;
+    }
     return n;
 }
 

@@ -44,7 +44,7 @@ check(builtIn.positionTT(Body.Moon, 2451545.0) !== null, 'after reload');
 // The table and asteroids load into the core as well.
 check(core.loadData(readFileSync(`${data}/eph-asteroids.bin`)), 'asteroids');
 check(core.positionTT(Body.Ceres, 2451545.0) !== null, 'Ceres');
-check(core.loadData(readFileSync(`${data}/ephem.bin`)), 'DE440 table');
+check(core.loadData(readFileSync(`${data}/de440/de440-2000.bin`)), 'DE440 table');
 
 if (fails === 0) console.log('All wasm checks passed.');
 process.exit(fails === 0 ? 0 : 1);

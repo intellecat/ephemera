@@ -114,10 +114,17 @@ int main(int argc, char** argv) {
     eph_unload_data();
     check(eph_position_tt(EPH_SUN, 2451545.0, &p) != 0, "unload");
 
-    /* The residual table alone covers 1850-2140 and nothing else. */
-    check(eph_load_file((dir + "ephem.bin").c_str()) == 0, "load ephem.bin");
+    /* A DE440 table alone covers its century and nothing else; several
+     * load side by side. */
+    const std::string t2000 = dir + "de440/de440-2000.bin";
+    const std::string t1900 = dir + "de440/de440-1900.bin";
+    check(eph_load_file(t2000.c_str()) == 0, "load de440-2000.bin");
     check(eph_position_tt(EPH_MOON, 2451545.0, &p) == 0, "table inside range");
-    check(eph_position_tt(EPH_MOON, 2300000.0, &p) != 0, "table outside range");
+    check(eph_position_tt(EPH_MOON, 2433282.5, &p) != 0, "table outside range");
+    check(eph_load_file(t1900.c_str()) == 0, "load de440-1900.bin");
+    check(eph_position_tt(EPH_MOON, 2433282.5, &p) == 0, "second table");
+    check(eph_position_tt(EPH_MOON, 2451545.0, &p) == 0, "first table still");
+    check(eph_position_tt(EPH_MOON, 2300000.0, &p) != 0, "outside both");
     eph_unload_data();
 
     /* Each series level within its accuracy (max over the reference,

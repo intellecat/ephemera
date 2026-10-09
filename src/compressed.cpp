@@ -9,11 +9,13 @@
 namespace eph {
 
 /*
- * Residual table: a section of data/ephem.bin (tools/pack_ephemeris.py).
+ * Residual tables: sections of the DE440 data files (data/de440/ files,
+ * written by tools/pack_ephemeris.py).  Several can be loaded, e.g. one per
+ * century; the most recently loaded table covering a date is used.
  *
- * For each body it stores DE440 minus a base series -- truncated VSOP87D /
- * ELP2000-82B series stored in the same file (role kBase), or nothing -- as Chebyshev polynomials over fixed-length
- * segments.  The residual is small and smooth, so its coefficients are
+ * For each body a table stores DE440 minus a base series -- truncated
+ * VSOP87D / ELP2000-82B series stored in the same file (role kBase), or
+ * nothing -- as Chebyshev polynomials over fixed-length segments.  The residual is small and smooth, so its coefficients are
  * quantized with one absolute step per body and packed with a fixed bit
  * width per coefficient.  Positions are in the IAU-1976 ecliptic of date,
  * AU; heliocentric, geocentric for the Moon.  The Earth's entry holds the
@@ -21,8 +23,10 @@ namespace eph {
  * the Moon).
  *
  * Layout (little-endian, offsets relative to the section):
- *   0  "EPHP", u32 version (3), u32 body count, f64 jd0, f64 jd1
- *  28  per body, 160 bytes:
+ *   0  "EPHP", u32 version (4), u32 body count, f64 jd0, f64 jd1,
+ *      u32 CRC-32 of the base series sections it was made against
+ *      (zlib, chained over their payloads in file order), u32 0
+ *  36  per body, 160 bytes:
  *        u32 body, u32 base (0 none, 1 series), u32 nseg, u32 ncoef,
  *        f64 threshold the base was truncated at (rad, informative),
  *        f64 start, f64 segment length (days),
@@ -35,7 +39,7 @@ namespace eph {
 namespace {
 
 constexpr int kMaxCoef = 32;
-constexpr long kHeader = 28, kRecord = 160;
+constexpr long kHeader = 36, kRecord = 160;
 
 struct Entry {
     int body;
@@ -47,10 +51,14 @@ struct Entry {
     unsigned char bits[3][kMaxCoef];
 };
 
-const unsigned char* g_table = nullptr;
-Entry g_entries[16];
-int g_nentries = 0;
-double g_jd0 = 0.0, g_jd1 = 0.0;
+struct Table {
+    double jd0, jd1; /* advertised range */
+    Entry entries[16];
+    int n;
+};
+
+Table g_tables[kMaxTables];
+int g_ntables = 0;
 
 template <typename T>
 T load_at(const unsigned char* p, long off) {
@@ -85,24 +93,32 @@ int64_t read_bits(const unsigned char* p, int64_t pos, int width) {
     return (int64_t)(w << shift) >> shift;
 }
 
-const Entry* find_entry(int body) {
-    for (int i = 0; i < g_nentries; ++i)
-        if (g_entries[i].body == body) return &g_entries[i];
+/* The entry for body in the most recent table covering jd. */
+const Entry* find_entry(int body, double jd) {
+    for (int t = g_ntables - 1; t >= 0; --t) {
+        const Table& tb = g_tables[t];
+        if (!(jd >= tb.jd0 && jd <= tb.jd1)) continue;
+        for (int i = 0; i < tb.n; ++i)
+            if (tb.entries[i].body == body) return &tb.entries[i];
+    }
     return nullptr;
 }
 
-bool parse(const unsigned char* t, uint64_t size) {
+bool parse(const unsigned char* t, uint64_t size, Table& tb) {
     if (size < kHeader || std::memcmp(t, "EPHP", 4) != 0) return false;
     const uint32_t version = load_at<uint32_t>(t, 4);
     const uint32_t n = load_at<uint32_t>(t, 8);
-    if (version != 3 || n > 16 || (uint64_t)(kHeader + n * kRecord) > size)
+    if (version != 4 || n > 16 || (uint64_t)(kHeader + n * kRecord) > size)
         return false;
-    g_jd0 = load_at<double>(t, 12);
-    g_jd1 = load_at<double>(t, 20);
-    const SeriesSet& base = data().set[kBase];
+    tb.jd0 = load_at<double>(t, 12);
+    tb.jd1 = load_at<double>(t, 20);
+    if (!(tb.jd1 > tb.jd0)) return false;
+    const Data& d = data();
+    const SeriesSet& base = d.set[kBase];
+    const bool base_matches = load_at<uint32_t>(t, 28) == d.base_crc;
     for (uint32_t i = 0; i < n; ++i) {
         const long r = kHeader + i * kRecord;
-        Entry& e = g_entries[i];
+        Entry& e = tb.entries[i];
         e.body = load_at<uint32_t>(t, r);
         e.base = load_at<uint32_t>(t, r + 4) != 0;
         e.nseg = load_at<uint32_t>(t, r + 8);
@@ -126,35 +142,40 @@ bool parse(const unsigned char* t, uint64_t size) {
             off + ((uint64_t)e.nseg * e.segbits + 7) / 8 + 8 > size)
             return false;
         e.data = t + off;
-        /* The base series must be in the loaded data. */
-        if (e.base && !(e.body == EPH_MOON ? base.elp_ok
-                        : e.body <= EPH_NEPTUNE && e.body != EPH_EARTH
-                            ? base.vsop_ok[e.body]
-                            : false))
+        /* The base series must be loaded, and be the ones the residuals
+         * were made against. */
+        if (e.base && !(base_matches &&
+                        (e.body == EPH_MOON ? base.elp_ok
+                         : e.body <= EPH_NEPTUNE && e.body != EPH_EARTH
+                             ? base.vsop_ok[e.body]
+                             : false)))
+            return false;
+        /* The segments must cover the advertised range. */
+        if (!(e.start <= tb.jd0 && e.start + e.nseg * e.length >= tb.jd1))
             return false;
     }
-    g_nentries = n;
+    tb.n = n;
     return true;
 }
 
 }  // namespace
 
-bool table_attach(const unsigned char* p, unsigned long size) {
-    g_table = nullptr;
-    g_nentries = 0;
-    if (!p) return true;
-    if (!parse(p, size)) {
-        g_nentries = 0;
-        return false;
+bool tables_attach() {
+    const Data& d = data();
+    g_ntables = 0;
+    for (int i = 0; i < d.ntables; ++i) {
+        if (!parse(d.tables[i].p, d.tables[i].size, g_tables[i])) {
+            g_ntables = 0;
+            return false;
+        }
     }
-    g_table = p;
+    g_ntables = d.ntables;
     return true;
 }
 
 bool compressed_residual(int body, double jd, Vec3& p, Vec3& v, Vec3& a,
                          bool& base) {
-    if (!g_table) return false;
-    const Entry* e = find_entry(body);
+    const Entry* e = find_entry(body, jd);
     if (!e) return false;
     const double x = (jd - e->start) / e->length;
     if (!(x >= 0.0 && x <= e->nseg)) return false;
@@ -185,7 +206,9 @@ bool compressed_residual(int body, double jd, Vec3& p, Vec3& v, Vec3& a,
 }
 
 bool compressed_covers(double jd) {
-    return g_table && jd >= g_jd0 && jd <= g_jd1;
+    for (int t = 0; t < g_ntables; ++t)
+        if (jd >= g_tables[t].jd0 && jd <= g_tables[t].jd1) return true;
+    return false;
 }
 
 }  // namespace eph

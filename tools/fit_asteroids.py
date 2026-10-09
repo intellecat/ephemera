@@ -2,7 +2,7 @@
 """Fit compact Chebyshev series for the four largest asteroids.
 
 Fetches heliocentric ecliptic-J2000 positions from JPL Horizons (public
-data) over 1850-2140 and packs them as adaptive-interval Chebyshev
+data) over 1600-2500 (the span Horizons covers for them) and packs them as adaptive-interval Chebyshev
 polynomials with float32 coefficients, emitted to
 data/asteroid_data.{h,cpp}.
 
@@ -31,9 +31,9 @@ ASTEROIDS = [
     ("VESTA", "4;"),
 ]
 
-START = "1850-01-01"
-STOP = "2140-01-01"
-STEP = "30 d"
+START = "1600-01-01"
+STOP = "2500-01-01"
+STEP = "10 d"
 DEG = 12
 TARGET = 0.01  # arcsec
 
@@ -87,10 +87,13 @@ def pack(jds, X, N):
     i = 0
     while i < n - 1:
         if i + minM - 1 > n - 1:
+            # Too few samples left: end the previous segment earlier so the
+            # last one has the minimum length (both stay within TARGET).
             if segs:
                 pi, _, _ = segs.pop()
-                _, C = fit_err(X[pi:n], N)
-                segs.append((pi, n - 1, C))
+                j = n - minM
+                segs.append((pi, j, fit_err(X[pi:j + 1], N)[1]))
+                segs.append((j, n - 1, fit_err(X[j:n], N)[1]))
             break
         lo, hi = i + minM - 1, min(n - 1, i + maxM - 1)
         best, bestC = None, None

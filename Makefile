@@ -26,6 +26,9 @@ LIB     = $(BUILD)/libephemeris.a
 
 .PHONY: all test tools data wasm wasm-test clean
 
+# The DE440 tables covering the test reference (1850-2140).
+DE440_1800_2200 = $(foreach y,1800 1900 2000 2100,data/de440/de440-$(y).bin)
+
 TESTS = $(BUILD)/test_ephemeris $(BUILD)/test_compressed $(BUILD)/test_topocentric \
         $(BUILD)/test_houses $(BUILD)/test_asteroids $(BUILD)/test_data
 
@@ -54,7 +57,7 @@ $(BUILD)/test_ephemeris: tests/test_ephemeris.cpp tests/reference_data.h $(LIB)
 
 test: $(TESTS)
 	$(BUILD)/test_ephemeris data/eph-full.bin
-	$(BUILD)/test_compressed data/ephem.bin
+	$(BUILD)/test_compressed $(DE440_1800_2200)
 	$(BUILD)/test_topocentric data/eph-full.bin
 	$(BUILD)/test_houses
 	$(BUILD)/test_asteroids data/eph-full.bin data/eph-asteroids.bin
@@ -77,7 +80,7 @@ $(BUILD)/test_data: tests/test_data.cpp tests/reference_data.h $(LIB)
 
 # Development tools and the series data files (see README).
 SERIES_SRC = data/vsop87d_data.cpp data/elp_data.cpp data/pluto_data.cpp \
-             data/corr_data.cpp data/corr_moon.cpp data/asteroid_data.cpp
+             data/corr_data.cpp data/asteroid_data.cpp
 
 tools: $(BUILD)/pack_series
 
@@ -86,9 +89,9 @@ $(BUILD)/pack_series: tools/pack_series.cpp $(SERIES_SRC)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $^ -o $@
 
 # Truncation thresholds (radians) per planet, Mercury..Neptune, and for the
-# Moon, chosen so each level stays within its accuracy over 1850-2140.
-LEVEL_01AS = 1e-8,1e-8,3e-9,3e-9,1e-8,3e-9,1e-8,1e-8 2e-8
-LEVEL_1AS  = 3e-7,1e-7,3e-8,3e-8,3e-7,1e-7,1e-7,3e-7 5e-8
+# Moon, chosen so each level stays within its accuracy over 1550-2650.
+LEVEL_01AS = 3e-8,1e-8,3e-9,1e-9,1e-8,3e-9,1e-8,1e-8 1e-8
+LEVEL_1AS  = 3e-7,1e-7,3e-8,3e-8,1e-7,1e-7,1e-7,3e-7 5e-8
 
 data: $(BUILD)/pack_series
 	$(BUILD)/pack_series series data/eph-full.bin 0 0

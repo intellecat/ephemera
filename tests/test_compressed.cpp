@@ -1,5 +1,5 @@
-/* Validation of the DE440 residual table (data/ephem.bin) on its own.
- * Usage: test_compressed <path to ephem.bin> */
+/* Validation of the DE440 tables (data/de440/) on their own.
+ * Usage: test_compressed <DE440 table files covering 1850-2140> */
 #include <cmath>
 #include <cstdio>
 
@@ -15,14 +15,15 @@ static double wrap180(double d) {
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        std::printf("usage: %s <ephem.bin>\n", argv[0]);
+        std::printf("usage: %s <de440-YEAR.bin>...\n", argv[0]);
         return 1;
     }
-    /* The table is self-contained: no series file is loaded. */
-    if (eph_load_file(argv[1]) != 0 || !eph_compressed_available()) {
-        std::printf("FAIL: could not load %s\n", argv[1]);
-        return 1;
-    }
+    /* The tables are self-contained: no series file is loaded. */
+    for (int i = 1; i < argc; ++i)
+        if (eph_load_file(argv[i]) != 0) {
+            std::printf("FAIL: could not load %s\n", argv[i]);
+            return 1;
+        }
 
     double gmax[EPH_BODY_COUNT] = {0}, amax[EPH_BODY_COUNT] = {0};
     for (const RefSample& r : kRefSamples) {

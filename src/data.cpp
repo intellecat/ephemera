@@ -22,13 +22,11 @@ static_assert(sizeof(elp::MainTerm) == 40 && offsetof(elp::MainTerm, amp) == 32 
 static_assert(sizeof(elp::PertTerm) == 16 && offsetof(elp::PertTerm, amp) == 8 &&
                   offsetof(elp::PertTerm, packed) == 12,
               "elp::PertTerm layout");
-static_assert(sizeof(pluto_fit::Term) == 32 && offsetof(pluto_fit::Term, k) == 8 &&
-                  offsetof(pluto_fit::Term, s) == 16,
-              "pluto_fit::Term layout");
+static_assert(sizeof(corr::Harmonic) == 16, "corr::Harmonic layout");
 
 namespace {
 
-constexpr int kMaxFiles = 8;
+constexpr int kMaxFiles = 32;
 
 struct File {
     const unsigned char* p;
@@ -42,8 +40,8 @@ int g_nfiles = 0;
 Data g_data;
 int g_generation = 1;
 
-/* CRC-32 (IEEE, as zlib.crc32). */
-uint32_t crc32(const unsigned char* p, uint64_t n) {
+/* CRC-32 (IEEE), continuing from crc as zlib.crc32(data, crc) does. */
+uint32_t crc32(const unsigned char* p, uint64_t n, uint32_t crc = 0) {
     static uint32_t table[256];
     if (!table[1])
         for (uint32_t i = 0; i < 256; ++i) {
@@ -51,7 +49,7 @@ uint32_t crc32(const unsigned char* p, uint64_t n) {
             for (int k = 0; k < 8; ++k) c = (c & 1) ? 0xEDB88320u ^ (c >> 1) : c >> 1;
             table[i] = c;
         }
-    uint32_t c = 0xFFFFFFFFu;
+    uint32_t c = crc ^ 0xFFFFFFFFu;
     for (uint64_t i = 0; i < n; ++i) c = table[(c ^ p[i]) & 0xFF] ^ (c >> 8);
     return c ^ 0xFFFFFFFFu;
 }
@@ -133,51 +131,42 @@ bool parse_elp(Reader r, SeriesSet& s) {
     return true;
 }
 
-bool parse_pluto(Reader r, Data& d) {
-    uint32_t count[3];
-    for (int m = 0; m < 3; ++m) {
-        uint32_t pad;
-        if (!r.read(d.pluto[m].a0) || !r.read(d.pluto[m].a1) ||
-            !r.read(count[m]) || !r.read(pad))
-            return false;
-    }
-    for (int m = 0; m < 3; ++m) {
-        if (!r.array(count[m], &d.pluto[m].terms)) return false;
-        d.pluto[m].count = (int)count[m];
-    }
-    d.pluto_ok = true;
-    return true;
-}
-
-bool parse_correction(Reader r, Data& d, int body) {
-    corr::Series& s = d.corr[body];
-    uint32_t n, pad;
-    if (!r.read(s.tmin) || !r.read(s.tmax) || !r.read(n) || !r.read(pad) ||
-        n < 1 || !r.array(n, &s.lon) || !r.array(n, &s.lat) ||
-        !r.array(n, &s.rad) || !(s.tmax > s.tmin))
-        return false;
-    s.n = (int)n;
-    d.corr_ok[body] = true;
-    return true;
-}
-
-bool parse_asteroid(Reader r, Data& d, int idx) {
-    ast::Body& b = d.asteroid[idx];
+/* Chebyshev intervals (asteroids, Pluto): u32 nseg, ncoef; f64 t[nseg+1];
+ * f32 c[nseg][3][ncoef]. */
+template <typename Body>
+bool parse_chebyshev(Reader r, Body& b) {
     uint32_t nseg, ncoef;
     if (!r.read(nseg) || !r.read(ncoef) || nseg < 1 || ncoef < 1 ||
         ncoef > 64 || !r.array(nseg + 1ull, &b.t) ||
         !r.array(nseg * 3ull * ncoef, &b.c))
         return false;
+    for (uint32_t i = 0; i < nseg; ++i)
+        if (!(b.t[i + 1] > b.t[i])) return false;
     b.nseg = (int)nseg;
     b.ncoef = (int)ncoef;
-    d.asteroid_ok[idx] = true;
+    return true;
+}
+
+bool parse_correction(Reader r, Data& d, int body) {
+    corr::Series& s = d.corr[body];
+    uint32_t n0, nh, nharm, pad;
+    if (!r.read(s.tmin) || !r.read(s.tmax) || !r.read(n0) || !r.read(nh) ||
+        !r.read(nharm) || !r.read(pad) || n0 < 1 || n0 > 1000 || nh > 100 ||
+        nharm > 100 || (nharm > 0 && nh < 1) || !(s.tmax > s.tmin) ||
+        !r.array(nharm, &s.harm) ||
+        !r.array(3ull * (n0 + 2ull * nharm * nh), &s.coef))
+        return false;
+    s.n0 = (int)n0;
+    s.nh = (int)nh;
+    s.nharm = (int)nharm;
+    d.corr_ok[body] = true;
     return true;
 }
 
 /* Apply every section of a file to d (later files override earlier
  * ones).  False if the file is malformed. */
 bool apply(const unsigned char* p, uint64_t size, Data& d, bool& has_table) {
-    if (size < 16 || std::memcmp(p, "EPHD", 4) != 0 || get<uint32_t>(p, 4) != 1 ||
+    if (size < 16 || std::memcmp(p, "EPHD", 4) != 0 || get<uint32_t>(p, 4) != 2 ||
         get<uint32_t>(p, 12) != crc32(p + 16, size - 16))
         return false;
     const uint32_t n = get<uint32_t>(p, 8);
@@ -194,22 +183,30 @@ bool apply(const unsigned char* p, uint64_t size, Data& d, bool& has_table) {
         switch (type) {
             case kSectionVsop:
                 ok = role <= kBase && sub < 8 && parse_vsop(r, d.set[role], sub);
+                if (ok && role == kBase) {
+                    d.base_section[sub] = p + off;
+                    d.base_size[sub] = len;
+                }
                 break;
             case kSectionElp:
                 ok = role <= kBase && sub == 0 && parse_elp(r, d.set[role]);
+                if (ok && role == kBase) {
+                    d.base_section[8] = p + off;
+                    d.base_size[8] = len;
+                }
                 break;
             case kSectionPluto:
-                ok = parse_pluto(r, d);
+                ok = d.pluto_ok = parse_chebyshev(r, d.pluto);
                 break;
             case kSectionCorrection:
                 ok = (id < 8 || id == 10) && parse_correction(r, d, id);
                 break;
             case kSectionAsteroid:
-                ok = id < 4 && parse_asteroid(r, d, id);
+                ok = id < 4 && (d.asteroid_ok[id] = parse_chebyshev(r, d.asteroid[id]));
                 break;
             case kSectionTable:
-                d.table = p + off;
-                d.table_size = len;
+                ok = d.ntables < kMaxTables;
+                if (ok) d.tables[d.ntables++] = {p + off, len};
                 has_table = true;
                 break;
             default: /* info and unknown sections are skipped */
@@ -229,7 +226,12 @@ bool rebuild() {
         apply(g_files[i].p, g_files[i].size, g_data, t);
     }
     ++g_generation;
-    return table_attach(g_data.table, g_data.table_size);
+    uint32_t crc = 0;
+    for (int i = 0; i < 9; ++i)
+        if (g_data.base_section[i])
+            crc = crc32(g_data.base_section[i], g_data.base_size[i], crc);
+    g_data.base_crc = crc;
+    return tables_attach();
 }
 
 void remove_file(int i) {
@@ -336,5 +338,5 @@ extern "C" void eph_unload_compressed(void) {
 }
 
 extern "C" int eph_compressed_available(void) {
-    return g_data.table ? 1 : 0;
+    return g_data.ntables > 0 ? 1 : 0;
 }

@@ -1,13 +1,13 @@
 /* Pack the series coefficients (the data/ coefficient tables) into a data file.
  *
- *   pack_series series    OUT VSOP ELP   theory: VSOP87D, ELP2000-82B, the
- *                                         Pluto fit and the DE440 corrections
+ *   pack_series series    OUT VSOP ELP   theory: VSOP87D, ELP2000-82B, Pluto
+ *                                         and the DE440 corrections
  *   pack_series base      OUT VSOP ELP   base series of a residual table
  *   pack_series asteroids OUT            Ceres, Pallas, Juno, Vesta
  *
  * VSOP is one threshold (radians) or eight, comma-separated, for Mercury..
  * Neptune; ELP is one threshold.  A term is kept when its amplitude, times
- * T^alpha at the 1850/2140 ends of the fitted range, reaches the threshold
+ * T^alpha at the 1550/2650 ends of the fitted range, reaches the threshold
  * (scaled by the mean distance for R); 0 keeps everything and a negative
  * threshold leaves the body out.  Built by the Makefile / CMake as a
  * development tool; the format is described in src/data.h.  Assumes a
@@ -31,7 +31,7 @@ using namespace eph;
 
 namespace {
 
-const double kTmaxDays = 51545.0; /* J2000 - 1850 */
+const double kTmaxDays = 237400.0; /* 2650 - J2000: the fitted range is 1550-2650 */
 const double kPi = 3.14159265358979323846;
 
 struct Section {
@@ -123,18 +123,13 @@ void add_elp(double thr, uint32_t role) {
     g_sections.push_back(std::move(s));
 }
 
-void add_pluto() {
-    const pluto_fit::Model* m[3] = {&pluto_fit::lon, &pluto_fit::lat,
-                                    &pluto_fit::rad};
-    Section s{kSectionPluto, 0, {}};
-    for (const pluto_fit::Model* x : m) {
-        s.put(x->a0);
-        s.put(x->a1);
-        s.put((uint32_t)x->count);
-        s.put(uint32_t(0));
-    }
-    for (const pluto_fit::Model* x : m)
-        s.put_bytes(x->terms, x->count * sizeof(pluto_fit::Term));
+template <typename Body>
+void add_chebyshev(uint32_t type, uint32_t id, const Body& b) {
+    Section s{type, id, {}};
+    s.put((uint32_t)b.nseg);
+    s.put((uint32_t)b.ncoef);
+    s.put_bytes(b.t, (b.nseg + 1) * sizeof(double));
+    s.put_bytes(b.c, (size_t)b.nseg * 3 * b.ncoef * sizeof(float));
     g_sections.push_back(std::move(s));
 }
 
@@ -142,24 +137,17 @@ void add_correction(uint32_t body, const corr::Series& c) {
     Section s{kSectionCorrection, body, {}};
     s.put(c.tmin);
     s.put(c.tmax);
-    s.put((uint32_t)c.n);
+    s.put((uint32_t)c.n0);
+    s.put((uint32_t)c.nh);
+    s.put((uint32_t)c.nharm);
     s.put(uint32_t(0));
-    s.put_bytes(c.lon, c.n * sizeof(double));
-    s.put_bytes(c.lat, c.n * sizeof(double));
-    s.put_bytes(c.rad, c.n * sizeof(double));
+    s.put_bytes(c.harm, c.nharm * sizeof(corr::Harmonic));
+    s.put_bytes(c.coef, 3 * (c.n0 + 2 * c.nharm * c.nh) * sizeof(float));
     g_sections.push_back(std::move(s));
 }
 
 void add_asteroids() {
-    for (uint32_t i = 0; i < 4; ++i) {
-        const ast::Body& b = ast::bodies[i];
-        Section s{kSectionAsteroid, i, {}};
-        s.put((uint32_t)b.nseg);
-        s.put((uint32_t)b.ncoef);
-        s.put_bytes(b.t, (b.nseg + 1) * sizeof(double));
-        s.put_bytes(b.c, (size_t)b.nseg * 3 * b.ncoef * sizeof(float));
-        g_sections.push_back(std::move(s));
-    }
+    for (uint32_t i = 0; i < 4; ++i) add_chebyshev(kSectionAsteroid, i, ast::bodies[i]);
 }
 
 void add_info(const std::string& text) {
@@ -177,7 +165,7 @@ bool write(const char* path) {
         for (int i = 0; i < 8; ++i) out.push_back((v >> (8 * i)) & 0xFF);
     };
     out.insert(out.end(), {'E', 'P', 'H', 'D'});
-    put32(1);
+    put32(2);
     put32((uint32_t)g_sections.size());
     put32(0);
     uint64_t off = 16 + 24 * g_sections.size();
@@ -245,7 +233,7 @@ int main(int argc, char** argv) {
             if (vsop[p] >= 0.0) add_vsop(p, vsop[p], theory ? kTheory : kBase);
         if (elp >= 0.0) add_elp(elp, theory ? kTheory : kBase);
         if (theory) {
-            add_pluto();
+            add_chebyshev(kSectionPluto, 0, pluto_fit::body);
             const corr::Series* c[8] = {&corr::mercury, &corr::venus,
                                         &corr::earth,   &corr::mars,
                                         &corr::jupiter, &corr::saturn,

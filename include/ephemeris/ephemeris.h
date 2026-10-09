@@ -155,13 +155,13 @@ const char* eph_body_name(eph_body body);
 
 /* ---- data files ------------------------------------------------------ *
  * Positions need series data from a file made by tools/pack_series or
- * tools/pack_ephemeris.py.  Pick one series level:
- *   data/eph-1as.bin    ~1"   (truncated series)
- *   data/eph-01as.bin   ~0.1" (truncated series)
- *   data/eph-full.bin   the full series (~0.05")
- * and optionally add data/eph-asteroids.bin (Ceres, Pallas, Juno, Vesta)
- * and/or data/ephem.bin (DE440 residual table, ~0.001" over 1850-2140,
- * self-contained: it works without a series file inside its range).
+ * tools/pack_ephemeris.py.  Pick one series level (fitted over 1550-2650):
+ *   data/eph-1as.bin    ~0.5" (truncated series)
+ *   data/eph-01as.bin   ~0.15" (truncated series)
+ *   data/eph-full.bin   the full series (~0.1")
+ * and optionally add data/eph-asteroids.bin (Ceres, Pallas, Juno, Vesta,
+ * 1600-2500) and/or DE440 tables data/de440/de440-YEAR.bin (one century
+ * each, ~0.002"; self-contained: they work without a series file).
  * Several files can be loaded; a later file overrides what an earlier one
  * provides.  Position functions return -1 for bodies with no data loaded.
  * Loading is not thread-safe: load before computing from other threads. */

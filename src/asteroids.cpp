@@ -18,29 +18,31 @@ double chebyshev(const float* c, int n, double u) {
 
 }  // namespace
 
-bool asteroid_heliocentric(int idx, double jd_tt, Vec3& v) {
-    if (idx < 0 || idx > 3 || !data().asteroid_ok[idx]) return false;
-    const ast::Body& b = data().asteroid[idx];
-    if (jd_tt < b.t[0] || jd_tt > b.t[b.nseg]) return false;
+bool chebyshev_body(const double* t, const float* c, int nseg, int ncoef,
+                    double jd_tt, Vec3& v) {
+    if (jd_tt < t[0] || jd_tt > t[nseg]) return false;
 
-    int lo = 0, hi = b.nseg - 1;
+    int lo = 0, hi = nseg - 1;
     while (lo < hi) {
         const int mid = (lo + hi + 1) / 2;
-        if (jd_tt < b.t[mid])
+        if (jd_tt < t[mid])
             hi = mid - 1;
         else
             lo = mid;
     }
-    const double t0 = b.t[lo], t1 = b.t[lo + 1];
+    const double t0 = t[lo], t1 = t[lo + 1];
     const double u = (2.0 * jd_tt - (t0 + t1)) / (t1 - t0);
 
     double out[3];
-    for (int c = 0; c < 3; ++c) {
-        const float* q = b.c + (lo * 3 + c) * b.ncoef;
-        out[c] = chebyshev(q, b.ncoef, u);
-    }
+    for (int k = 0; k < 3; ++k) out[k] = chebyshev(c + (lo * 3 + k) * ncoef, ncoef, u);
     v = {out[0], out[1], out[2]};
     return true;
+}
+
+bool asteroid_heliocentric(int idx, double jd_tt, Vec3& v) {
+    if (idx < 0 || idx > 3 || !data().asteroid_ok[idx]) return false;
+    const ast::Body& b = data().asteroid[idx];
+    return chebyshev_body(b.t, b.c, b.nseg, b.ncoef, jd_tt, v);
 }
 
 }  // namespace eph

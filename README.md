@@ -4,8 +4,9 @@ A small, dependency-free C/C++ library that computes positions of the Sun,
 Moon, Pluto, the eight planets and the four largest asteroids (Ceres,
 Pallas, Juno, Vesta) from analytical series.  No JPL kernel and no SPICE:
 a ~44 KB core (as WebAssembly; ~20 KB brotli) loads one small data file
-with the series coefficients at the accuracy you need -- from 115 KB for
-~1" to a 865 KB DE440 table for ~0.001" (see [Data files](#data-files)).
+with the series coefficients at the accuracy you need -- from 145 KB for
+~0.5" to DE440 tables at ~320 KB per century for ~0.002", over 1550–2650
+(see [Data files](#data-files)).
 
 Internally it evaluates:
 
@@ -16,10 +17,10 @@ Internally it evaluates:
   Moon; ~0.1" near J2000, growing to a few arcseconds at the range edges
   because its constants are fitted to DE200/LE200.
 * Compact Chebyshev series for Ceres/Pallas/Juno/Vesta fitted to JPL
-  Horizons (public data), heliocentric fit error <0.02" over 1850-2140.
-  Apparent positions from UT match Horizons to ~0.04".
-* A compact Poisson series for Pluto fitted to JPL DE440s over 1850-2140,
-  and small Chebyshev DE440 corrections for Uranus and Neptune.
+  Horizons (public data), heliocentric fit error <0.03" over 1600-2500
+  (Horizons' span for them).  Apparent positions match Horizons to ~0.02".
+* Chebyshev intervals for Pluto fitted to JPL DE440 (0.03" over 1550-2650),
+  and DE440 corrections for VSOP87D and ELP2000-82B over 1550-2650.
 * **IAU 2000B** nutation (77 terms), a rotation from the series' native
   IAU-1976 frame to the **IAU-2006** ecliptic of date (the frame Swiss
   Ephemeris and JPL Horizons use), and a yearly ΔT table for UT↔TT
@@ -32,50 +33,53 @@ Angles are radians, distances are AU, and time is Julian Date (TT or UT).
 ## Accuracy
 
 Maximum error in apparent geocentric ecliptic longitude/latitude against
-JPL DE440s on 3000 random dates in 1850–2140, for each data file.  The
-reference is DE440s via Skyfield in the IAU-2006/2000A ecliptic of date
--- the frame Swiss Ephemeris and Horizons report:
+JPL DE440 on 3000 random dates in **1550–2650**, for each data file
+(`tools/check_accuracy.py`).  The reference is DE440 via Skyfield in the
+IAU-2006/2000A ecliptic of date -- the frame Swiss Ephemeris and Horizons
+report:
 
-| Body    | full series | 0.1″ file | 1″ file | DE440 table | notes                         |
-|---------|-------------|-----------|---------|-------------|-------------------------------|
-| Mercury | 0.05″       | 0.06″     | 0.42″   | 0.004″      | VSOP87 + DE440 correction     |
-| Venus   | 0.08″       | 0.11″     | 0.68″   | 0.004″      | VSOP87 + DE440 correction     |
-| Mars    | 0.11″       | 0.14″     | 0.52″   | 0.004″      | VSOP87 + DE440 correction     |
-| Jupiter | 0.14″       | 0.13″     | 0.75″   | 0.004″      | VSOP87 + DE440 correction     |
-| Saturn  | 0.03″       | 0.03″     | 0.44″   | 0.004″      | VSOP87 + DE440 correction     |
-| Uranus  | 0.02″       | 0.04″     | 0.33″   | 0.004″      | VSOP87 + DE440 correction     |
-| Neptune | 0.01″       | 0.03″     | 0.33″   | 0.004″      | VSOP87 + DE440 correction     |
-| Pluto   | 0.06″       | 0.06″     | 0.07″   | 0.004″      | Poisson fit to DE440s         |
-| Sun     | 0.05″       | 0.06″     | 0.10″   | 0.004″      | VSOP87 + DE440 correction     |
-| Moon    | 0.45″       | 0.51″     | 0.68″   | 0.003″      | ELP2000-82B + DE440 corr      |
+| Body    | full series | 0.1″ file | 1″ file | DE440 tables |
+|---------|-------------|-----------|---------|--------------|
+| Mercury | 0.04″       | 0.08″     | 0.48″   | 0.04″        |
+| Venus   | 0.05″       | 0.10″     | 0.58″   | 0.03″        |
+| Mars    | 0.11″       | 0.13″     | 0.55″   | 0.03″        |
+| Jupiter | 0.09″       | 0.10″     | 0.32″   | 0.03″        |
+| Saturn  | 0.04″       | 0.05″     | 0.49″   | 0.03″        |
+| Uranus  | 0.04″       | 0.07″     | 0.46″   | 0.03″        |
+| Neptune | 0.03″       | 0.04″     | 0.47″   | 0.03″        |
+| Pluto   | 0.04″       | 0.04″     | 0.04″   | 0.03″        |
+| Sun     | 0.03″       | 0.04″     | 0.11″   | 0.03″        |
+| Moon    | 0.12″       | 0.17″     | 0.47″   | 0.03″        |
+| median  | 0.004–0.03″ | 0.005–0.04″ | 0.01–0.11″ | 0.002″   |
 
-The Moon's maxima are at the 1850/2140 ends; it is ~0.05" typical with
-the full series.  Medians are 0.003–0.05" with the full series and
-**~0.001"** with the DE440 table, on par with Swiss Ephemeris' .se1 files
-(0.0005–0.0007" median, 0.002" for the Moon).  The 1″ file is comparable
-to Swiss Ephemeris' Moshier mode in size and better for the Moon and the
-outer planets (Moshier: Moon 3.2", Neptune 2.1", Pluto 2.5" max), but it
-is tuned to 1850–2140 while Moshier covers millennia.
+Within 1850–2140 the errors are smaller still: the DE440 tables reach
+0.004" max / ~0.001" median there, on par with Swiss Ephemeris' .se1
+files (0.0005–0.0007" median, 0.002" for the Moon); towards 1550 and 2650
+their maximum grows to ~0.03" with the nutation model (below).  The 1″
+file is comparable to Swiss Ephemeris' Moshier mode in size and better
+for the Moon and the outer planets (Moshier, 1850–2140: Moon 3.2",
+Neptune 2.1", Pluto 2.5" max).  Outside 1550–2650 positions come from the
+series alone and degrade gradually (Pluto has no data there).
 
 ### Where the remaining error comes from
 
-* **Uranus/Neptune.**  VSOP87 is fitted to DE200 and drifts from DE440 by
-  ~1-2" over 1850-2140.  This is absorbed by a small Chebyshev correction
-  (`tools/fit_correction.py`), so both are now ~0.01-0.05".  The
-  correction is clamped to its 1850-2140 fit window; outside it freezes at
-  the boundary value.
-* **Moon.**  ELP2000-82B is fitted to DE200/LE200 and drifts ~1.2"/
-  century from DE440; this is absorbed by a Chebyshev correction
-  (`tools/fit_moon_correction.py`), leaving ~0.2" at the 1850/2140 edges
-  and ~0.01" near J2000.  The Moon's apparent place applies light-time
-  (~0.7") and nutation but no annual aberration, matching the reference to
-  ~0.001".
+* **Planets and Moon.**  VSOP87D and ELP2000-82B are fitted to DE200/
+  LE200.  Against DE440 they drift slowly (Uranus/Neptune by ~10" over
+  1550–2650) and, because their orbital elements' rates differ slightly,
+  periodically with growing amplitude (the Moon by 49", Mars by 2.6").
+  `tools/fit_correction.py` fits both: a Chebyshev polynomial in time plus
+  slowly varying amplitudes of each body's fundamental arguments
+  (harmonics of a planet's mean longitude; 20 combinations of the Moon's
+  Delaunay arguments).  The corrections leave 0.01–0.07" heliocentric and
+  0.16" for the Moon, and are clamped to 1550–2650.  The Moon's apparent
+  place applies light-time (~0.7") and nutation but no annual aberration,
+  matching the reference to ~0.001".
 * **Frame.**  The series are evaluated in their native IAU-1976 frame and
   rotated to the IAU-2006 ecliptic of date (`frame_1976_to_2006`, checked
   against ERFA to <0.001 mas).  Without it longitudes drift by 0.3"/century
   and the ecliptic is tilted by 0.04".  Nutation is IAU 2000B, within
-  ~1 mas of IAU 2000A near J2000 and ~3 mas at the 1850/2140 ends (IAU
-  1980 was off by up to 18 mas).
+  ~1 mas of IAU 2000A near J2000, ~3 mas at 1850/2140 and ~30 mas at
+  1550/2650 (IAU 1980 was off by up to 18 mas over 1850–2140).
 * **Apparent place.**  Iterated light-time, relativistic light deflection
   by the Sun (finite-distance form: up to ~1.7" for a body behind the Sun,
   ~0 for one in front of it), first-order annual aberration and nutation.
@@ -91,8 +95,8 @@ and acceleration together); light-time uses that expansion instead of
 re-evaluating, speeds come from the same velocities, and the Earth is
 cached per date and thread.  A full chart (14 bodies with speeds, Asc/MC,
 houses) takes, on one core of a 2024 desktop CPU, ~1.4 ms with the full
-series, ~0.43 ms with the 0.1″ file, ~0.22 ms with the 1″ file and
-~0.12 ms with the DE440 table.
+series, ~0.6 ms with the 0.1″ file, ~0.22 ms with the 1″ file and
+~0.13 ms with the DE440 tables.
 
 ## Building
 
@@ -114,8 +118,9 @@ make -j && make test
 
 Link against `libephemeris.a` and include `ephemeris/ephemeris.h`.  The
 public API is plain C, so it can be used from C or C++.  The CLI loads
-`data/eph-full.bin`, `data/eph-asteroids.bin` and `data/ephem.bin` from the
-current directory, or the files listed in `$EPH_DATA` (`:`-separated).
+`data/eph-full.bin`, `data/eph-asteroids.bin` and the DE440 tables in
+`data/de440/` from the current directory, or the files listed in
+`$EPH_DATA` (`:`-separated).
 
 The data files are generated from the coefficient tables in `data/` (see
 [Coefficient provenance](#coefficient-provenance-and-regeneration)):
@@ -251,8 +256,10 @@ consistent with the output frame.
 ## Coefficient provenance and regeneration
 
 The VSOP87D tables are downloaded from IMCCE (Observatoire de Paris) and
-written to `data/vsop87d_data.cpp`; ELP2000-82B, the Pluto fit, the DE440
-corrections and the asteroid fits have their own generators in `tools/`.
+written to `data/vsop87d_data.cpp`; ELP2000-82B, Pluto, the DE440
+corrections and the asteroid fits have their own generators in `tools/`
+(the DE440 fits use the full `de440.bsp` kernel, 1550–2650, which is a
+development download and never shipped).
 These generated sources are not compiled into the library:
 `tools/pack_series.cpp` packs them into the data files.
 
@@ -278,43 +285,46 @@ without measurable loss:
 * **ELP2000-82B** — the bounded phase (mod 2π) is stored in 30 bits, with
   the time power packed into the top 2 bits and only the rate kept as
   `double` — 48/24 → 40/16 bytes/term.
-* **Pluto** — kept as `double`; its least-squares fit has large cancelling
-  coefficients that float32 cannot represent.
+* **Pluto, asteroids, corrections** — float32 Chebyshev coefficients.
 
 ## Data files
 
-| File                    | Size   | brotli | Contents                                   |
-|-------------------------|--------|--------|--------------------------------------------|
-| `data/eph-1as.bin`      | 115 KB | 72 KB  | series truncated to ~1″ (3,810 terms)       |
-| `data/eph-01as.bin`     | 221 KB | 142 KB | series truncated to ~0.1″ (10,211 terms)    |
-| `data/eph-full.bin`     | 634 KB | 388 KB | the full series (34,530 terms)              |
-| `data/eph-asteroids.bin`| 112 KB | 104 KB | Ceres, Pallas, Juno, Vesta (1850–2140)      |
-| `data/ephem.bin`        | 865 KB | 830 KB | DE440 residual table, 1850–2140, ~0.001″    |
+| File                       | Size   | brotli | Contents                                      |
+|----------------------------|--------|--------|-----------------------------------------------|
+| `data/eph-1as.bin`         | 145 KB | 112 KB | series truncated to ~0.5″ (4,719 terms)        |
+| `data/eph-01as.bin`        | 303 KB | 213 KB | series truncated to ~0.15″ (14,176 terms)      |
+| `data/eph-full.bin`        | 649 KB | 420 KB | the full series (34,530 terms)                 |
+| `data/eph-asteroids.bin`   | 365 KB | 341 KB | Ceres, Pallas, Juno, Vesta, 1600–2500          |
+| `data/de440/de440-YEAR.bin`| ~325 KB each | ~305 KB | DE440 table for YEAR..YEAR+100, ~0.002″ |
 
-Load one series file, plus the asteroids if you need them.  The series
-files include the Pluto fit and the DE440 corrections; truncation drops the
-VSOP87/ELP terms whose amplitude (times T^α at 1850/2140) is below a
-per-planet threshold chosen so the level holds over 1850–2140 (see
-`LEVEL_*` in the `Makefile`).  Outside that range the truncated files
-degrade faster than the full series.
+The series files cover 1550–2650 (Pluto and the corrections) and work,
+less accurately, outside it.  Load one series file, plus the asteroids if
+you need them.  The series files include Pluto and the DE440 corrections;
+truncation drops the VSOP87/ELP terms whose amplitude (times T^α at
+1550/2650) is below a per-planet threshold chosen so the level holds over
+1550–2650 (see `LEVEL_*` in the `Makefile`).
 
 Several files can be loaded at once; a later file overrides what an
 earlier one provides.  Each file is a small container (`src/data.h`):
 typed sections used in place after loading, with a CRC-32, so a damaged
 or mismatched file is rejected rather than giving wrong positions.
 
-**DE440 table.**  `data/ephem.bin` stores **DE440 minus the library's own
-series**: the residual is small and smooth, so it packs into fixed-length
+**DE440 tables.**  `data/de440/` holds one file per century (1550–1600,
+1600–1700, …, 2600–2650; 3.7 MB in all): load the ones you need, side by
+side.  Each stores **DE440 minus the library's own series**: the residual is small and smooth, so it packs into fixed-length
 Chebyshev segments with one absolute quantization step per body and a
 fixed bit width per coefficient.  The series under the Moon and the inner
 planets are truncated to terms above 1e-7 rad (~0.02") and stored in the
-same file (37 KB), so the table needs no other file; the outer planets and
+same file (41 KB), so a table needs no other file, and the table records
+a checksum of that base, so tables built against different series are
+rejected; the outer planets and
 the Earth-Moon barycentre are stored without a base series.  Each body is
 fitted to 0.002" (seen from the Earth at its closest) and its speed to
 0.01"/day; the Earth comes from the barycentre and the Moon.  For dates
-outside 1850–2140 a series file is used if one is loaded.  Regenerate with
-`python3 tools/pack_ephemeris.py` (needs numpy + skyfield + pyerfa, a
-DE440s kernel, and `make && make tools`; `--target` sets the accuracy).
+no loaded table covers, a series file is used if one is loaded.
+Regenerate with `python3 tools/pack_ephemeris.py` (needs numpy + skyfield
++ pyerfa, the DE440 kernel, and `make && make tools`; `--target` sets the
+accuracy, `--chunk` the years per file).
 The format is our own, built from public-domain JPL data, so no
 third-party license applies.
 
