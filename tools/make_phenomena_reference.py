@@ -1,42 +1,122 @@
 #!/usr/bin/env python3
 """Regenerate tests/phenomena_ref.h (development only): phase angle,
-illuminated fraction, elongation, apparent diameter (degrees) and
-magnitude from Swiss Ephemeris (pyswisseph, Moshier mode) for the Sun,
-Moon, planets and Pluto.  Test data only; no code is shared.
+illuminated fraction, elongation, apparent diameter (degrees) and visual
+magnitude of the Sun, Moon, planets and Pluto from JPL DE440 with Skyfield.
 
-    python3 tools/make_phenomena_reference.py
+The geometry follows the definitions on the apparent geocentric vectors of
+the body and the Sun (apparent directions, light-time distances); the planets' magnitudes are Skyfield's Mallama &
+Hilton (2018) formulae applied to that geometry; the Sun's is
+-26.74 + 5 log10(distance).  The Moon and Pluto get no magnitude (NaN).
+Test data only.
+
+    python3 tools/make_phenomena_reference.py [path/to/de440.bsp]
 """
+import math
 import os
+import sys
 
 import numpy as np
-import swisseph as swe
+from skyfield import magnitudelib as mag
+from skyfield.api import load
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# (eph_body, Swiss Ephemeris body)
-BODIES = [(9, swe.SUN), (10, swe.MOON), (0, swe.MERCURY), (1, swe.VENUS),
-          (3, swe.MARS), (4, swe.JUPITER), (5, swe.SATURN), (6, swe.URANUS),
-          (7, swe.NEPTUNE), (8, swe.PLUTO)]
+AU_KM = 149597870.7
+# (eph_body, DE440 target, mean radius km as src/phenomena.cpp)
+BODIES = [(9, "sun", 695700.0), (10, "moon", 1737.4), (0, "mercury", 2439.4),
+          (1, "venus", 6051.8), (3, "mars barycenter", 3389.5),
+          (4, "jupiter barycenter", 69911.0), (5, "saturn barycenter", 58232.0),
+          (6, "uranus barycenter", 25362.0), (7, "neptune barycenter", 24622.0),
+          (8, "pluto barycenter", 1188.3)]
+
+
+def angle(a, b):
+    c = np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+    return math.acos(max(-1.0, min(1.0, c)))
+
+
+def sub_lat(pole, v):
+    return math.degrees(angle(pole, v)) - 90.0
+
+
+def apparent(eph, ts, e, target, moon=False):
+    """Apparent direction scaled to the light-time distance (Skyfield's
+    apparent() changes the vector's length with the aberration).  For the
+    Moon the light-time distance in the geocentric frame, as is usual for
+    its semidiameter (the barycentric one is 1e-4 longer: the Earth moves
+    36 km while the light travels)."""
+    astrometric = e.observe(target)
+    v = astrometric.apparent().xyz.au
+    d = astrometric.distance().au
+    if moon:
+        t = ts.tt_jd(e.t.tt - astrometric.light_time)
+        d = (target.at(t) - eph["earth"].at(t)).distance().au
+    return v / np.linalg.norm(v) * d
+
+
+def magnitude(body, r, delta, i_deg, sun_to_planet, earth_to_planet, t):
+    if body == 9:
+        return -26.74 + 5 * math.log10(delta)
+    if body in (10, 8):
+        return float("nan")
+    if body == 0:
+        return float(mag._mercury_magnitude(r, delta, i_deg))
+    if body == 1:
+        return float(mag._venus_magnitude(r, delta, i_deg))
+    if body == 3:
+        return float(mag._mars_magnitude(r, delta, i_deg))
+    if body == 4:
+        return float(mag._jupiter_magnitude(r, delta, i_deg))
+    if body == 5:
+        return float(mag._saturn_magnitude(
+            r, delta, i_deg, sub_lat(mag._SATURN_POLE, sun_to_planet),
+            sub_lat(mag._SATURN_POLE, earth_to_planet)))
+    if body == 6:
+        return float(mag._uranus_magnitude(
+            r, delta, i_deg, sub_lat(mag._URANUS_POLE, sun_to_planet),
+            sub_lat(mag._URANUS_POLE, earth_to_planet)))
+    if body == 7:
+        return float(mag._neptune_magnitude(r, delta, i_deg, t.J))
+    raise ValueError(body)
 
 
 def main():
+    eph = load(sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "de440.bsp"))
+    ts = load.timescale()
+    earth = eph["earth"]
     rng = np.random.default_rng(12)
     rows = []
     for jd in rng.uniform(2440000, 2465000, 30):
-        for body, sid in BODIES:
-            a = swe.pheno(jd, sid, swe.FLG_MOSEPH)
-            rows.append((jd, body) + tuple(a[:5]))
+        t = ts.tt_jd(jd)
+        e = earth.at(t)
+        vs = apparent(eph, ts, e, eph["sun"])
+        for body, name, radius in BODIES:
+            vb = apparent(eph, ts, e, eph[name], body == 10)
+            delta = float(np.linalg.norm(vb))
+            if body == 9:
+                i, r, elong = 0.0, delta, 0.0
+            else:
+                to_sun = vs - vb
+                i = angle(to_sun, -vb)
+                r = float(np.linalg.norm(to_sun))
+                elong = angle(vb, vs)
+            diameter = 2 * math.asin(min(1.0, radius / (delta * AU_KM)))
+            m = magnitude(body, r, delta, math.degrees(i), -to_sun if body != 9 else vb,
+                          vb, t)
+            rows.append((jd, body, math.degrees(i), (1 + math.cos(i)) / 2,
+                         math.degrees(elong), math.degrees(diameter), m))
     out = os.path.join(ROOT, "tests", "phenomena_ref.h")
     with open(out, "w") as f:
-        f.write("/* Generated by tools/make_phenomena_reference.py: Swiss "
-                "Ephemeris swe_pheno\n * (TT; degrees, fraction, magnitude). */\n")
-        f.write("#pragma once\n")
+        f.write("/* Generated by tools/make_phenomena_reference.py: JPL DE440 with "
+                "Skyfield\n * (TT; degrees, fraction, magnitude; NaN: no magnitude). */\n")
+        f.write("#pragma once\n#include <cmath>\n")
         f.write("struct PhenoRef { double jd_tt; int body; double phase_angle, "
                 "phase, elongation, diameter, magnitude; };\n\n")
         f.write("static const PhenoRef kPhenoRef[%d] = {\n" % len(rows))
         for r in rows:
-            f.write("    {%.6f, %d, %.9f, %.9f, %.9f, %.9f, %.6f},\n" % r)
+            m = "NAN" if math.isnan(r[6]) else "%.6f" % r[6]
+            f.write("    {%.6f, %d, %.9f, %.12f, %.9f, %.12f, %s},\n" % (r[:6] + (m,)))
         f.write("};\n")
-    print("wrote", out)
+    print("wrote", out, len(rows), "rows")
 
 
 if __name__ == "__main__":

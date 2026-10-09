@@ -50,12 +50,14 @@ double hg_magnitude(double h, double g, double r, double delta, double i) {
            2.5 * std::log10((1 - g) * phi1 + g * phi2);
 }
 
-/* Visual magnitude: Mallama & Hilton (2018), as in the Astronomical
- * Almanac, for the planets (i: phase angle in degrees; r, delta in AU;
- * ring: Saturn's ring tilt seen from the Earth, radians); the Moon after
- * Allen; H, G values from the JPL small-body database. */
-double magnitude(eph_body body, double r, double delta, double i, double ring,
-                 double year) {
+/* Visual magnitude: Mallama & Hilton (2018, Astronomy and Computing 25,
+ * 10), as in the Astronomical Almanac, for the planets (i: phase angle in
+ * degrees; r, delta in AU; lat_sun, lat_earth: the Sun's and the Earth's
+ * latitudes over Saturn's ring plane (saturnicentric) or Uranus' equator
+ * (planetographic), radians); the Moon after Allen; H, G values from the
+ * JPL small-body database. */
+double magnitude(eph_body body, double r, double delta, double i, double lat_sun,
+                 double lat_earth, double year) {
     const double d = 5 * std::log10(r * delta);
     switch (body) {
         case EPH_SUN: return -26.74 + 5 * std::log10(delta);
@@ -83,22 +85,37 @@ double magnitude(eph_body body, double r, double delta, double i, double ring,
                                     1.876 * std::pow(x, 5));
         }
         case EPH_SATURN: {
-            const double sb = std::fabs(std::sin(ring));
+            /* Eq. 10 (globe and rings, i <= 6.5 deg): the ring tilt is the
+             * geometric mean of the Sun's and the Earth's latitudes, 0 when
+             * they lie on opposite sides of the rings; eq. 12 (globe alone)
+             * beyond. */
+            const double p = lat_sun * lat_earth;
+            const double sb = p > 0.0 ? std::sin(std::sqrt(p)) : 0.0;
             if (i <= 6.5)
                 return -8.914 + d - 1.825 * sb + 0.026 * i -
                        0.378 * sb * std::exp(-2.25 * i);
             return -8.94 + d +
                    i * (2.446e-4 + i * (2.672e-4 + i * (-1.505e-6 + i * 4.767e-9)));
         }
-        case EPH_URANUS: /* ring: |planetographic sub-Earth latitude| */
-            return -7.110 + d - 8.4e-4 * std::fabs(ring) / eph::DEG +
-                   i * (6.587e-3 + i * 1.045e-4);
+        case EPH_URANUS: {
+            /* Eq. 14: the mean of the Sun's and the Earth's |planetographic
+             * latitudes| (degrees); eq. 15 adds the phase term beyond
+             * 3.1 deg (seen only from spacecraft). */
+            const double lat = (std::fabs(lat_sun) + std::fabs(lat_earth)) / 2 / eph::DEG;
+            double v = -7.110 + d - 8.4e-4 * lat;
+            if (i > 3.1) v += i * (6.587e-3 + i * 1.045e-4);
+            return v;
+        }
         case EPH_NEPTUNE: {
-            /* Neptune brightened between 1980 and 2000. */
+            /* Eq. 16: Neptune brightened by 0.0054 mag/yr between 1980 and
+             * 2000; eq. 17 adds the phase term beyond 1.9 deg (seen only
+             * from spacecraft). */
             const double v10 = year <= 1980.0   ? -6.89
                                : year >= 2000.0 ? -7.00
-                                                : -6.89 - 0.0055 * (year - 1980.0);
-            return v10 + d + i * (7.944e-3 + i * 9.617e-5);
+                                                : -6.89 - 0.0054 * (year - 1980.0);
+            double v = v10 + d;
+            if (i > 1.9) v += i * (7.944e-3 + i * 9.617e-5);
+            return v;
         }
         case EPH_PLUTO: return -1.01 + d + 0.041 * i;
         case EPH_CERES: return hg_magnitude(3.33, 0.12, r, delta, i * eph::DEG);
@@ -110,12 +127,13 @@ double magnitude(eph_body body, double r, double delta, double i, double ring,
     }
 }
 
-/* Latitude of the Earth over a planet's equator (Saturn: its ring plane)
- * as seen from the planet: the pole is given in the ICRF (IAU) and
- * carried to the ecliptic of date by the general precession in
+/* Planetocentric latitude, over a planet's equator (Saturn: its ring
+ * plane), of the point the planet is seen from, `planet` being the
+ * planet's position relative to that point: the pole is given in the ICRF
+ * (IAU) and carried to the ecliptic of date by the general precession in
  * longitude. */
-double sub_earth_latitude(double jd_tt, const eph::Vec3& planet, double ra_deg,
-                          double dec_deg) {
+double sub_latitude(double jd_tt, const eph::Vec3& planet, double ra_deg,
+                    double dec_deg) {
     const double ra = ra_deg * eph::DEG, dec = dec_deg * eph::DEG;
     const double e0 = 23.4392911 * eph::DEG;
     const double x = std::cos(dec) * std::cos(ra), y = std::cos(dec) * std::sin(ra),
@@ -154,11 +172,21 @@ int eph_phenomena_tt(eph_body body, double jd_tt, eph_phenomena* out) {
     out->phase = (1.0 + std::cos(i)) / 2.0;
     out->elongation = body == EPH_SUN ? 0.0 : angle(vb, vs);
     out->diameter = 2.0 * std::asin(std::fmin(1.0, radius_km(body) / (delta * eph::AU_KM)));
-    const double tilt = body == EPH_SATURN   ? sub_earth_latitude(jd_tt, vb, 40.589, 83.537)
-                        : body == EPH_URANUS ? sub_earth_latitude(jd_tt, vb, 257.311, -15.175)
-                                             : 0.0;
+    double lat_sun = 0.0, lat_earth = 0.0;
+    if (body == EPH_SATURN || body == EPH_URANUS) {
+        const double ra = body == EPH_SATURN ? 40.589 : 257.311;
+        const double dec = body == EPH_SATURN ? 83.537 : -15.175;
+        lat_earth = sub_latitude(jd_tt, vb, ra, dec);
+        lat_sun = sub_latitude(jd_tt, vb - vs, ra, dec);
+        if (body == EPH_URANUS) {
+            /* Planetographic, with Uranus' flattening (IAU 2015 radii). */
+            const double k = 1.0 / ((1.0 - 0.02293) * (1.0 - 0.02293));
+            lat_earth = std::atan(k * std::tan(lat_earth));
+            lat_sun = std::atan(k * std::tan(lat_sun));
+        }
+    }
     const double year = 2000.0 + (jd_tt - eph::J2000) / 365.25;
-    out->magnitude = magnitude(body, r, delta, i / eph::DEG, tilt, year);
+    out->magnitude = magnitude(body, r, delta, i / eph::DEG, lat_sun, lat_earth, year);
     return 0;
 }
 

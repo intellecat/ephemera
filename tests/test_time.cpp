@@ -30,17 +30,18 @@ int main(int argc, char** argv) {
     check(eph_utc_to_jd(2021, 4, 31, 0, 0, 0.0, &tt, &ut) == -1, "31 April rejected");
     check(eph_utc_to_jd(2021, 13, 1, 0, 0, 0.0, &tt, &ut) == -1, "month 13 rejected");
 
-    /* Equation of time vs Swiss Ephemeris (days). */
+    /* Equation of time (days) vs JPL DE440 with Skyfield: GAST - apparent
+     * RA of the Sun + 12 h - UT of day (tools/make_search_reference.py). */
     const struct {
         double jd, e;
     } eot[] = {
-        {2448908.50, 0.009518443475},
-        {2451545.00, -0.002281427250},
-        {2460400.25, -0.002929058894},
+        {2448908.50, 0.009518437102},
+        {2451545.00, -0.002281424812},
+        {2460400.25, -0.002929056532},
     };
     for (const auto& r : eot) {
         double e;
-        check(eph_equation_of_time(r.jd, &e) == 0 && std::fabs(e - r.e) * 86400.0 < 0.02,
+        check(eph_equation_of_time(r.jd, &e) == 0 && std::fabs(e - r.e) * 86400.0 < 0.002,
               "equation of time");
     }
 

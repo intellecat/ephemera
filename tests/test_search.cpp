@@ -22,29 +22,33 @@ int main(int argc, char** argv) {
     if (!load_data_args(argc, argv)) return 1;
     eph_position p;
 
-    /* Solar and lunar crossings (TT) vs Swiss Ephemeris (Moshier mode,
-     * whose own error is ~1-3 s for these). */
+    /* Solar and lunar crossings (TT) vs JPL DE440 with Skyfield
+     * (tools/make_search_reference.py). */
     const struct {
         double jd, lon, sun, moon;
     } ref[] = {
-    {2461756.230099, 103.254195, 2461957.231764120, 2461782.119395158},
-    {2455078.703751, 279.912270, 2455196.971828167, 2455101.262543009},
-    {2457901.865740, 329.536843, 2458167.762647833, 2457919.892697133},
-    {2461509.841230, 330.565546, 2461821.204447197, 2461526.208855171},
-    {2440664.693362, 157.409280, 2440829.737407133, 2440666.556951401},
-    {2452123.608174, 23.455511, 2452378.076393210, 2452131.735357303},
-    {2440140.651267, 299.023717, 2440240.776478579, 2440157.584986175},
-    {2464582.556107, 282.459547, 2464695.788852262, 2464609.616236460},
+    {2461756.230099, 103.254195, 2461957.231758161, 2461782.119385233},
+    {2455078.703751, 279.912270, 2455196.971830348, 2455101.262528104},
+    {2457901.865740, 329.536843, 2458167.762648552, 2457919.892697950},
+    {2461509.841230, 330.565546, 2461821.204449217, 2461526.208840692},
+    {2440664.693362, 157.409280, 2440829.737409717, 2440666.556949975},
+    {2452123.608174, 23.455511, 2452378.076380586, 2452131.735376221},
+    {2440140.651267, 299.023717, 2440240.776474946, 2440157.584987245},
+    {2464582.556107, 282.459547, 2464695.788852571, 2464609.616260689},
     };
+    double worst_sun = 0.0, worst_moon = 0.0;
     for (const auto& r : ref) {
         double t;
-        check(eph_longitude_crossing(EPH_SUN, r.lon * D2R, r.jd, 1, 400, &t) == 0 &&
-                  std::fabs(t - r.sun) * 86400.0 < 10.0,
-              "solar crossing");
-        check(eph_longitude_crossing(EPH_MOON, r.lon * D2R, r.jd, 1, 40, &t) == 0 &&
-                  std::fabs(t - r.moon) * 86400.0 < 10.0,
-              "lunar crossing");
+        check(eph_longitude_crossing(EPH_SUN, r.lon * D2R, r.jd, 1, 400, &t) == 0,
+              "solar crossing found");
+        worst_sun = std::fmax(worst_sun, std::fabs(t - r.sun) * 86400.0);
+        check(eph_longitude_crossing(EPH_MOON, r.lon * D2R, r.jd, 1, 40, &t) == 0,
+              "lunar crossing found");
+        worst_moon = std::fmax(worst_moon, std::fabs(t - r.moon) * 86400.0);
     }
+    std::printf("Crossings vs DE440: Sun %.3f s, Moon %.3f s\n", worst_sun, worst_moon);
+    /* Measured with eph-full.bin: 0.13 s and 0.015 s (~0.005" and 0.008"). */
+    check(worst_sun < 0.3 && worst_moon < 0.05, "crossing times");
 
     /* Every found event is one, and searching back from just after it finds
      * it again. */
