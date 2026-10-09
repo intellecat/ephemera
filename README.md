@@ -1,8 +1,8 @@
 # ephemeris
 
 A small, dependency-free C/C++ library that computes positions of the Sun,
-Moon, Pluto, the eight planets and the four largest asteroids (Ceres,
-Pallas, Juno, Vesta) from analytical series.  No JPL kernel and no SPICE:
+Moon, Pluto, the eight planets, Chiron and the four largest asteroids
+(Ceres, Pallas, Juno, Vesta) from analytical series.  No JPL kernel and no SPICE:
 a ~44 KB core (as WebAssembly; ~20 KB brotli) loads one small data file
 with the series coefficients at the accuracy you need -- from 145 KB for
 ~0.5" to DE440 tables at ~320 KB per century for ~0.002", over 1550–2650
@@ -16,7 +16,7 @@ Internally it evaluates:
 * **ELP2000-82B** (Chapront-Touze & Chapront) full lunar theory for the
   Moon; ~0.1" near J2000, growing to a few arcseconds at the range edges
   because its constants are fitted to DE200/LE200.
-* Compact Chebyshev series for Ceres/Pallas/Juno/Vesta fitted to JPL
+* Compact Chebyshev series for Ceres/Pallas/Juno/Vesta/Chiron fitted to JPL
   Horizons (public data), heliocentric fit error <0.03" over 1600-2500
   (Horizons' span for them).  Apparent positions match Horizons to ~0.02".
 * Chebyshev intervals for Pluto fitted to JPL DE440 (0.03" over 1550-2650),
@@ -294,7 +294,7 @@ without measurable loss:
 | `data/eph-1as.bin`         | 145 KB | 112 KB | series truncated to ~0.5″ (4,719 terms)        |
 | `data/eph-01as.bin`        | 303 KB | 213 KB | series truncated to ~0.2″ (14,176 terms)       |
 | `data/eph-full.bin`        | 649 KB | 420 KB | the full series (34,530 terms)                 |
-| `data/eph-asteroids.bin`   | 365 KB | 341 KB | Ceres, Pallas, Juno, Vesta, 1600–2500          |
+| `data/eph-asteroids.bin`   | 425 KB | 397 KB | Ceres, Pallas, Juno, Vesta, Chiron, 1600–2500  |
 | `data/de440/de440-YEAR.bin`| ~330 KB each | ~310 KB | DE440 table for YEAR..YEAR+100, ~0.002″ |
 
 The series files cover 1550–2650 (Pluto and the corrections) and work,

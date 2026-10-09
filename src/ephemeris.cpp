@@ -32,7 +32,7 @@ Vec3 j2000_to_date(double jd, const Vec3& v) {
  * asteroids (see chebyshev_body). */
 bool body_heliocentric(eph_body body, double jd, Vec3& out, double anchor) {
     if (body == EPH_PLUTO) return pluto_heliocentric(jd, anchor, out);
-    if (body >= EPH_CERES && body <= EPH_VESTA) {
+    if (body >= EPH_CERES && body <= EPH_CHIRON) {
         Vec3 v;
         if (!asteroid_heliocentric((int)body - EPH_CERES, jd, anchor, v))
             return false;
@@ -369,7 +369,7 @@ int eph_position_apparent_ut(eph_body body, double jd_ut, double year,
 int eph_heliocentric_tt(eph_body body, double jd_tt, double* lon, double* lat,
                         double* distance) {
     const bool planet = (body >= EPH_MERCURY && body <= EPH_PLUTO);
-    const bool asteroid = (body >= EPH_CERES && body <= EPH_VESTA);
+    const bool asteroid = (body >= EPH_CERES && body <= EPH_CHIRON);
     if (!planet && !asteroid) return -1;
     Vec3 h;
     if (!body_heliocentric(body, jd_tt, h, jd_tt)) return -1;

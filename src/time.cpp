@@ -196,6 +196,7 @@ const char* eph_body_name(eph_body body) {
         case EPH_PALLAS:  return "Pallas";
         case EPH_JUNO:    return "Juno";
         case EPH_VESTA:   return "Vesta";
+        case EPH_CHIRON:  return "Chiron";
         default:          return "?";
     }
 }

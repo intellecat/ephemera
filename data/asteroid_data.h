@@ -7,7 +7,7 @@ namespace ast {
 struct Body { const double* t; const float* c;
               int nseg; int ncoef; };
 
-extern const Body bodies[4];
+extern const Body bodies[5];
 
 }  // namespace ast
 }  // namespace eph

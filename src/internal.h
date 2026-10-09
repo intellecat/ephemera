@@ -104,8 +104,8 @@ bool pluto_heliocentric_j2000(double jd_tt, double anchor, double& lon,
 bool chebyshev_body(const double* t, const float* c, int nseg, int ncoef,
                     double jd_tt, double anchor, Vec3& v);
 
-/* Asteroids: heliocentric J2000 ecliptic rectangular (AU), idx 0..3
- * (Ceres, Pallas, Juno, Vesta).  src/asteroids.cpp. */
+/* Asteroids: heliocentric J2000 ecliptic rectangular (AU), idx 0..4
+ * (Ceres, Pallas, Juno, Vesta, Chiron).  src/asteroids.cpp. */
 bool asteroid_heliocentric(int idx, double jd_tt, double anchor, Vec3& v);
 
 }  // namespace eph

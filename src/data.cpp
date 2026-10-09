@@ -202,7 +202,8 @@ bool apply(const unsigned char* p, uint64_t size, Data& d, bool& has_table) {
                 ok = (id < 8 || id == 10) && parse_correction(r, d, id);
                 break;
             case kSectionAsteroid:
-                ok = id < 4 && (d.asteroid_ok[id] = parse_chebyshev(r, d.asteroid[id]));
+                ok = id < kAsteroids &&
+                     (d.asteroid_ok[id] = parse_chebyshev(r, d.asteroid[id]));
                 break;
             case kSectionTable:
                 ok = d.ntables < kMaxTables;

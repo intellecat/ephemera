@@ -62,9 +62,9 @@ int main(int argc, char** argv) {
     if (!load_data_args(argc, argv)) return 1;
     int time_failures = check_time();
 
-    double gmax[15] = {0}, amax[15] = {0};
-    double gdist[15] = {0}, adist[15] = {0};
-    int gcount[15] = {0}, acount[15] = {0};
+    double gmax[EPH_BODY_COUNT] = {0}, amax[EPH_BODY_COUNT] = {0};
+    double gdist[EPH_BODY_COUNT] = {0}, adist[EPH_BODY_COUNT] = {0};
+    int gcount[EPH_BODY_COUNT] = {0}, acount[EPH_BODY_COUNT] = {0};
 
     for (const RefSample& r : kRefSamples) {
         eph_position g, a;
@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
     /* Accuracy gates (arcsec), ~2x the measured maxima, indexed by
      * eph_body: Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus,
      * Neptune, Pluto, Sun, Moon. */
-    static const double limit[15] = {0.1, 0.12, 0, 0.1, 0.15, 0.08,
+    static const double limit[EPH_BODY_COUNT] = {0.1, 0.12, 0, 0.1, 0.15, 0.08,
                                      0.08, 0.08, 0.15, 0.1, 0.4};
     int failures = 0;
     for (int i = 0; i < EPH_BODY_COUNT; ++i) {

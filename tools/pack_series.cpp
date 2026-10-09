@@ -147,7 +147,8 @@ void add_correction(uint32_t body, const corr::Series& c) {
 }
 
 void add_asteroids() {
-    for (uint32_t i = 0; i < 4; ++i) add_chebyshev(kSectionAsteroid, i, ast::bodies[i]);
+    for (uint32_t i = 0; i < kAsteroids; ++i)
+        add_chebyshev(kSectionAsteroid, i, ast::bodies[i]);
 }
 
 void add_info(const std::string& text) {
@@ -221,7 +222,7 @@ int main(int argc, char** argv) {
     const std::string mode = argc > 2 ? argv[1] : "";
     double vsop[8];
     if (mode == "asteroids" && argc == 3) {
-        add_info("asteroids: Ceres, Pallas, Juno, Vesta (fit to JPL Horizons)");
+        add_info("asteroids: Ceres, Pallas, Juno, Vesta, Chiron (fit to JPL Horizons)");
         add_asteroids();
     } else if ((mode == "series" || mode == "base") && argc == 5 &&
                parse_thresholds(argv[3], vsop)) {

@@ -2,7 +2,7 @@
  * ephemeris.h -- lightweight analytical ephemeris engine.
  *
  * Positions of the Sun, Moon, Pluto, the eight planets and
- * Ceres/Pallas/Juno/Vesta using the VSOP87D planetary theory (Bretagnon &
+ * Ceres/Pallas/Juno/Vesta/Chiron using the VSOP87D planetary theory (Bretagnon &
  * Francou 1988), the ELP2000-82B lunar theory and compact series fitted to
  * JPL data, with small DE440 corrections.  The series coefficients are
  * not compiled in: load a data file first (see "data files" below).
@@ -46,6 +46,7 @@ typedef enum {
     EPH_PALLAS,
     EPH_JUNO,
     EPH_VESTA,
+    EPH_CHIRON,
     EPH_BODY_COUNT
 } eph_body;
 
@@ -160,7 +161,7 @@ const char* eph_body_name(eph_body body);
  *   data/eph-01as.bin   ~0.2" (truncated series)
  *   data/eph-full.bin   the full series (~0.1")
  * and optionally add data/eph-asteroids.bin (Ceres, Pallas, Juno, Vesta,
- * 1600-2500) and/or DE440 tables data/de440/de440-YEAR.bin (one century
+ * Chiron; 1600-2500) and/or DE440 tables data/de440/de440-YEAR.bin (one century
  * each, ~0.002"; self-contained: they work without a series file).
  * Several files can be loaded; a later file overrides what an earlier one
  * provides.  Position functions return -1 for bodies with no data loaded.

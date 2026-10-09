@@ -28,8 +28,12 @@ int main(int argc, char** argv) {
     double gmax[EPH_BODY_COUNT] = {0}, amax[EPH_BODY_COUNT] = {0};
     for (const RefSample& r : kRefSamples) {
         eph_position g, a;
-        eph_position_tt((eph_body)r.body, r.tt_jd, &g);
-        eph_position_apparent_tt((eph_body)r.body, r.tt_jd, &a);
+        if (eph_position_tt((eph_body)r.body, r.tt_jd, &g) != 0 ||
+            eph_position_apparent_tt((eph_body)r.body, r.tt_jd, &a) != 0) {
+            std::printf("FAIL: no position for %s at JD %.1f\n",
+                        eph_body_name((eph_body)r.body), r.tt_jd);
+            return 1;
+        }
         const double e_glon =
             std::fabs(wrap180(g.longitude * R2D - r.geom_lon)) * 3600.0;
         const double e_glat = std::fabs(g.latitude * R2D - r.geom_lat) * 3600.0;

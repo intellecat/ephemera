@@ -13,7 +13,7 @@
 export const Body = Object.freeze({
   Mercury: 0, Venus: 1, Earth: 2, Mars: 3, Jupiter: 4, Saturn: 5, Uranus: 6,
   Neptune: 7, Pluto: 8, Sun: 9, Moon: 10, Ceres: 11, Pallas: 12, Juno: 13,
-  Vesta: 14,
+  Vesta: 14, Chiron: 15,
 });
 
 export const HouseSystem = Object.freeze({ WholeSign: 0, Equal: 1, Porphyry: 2 });

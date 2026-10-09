@@ -28,7 +28,7 @@ enum SectionType {
     kSectionElp = 2,        /* id: role << 8           */
     kSectionPluto = 3,      /* Pluto fit               */
     kSectionCorrection = 4, /* id: planet, or 10 (Moon) */
-    kSectionAsteroid = 5,   /* id: 0..3                */
+    kSectionAsteroid = 5,   /* id: 0..4 (Ceres..Chiron) */
     kSectionTable = 6,      /* DE440 residual table    */
     kSectionInfo = 7,       /* free text               */
 };
@@ -46,6 +46,7 @@ struct SeriesSet {
 };
 
 constexpr int kMaxTables = 32;
+constexpr int kAsteroids = 5; /* Ceres, Pallas, Juno, Vesta, Chiron */
 
 struct Data {
     SeriesSet set[2]; /* indexed by Role */
@@ -53,8 +54,8 @@ struct Data {
     pluto_fit::Body pluto;
     bool corr_ok[11];
     corr::Series corr[11];
-    bool asteroid_ok[4];
-    ast::Body asteroid[4];
+    bool asteroid_ok[kAsteroids];
+    ast::Body asteroid[kAsteroids];
     /* Residual table sections, in load order (later ones take
      * precedence). */
     struct {

@@ -40,7 +40,7 @@ bool chebyshev_body(const double* t, const float* c, int nseg, int ncoef,
 }
 
 bool asteroid_heliocentric(int idx, double jd_tt, double anchor, Vec3& v) {
-    if (idx < 0 || idx > 3 || !data().asteroid_ok[idx]) return false;
+    if (idx < 0 || idx >= kAsteroids || !data().asteroid_ok[idx]) return false;
     const ast::Body& b = data().asteroid[idx];
     return chebyshev_body(b.t, b.c, b.nseg, b.ncoef, jd_tt, anchor, v);
 }
