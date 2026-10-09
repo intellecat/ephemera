@@ -1,21 +1,24 @@
 #include "internal.h"
 
 #include "../include/ephemeris/ephemeris.h"
+#include "data.h"
 
 namespace eph {
 namespace {
 
-Vec3 planet_heliocentric(int planet, double jd) {
+bool planet_heliocentric(int planet, double jd, Vec3& out) {
     double l, b, r;
-    vsop87_heliocentric(planet, jd, l, b, r);
-    return spherical_to_cartesian(l, b, r);
+    if (!vsop87_heliocentric(planet, jd, l, b, r)) return false;
+    out = spherical_to_cartesian(l, b, r);
+    return true;
 }
 
-Vec3 pluto_heliocentric(double jd) {
+bool pluto_heliocentric(double jd, Vec3& out) {
     double l, b, r;
-    pluto_heliocentric_j2000(jd, l, b, r);
+    if (!pluto_heliocentric_j2000(jd, l, b, r)) return false;
     precess_ecliptic_j2000_to_date(jd, l, b);
-    return spherical_to_cartesian(l, b, r);
+    out = spherical_to_cartesian(l, b, r);
+    return true;
 }
 
 Vec3 j2000_to_date(double jd, const Vec3& v) {
@@ -26,18 +29,14 @@ Vec3 j2000_to_date(double jd, const Vec3& v) {
 }
 
 bool body_heliocentric(eph_body body, double jd, Vec3& out) {
-    if (body == EPH_PLUTO) {
-        out = pluto_heliocentric(jd);
-        return true;
-    }
+    if (body == EPH_PLUTO) return pluto_heliocentric(jd, out);
     if (body >= EPH_CERES && body <= EPH_VESTA) {
         Vec3 v;
         if (!asteroid_heliocentric((int)body - EPH_CERES, jd, v)) return false;
         out = j2000_to_date(jd, v);
         return true;
     }
-    out = planet_heliocentric(static_cast<int>(body), jd);
-    return true;
+    return planet_heliocentric(static_cast<int>(body), jd, out);
 }
 
 Vec3 normalize_vec(const Vec3& v) {
@@ -65,7 +64,7 @@ bool source(eph_body body, double jd, Vec3& v) {
     }
     if (body == EPH_MOON) {
         double l, b, r;
-        moon_position(jd, l, b, r);
+        if (!moon_position(jd, l, b, r)) return false;
         v = spherical_to_cartesian(l, b, r);
         return true;
     }
@@ -73,15 +72,17 @@ bool source(eph_body body, double jd, Vec3& v) {
 }
 
 /* The truncated series under the residual table, same frame. */
-Vec3 base(eph_body body, double jd) {
+bool base(eph_body body, double jd, Vec3& v) {
     if (body == EPH_MOON) {
         double x, y, z;
-        elp_truncated_j2000(jd, x, y, z);
-        return j2000_to_date(jd, {x / AU_KM, y / AU_KM, z / AU_KM});
+        if (!elp_base_j2000(jd, x, y, z)) return false;
+        v = j2000_to_date(jd, {x / AU_KM, y / AU_KM, z / AU_KM});
+        return true;
     }
     double l, b, r;
-    vsop87_truncated((int)body, jd, l, b, r);
-    return spherical_to_cartesian(l, b, r);
+    if (!vsop87_base((int)body, jd, l, b, r)) return false;
+    v = spherical_to_cartesian(l, b, r);
+    return true;
 }
 
 /* Position, velocity and acceleration. */
@@ -103,24 +104,26 @@ constexpr double kEarthMoonRatio1 = 82.3005682214972154;
 bool state(eph_body body, double jd, bool table, State& s);
 
 /* The Earth and the Moon are needed for every body at the same instant;
- * keep the last ones (per thread, keyed on the table generation). */
+ * keep the last ones (per thread, keyed on the loaded data). */
 struct Cache {
     double jd = -1.0;
     int generation = -1;
+    bool table = false;
     State s;
 };
 thread_local Cache g_earth, g_moon;
 
 bool cached_state(eph_body body, double jd, bool table, State& s) {
     Cache& c = (body == EPH_EARTH) ? g_earth : g_moon;
-    const int gen = table ? compressed_generation() : 0;
-    if (c.jd == jd && c.generation == gen) {
+    const int gen = data_generation();
+    if (c.jd == jd && c.generation == gen && c.table == table) {
         s = c.s;
         return true;
     }
     if (!state(body, jd, table, s)) return false;
     c.jd = jd;
     c.generation = gen;
+    c.table = table;
     c.s = s;
     return true;
 }
@@ -141,9 +144,12 @@ bool state(eph_body body, double jd, bool table, State& s) {
             return false;
         s = {p, v, a};
         if (has_base) {
+            Vec3 m, c, pl;
+            if (!base(body, jd - h, m) || !base(body, jd, c) ||
+                !base(body, jd + h, pl))
+                return false;
             State b;
-            differentiate(base(body, jd - h), base(body, jd),
-                          base(body, jd + h), h, b);
+            differentiate(m, c, pl, h, b);
             s = {add(s.p, b.p), add(s.v, b.v), add(s.a, b.a)};
         }
         if (body == EPH_EARTH) {

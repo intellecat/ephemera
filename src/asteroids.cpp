@@ -1,6 +1,6 @@
 #include "internal.h"
 
-#include "../data/asteroid_data.h"
+#include "data.h"
 
 namespace eph {
 
@@ -19,8 +19,8 @@ double chebyshev(const float* c, int n, double u) {
 }  // namespace
 
 bool asteroid_heliocentric(int idx, double jd_tt, Vec3& v) {
-    if (idx < 0 || idx > 3) return false;
-    const ast::Body& b = ast::bodies[idx];
+    if (idx < 0 || idx > 3 || !data().asteroid_ok[idx]) return false;
+    const ast::Body& b = data().asteroid[idx];
     if (jd_tt < b.t[0] || jd_tt > b.t[b.nseg]) return false;
 
     int lo = 0, hi = b.nseg - 1;

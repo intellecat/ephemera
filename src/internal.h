@@ -36,16 +36,17 @@ inline double normalize(double a) {
     return a;
 }
 
-/* VSOP87D heliocentric spherical coordinates, mean ecliptic of date. */
-void vsop87_heliocentric(int planet, double jd_tt, double& lon, double& lat,
+/* The series below come from loaded data files (src/data.cpp); each
+ * returns false when its data is not loaded. */
+
+/* VSOP87D heliocentric spherical coordinates, mean ecliptic of date, with
+ * the DE440 correction. */
+bool vsop87_heliocentric(int planet, double jd_tt, double& lon, double& lat,
                          double& r);
 
-/* VSOP87D without the terms whose amplitude within tmax_days of J2000 is
- * below threshold (radians; scaled by the mean distance for R), and
- * without the DE440 correction: the base of the residual table. */
-void vsop87_truncate(int planet, double threshold, double tmax_days);
-void vsop87_truncated(int planet, double jd_tt, double& lon, double& lat,
-                      double& r);
+/* The truncated VSOP87D series under the residual table (no correction). */
+bool vsop87_base(int planet, double jd_tt, double& lon, double& lat,
+                 double& r);
 
 /* Small fitted DE440 corrections (Mercury..Neptune, Earth); src/correction.cpp. */
 void apply_correction(int planet, double jd_tt, double& lon, double& lat,
@@ -58,12 +59,10 @@ void apply_moon_correction(double jd_tt, double& lon, double& lat, double& r);
  * series, IAU-1976 ecliptic of date (AU), heliocentric for the planets and
  * the Earth, geocentric for the Moon, with its velocity and acceleration
  * (per day).  `base` tells whether the truncated series must be
- * added.  compressed_covers: the advertised date range.
- * compressed_generation changes on every load/unload. */
+ * added.  compressed_covers: the advertised date range. */
 bool compressed_residual(int body, double jd, Vec3& p, Vec3& v, Vec3& a,
                          bool& base);
 bool compressed_covers(double jd);
-int compressed_generation();
 
 /* Frame helpers (src/frames.cpp). */
 Vec3 spherical_to_cartesian(double lon, double lat, double r);
@@ -85,18 +84,16 @@ double gast_degrees(double jd_ut);
  * to the IAU-2006 mean ecliptic of date used for all output. */
 Vec3 frame_1976_to_2006(double jd_tt, const Vec3& v);
 
-/* ELP2000-82B geocentric rectangular, J2000 ecliptic, km (src/elp.cpp). */
-void elp_moon_j2000(double jd_tt, double& x, double& y, double& z);
-
-/* The same truncation for ELP2000-82B (src/elp.cpp). */
-void elp_truncate(double threshold, double tmax_days);
-void elp_truncated_j2000(double jd_tt, double& x, double& y, double& z);
+/* ELP2000-82B geocentric rectangular, J2000 ecliptic, km (src/elp.cpp):
+ * the theory, and the truncated base under the residual table. */
+bool elp_moon_j2000(double jd_tt, double& x, double& y, double& z);
+bool elp_base_j2000(double jd_tt, double& x, double& y, double& z);
 
 /* Lunar position, geocentric mean ecliptic of date (src/moon.cpp). */
-void moon_position(double jd_tt, double& lon, double& lat, double& dist_au);
+bool moon_position(double jd_tt, double& lon, double& lat, double& dist_au);
 
 /* Pluto heliocentric J2000 ecliptic (src/pluto.cpp). */
-void pluto_heliocentric_j2000(double jd_tt, double& lon, double& lat, double& r);
+bool pluto_heliocentric_j2000(double jd_tt, double& lon, double& lat, double& r);
 
 /* Asteroids: heliocentric J2000 ecliptic rectangular (AU), idx 0..3
  * (Ceres, Pallas, Juno, Vesta).  src/asteroids.cpp. */

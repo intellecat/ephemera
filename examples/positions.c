@@ -2,10 +2,14 @@
  *
  * Build:  cmake -S . -B build && cmake --build build
  * Run:    ./build/ephcliapp 2026 1 1 12      (year month day [UT hours])
+ *
+ * Data files come from $EPH_DATA (paths separated by ':'), or by default
+ * data/eph-full.bin, data/eph-asteroids.bin and data/ephem.bin.
  */
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "ephemeris/ephemeris.h"
 
@@ -25,7 +29,39 @@ static void format_zodiac(double lon_rad, char* buf, size_t n) {
     snprintf(buf, n, "%2d deg %02d' %s", d, (int)(m + 0.5), kSigns[sign]);
 }
 
+/* Load the data files; returns how many were loaded. */
+static int load_data(void) {
+    const char* env = getenv("EPH_DATA");
+    int n = 0;
+    if (env && *env) {
+        char path[1024];
+        while (*env) {
+            size_t len = strcspn(env, ":");
+            if (len > 0 && len < sizeof path) {
+                memcpy(path, env, len);
+                path[len] = '\0';
+                if (eph_load_file(path) == 0)
+                    n++;
+                else
+                    fprintf(stderr, "cannot load %s\n", path);
+            }
+            env += len + (env[len] == ':');
+        }
+        return n;
+    }
+    const char* defaults[] = {"data/eph-full.bin", "data/eph-asteroids.bin",
+                              "data/ephem.bin"};
+    for (size_t i = 0; i < sizeof defaults / sizeof defaults[0]; ++i)
+        if (eph_load_file(defaults[i]) == 0) n++;
+    return n;
+}
+
 int main(int argc, char** argv) {
+    if (load_data() == 0) {
+        fprintf(stderr, "no data file loaded: set EPH_DATA or run from the "
+                        "source directory\n");
+        return 1;
+    }
     int year = 2000, month = 1;
     double day = 1.5;
     if (argc >= 4) {

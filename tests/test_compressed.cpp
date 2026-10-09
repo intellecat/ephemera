@@ -1,4 +1,4 @@
-/* Validation of the optional residual table against DE440s.
+/* Validation of the DE440 residual table (data/ephem.bin) on its own.
  * Usage: test_compressed <path to ephem.bin> */
 #include <cmath>
 #include <cstdio>
@@ -18,13 +18,10 @@ int main(int argc, char** argv) {
         std::printf("usage: %s <ephem.bin>\n", argv[0]);
         return 1;
     }
-    if (eph_load_compressed(argv[1]) != 0) {
-        std::printf("SKIP: could not load %s\n", argv[1]);
-        return 0; /* not a failure: the backend is optional */
-    }
-    if (!eph_compressed_available()) {
-        std::printf("SKIP: backend unavailable\n");
-        return 0;
+    /* The table is self-contained: no series file is loaded. */
+    if (eph_load_file(argv[1]) != 0 || !eph_compressed_available()) {
+        std::printf("FAIL: could not load %s\n", argv[1]);
+        return 1;
     }
 
     double gmax[EPH_BODY_COUNT] = {0}, amax[EPH_BODY_COUNT] = {0};

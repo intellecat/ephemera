@@ -1,6 +1,6 @@
 #include "internal.h"
 
-#include "../data/corr_data.h"
+#include "data.h"
 
 namespace eph {
 
@@ -39,22 +39,13 @@ void apply(const corr::Series& s, double jd_tt, double& lon, double& lat,
  */
 void apply_correction(int planet, double jd_tt, double& lon, double& lat,
                       double& r) {
-    switch (planet) {
-        case 0: apply(corr::mercury, jd_tt, lon, lat, r); break;
-        case 2: apply(corr::earth, jd_tt, lon, lat, r); break;
-        case 1: apply(corr::venus, jd_tt, lon, lat, r); break;
-        case 3: apply(corr::mars, jd_tt, lon, lat, r); break;
-        case 4: apply(corr::jupiter, jd_tt, lon, lat, r); break;
-        case 5: apply(corr::saturn, jd_tt, lon, lat, r); break;
-        case 6: apply(corr::uranus, jd_tt, lon, lat, r); break;
-        case 7: apply(corr::neptune, jd_tt, lon, lat, r); break;
-        default: break;
-    }
+    if (planet >= 0 && planet < 8 && data().corr_ok[planet])
+        apply(data().corr[planet], jd_tt, lon, lat, r);
 }
 
 /* DE440 correction for the ELP2000-82B (DE200) lunar drift. */
 void apply_moon_correction(double jd_tt, double& lon, double& lat, double& r) {
-    apply(corr::moon, jd_tt, lon, lat, r);
+    if (data().corr_ok[10]) apply(data().corr[10], jd_tt, lon, lat, r);
 }
 
 }  // namespace eph

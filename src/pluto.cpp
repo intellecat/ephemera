@@ -1,13 +1,14 @@
 #include "internal.h"
 
-#include "../data/pluto_data.h"
+#include "data.h"
 
 namespace eph {
 
 /*
  * Pluto heliocentric position in the J2000 ecliptic frame.
  *
- * The coefficients in data/pluto_data.h are produced by tools/fit_pluto.py,
+ * The coefficients (data/pluto_data.cpp, loaded from a data file) come from
+ * tools/fit_pluto.py,
  * a least-squares Poisson-series fit to JPL DE440s over 1850-2150 with the
  * argument structure
  *
@@ -16,7 +17,9 @@ namespace eph {
  *
  * Sub-arcsecond heliocentric accuracy across the fitted window.
  */
-void pluto_heliocentric_j2000(double jd_tt, double& lon, double& lat, double& r) {
+bool pluto_heliocentric_j2000(double jd_tt, double& lon, double& lat, double& r) {
+    const Data& d = data();
+    if (!d.pluto_ok) return false;
     const double T = (jd_tt - J2000) / DAYS_PER_CENTURY;
 
     const double J = 34.35 + 3034.9057 * T;
@@ -33,9 +36,10 @@ void pluto_heliocentric_j2000(double jd_tt, double& lon, double& lat, double& r)
         return v;
     };
 
-    lon = normalize(eval(pluto_fit::lon) * DEG);
-    lat = eval(pluto_fit::lat) * DEG;
-    r = eval(pluto_fit::rad);
+    lon = normalize(eval(d.pluto[0]) * DEG);
+    lat = eval(d.pluto[1]) * DEG;
+    r = eval(d.pluto[2]);
+    return true;
 }
 
 }  // namespace eph

@@ -4,16 +4,18 @@
 For each body the reference ephemeris (JPL DE440s via Skyfield) is compared
 with a truncated copy of the library's analytical series (VSOP87D,
 ELP2000-82B), or with nothing for bodies where the series would cost more
-time than it saves space.  The residual is small and
+time than it saves space.  The truncated series are stored in the same
+file (written by build/pack_series), so the table needs no other data.  The residual is small and
 smooth, so it is stored as Chebyshev polynomials over fixed-length
 segments with one absolute quantization step per body and a fixed bit
 width per coefficient.  For every body the segment length, degree and step
 giving the smallest file within --target (arcsec, as seen from the Earth at
 the body's closest approach) are chosen.  The format is described in
-src/compressed.cpp.
+src/data.h and src/compressed.cpp.
 
 The residuals come from tools/residual.cpp, built here against
-build/libephemeris.a (run `make` first), so they match the runtime exactly.
+build/libephemeris.a (run `make` and `make tools` first), so they match the
+runtime exactly.
 A table must be regenerated whenever the series change.
 
 Development tool; needs numpy, pyerfa and skyfield.
@@ -28,6 +30,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+import zlib
 
 import erfa
 import numpy as np
@@ -78,10 +81,8 @@ def reference(eph, ts, key, center, jds):
     return np.stack([x[0], c * x[1] + s * x[2], -s * x[1] + c * x[2]], axis=1)
 
 
-def residual(exe, body, threshold, jd0, jd1, jds, X):
-    base = threshold is not None
-    args = [exe, str(body), "1" if base else "0", repr(threshold or 0.0),
-            repr(jd0), repr(jd1)]
+def residual(exe, body, base_file, jds, X):
+    args = [exe, str(body)] + ([base_file] if base_file else [])
     inp = "\n".join("%.10f %.17g %.17g %.17g" % (j, *x) for j, x in zip(jds, X))
     out = subprocess.run(args, input=inp, capture_output=True, text=True,
                          check=True).stdout
@@ -180,13 +181,24 @@ def main():
     records, blobs = [], []
     with tempfile.TemporaryDirectory() as tmp:
         exe = build_helper(tmp)
+        # The base series: Mercury..Neptune thresholds (-1: none), ELP.
+        thresholds = {b: t for b, _, _, _, _, t in BODIES}
+        vsop = ",".join(repr(thresholds[p] if thresholds[p] is not None and
+                             p != 2 else -1.0) for p in range(8))
+        base_file = os.path.join(tmp, "base.bin")
+        subprocess.run([os.path.join(ROOT, "build", "pack_series"), "base",
+                        base_file, vsop,
+                        repr(thresholds[10] if thresholds[10] is not None
+                             else -1.0)], check=True)
+        with open(base_file, "rb") as f:
+            base_sections = read_sections(f.read())
         for body, key, center, dmin, dt, thr in BODIES:
             # Two days of margin; sample far enough for the longest segment.
             start = jd0 - 2.0
             n = int(np.ceil((jd1 + 2.0 - start + max(LENGTHS)) / dt)) + 1
             jds = start + dt * np.arange(n)
-            R = residual(exe, body, thr, jd0, jd1, jds,
-                         reference(eph, ts, key, center, jds))
+            R = residual(exe, body, base_file if thr is not None else None,
+                         jds, reference(eph, ts, key, center, jds))
             quantum = args.target * ARCSEC * dmin
             nbytes, L, N, q, Q, err = fit(R, dt, jd1 + 2.0 - start, quantum,
                                           args.speed_target * ARCSEC * dmin)
@@ -211,12 +223,41 @@ def main():
                              ncoef, thr or 0.0, start, L, q, offset, segbits, 0)
         index += b.tobytes()
         offset += len(blob)
+    table = header + index + b"".join(blobs)
+    info = ("DE440 residual table %d-%d, %g\" (base: %s)"
+            % (args.start, args.end, args.target,
+               next(p for t, _, p in base_sections if t == 7).decode())).encode()
+    sections = [(7, 0, info)] + [s for s in base_sections if s[0] != 7]
+    sections.append((6, 0, table))
     with open(args.out, "wb") as f:
-        f.write(header + index)
-        for blob in blobs:
-            f.write(blob)
+        f.write(write_sections(sections))
     sys.stderr.write("wrote %s (%.0f KB)\n" % (args.out,
                                                os.path.getsize(args.out) / 1e3))
+
+
+def read_sections(buf):
+    """[(type, id, payload)] of a data file (format in src/data.h)."""
+    assert buf[:4] == b"EPHD"
+    _, n, _ = struct.unpack_from("<III", buf, 4)
+    out = []
+    for i in range(n):
+        t, sid, off, size = struct.unpack_from("<IIQQ", buf, 16 + 24 * i)
+        out.append((t, sid, buf[off:off + size]))
+    return out
+
+
+def write_sections(sections):
+    """A data file; the header ends with the CRC-32 of the rest."""
+    off = 16 + 24 * len(sections)
+    index, body = b"", b""
+    for t, sid, payload in sections:
+        off_aligned = (off + len(body) + 7) // 8 * 8
+        body += b"\0" * (off_aligned - off - len(body))
+        index += struct.pack("<IIQQ", t, sid, off_aligned, len(payload))
+        body += payload
+    rest = index + body
+    return (b"EPHD" + struct.pack("<III", 1, len(sections), zlib.crc32(rest))
+            + rest)
 
 
 if __name__ == "__main__":

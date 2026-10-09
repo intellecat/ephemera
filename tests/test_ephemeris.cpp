@@ -8,6 +8,7 @@
 #include <cstdio>
 
 #include "ephemeris/ephemeris.h"
+#include "load_data.h"
 #include "reference_data.h"
 
 static const double R2D = 180.0 / 3.14159265358979323846;
@@ -57,7 +58,8 @@ static int check_time() {
     return failures;
 }
 
-int main() {
+int main(int argc, char** argv) {
+    if (!load_data_args(argc, argv)) return 1;
     int time_failures = check_time();
 
     double gmax[15] = {0}, amax[15] = {0};

@@ -1,8 +1,6 @@
 #include "internal.h"
 
-#include <cstdlib>
-
-#include "../data/elp_data.h"
+#include "data.h"
 
 namespace eph {
 
@@ -88,50 +86,18 @@ void eval(const elp::Coord* coords, double jd_tt, double& x, double& y,
     z = -pw * x1 + qw * x2 + (pw2 + qw2 - 1.0) * x3;
 }
 
-/* Truncated copy of the series (see elp_truncate). */
-struct Truncated {
-    elp::MainTerm* main[3];
-    elp::PertTerm* pert[3];
-    elp::Coord coords[3];
-};
-Truncated g_truncated;
-
 }  // namespace
 
-void elp_moon_j2000(double jd_tt, double& x, double& y, double& z) {
-    eval(elp::coords, jd_tt, x, y, z);
+bool elp_moon_j2000(double jd_tt, double& x, double& y, double& z) {
+    if (!data().set[kTheory].elp_ok) return false;
+    eval(data().set[kTheory].elp, jd_tt, x, y, z);
+    return true;
 }
 
-void elp_truncate(double threshold, double tmax_days) {
-    /* Amplitudes are arcseconds (longitude, latitude) and km (distance). */
-    const double thr[3] = {threshold / ARCSEC, threshold / ARCSEC,
-                           threshold * 385000.0};
-    const double tm = tmax_days / DAYS_PER_CENTURY;
-    for (int iv = 0; iv < 3; ++iv) {
-        const elp::Coord& c = elp::coords[iv];
-        elp::MainTerm*& main = g_truncated.main[iv];
-        elp::PertTerm*& pert = g_truncated.pert[iv];
-        std::free(main);
-        std::free(pert);
-        main = static_cast<elp::MainTerm*>(
-            std::malloc(sizeof(elp::MainTerm) * (c.nmain + 1)));
-        pert = static_cast<elp::PertTerm*>(
-            std::malloc(sizeof(elp::PertTerm) * (c.npert + 1)));
-        int nmain = 0, npert = 0;
-        for (int n = 0; n < c.nmain; ++n)
-            if (main && std::fabs(c.main[n].amp) >= thr[iv])
-                main[nmain++] = c.main[n];
-        for (int n = 0; n < c.npert; ++n) {
-            const double f = std::pow(tm, (double)(c.pert[n].packed >> 30));
-            if (pert && std::fabs(c.pert[n].amp) * f >= thr[iv])
-                pert[npert++] = c.pert[n];
-        }
-        g_truncated.coords[iv] = {main, nmain, pert, npert};
-    }
-}
-
-void elp_truncated_j2000(double jd_tt, double& x, double& y, double& z) {
-    eval(g_truncated.coords, jd_tt, x, y, z);
+bool elp_base_j2000(double jd_tt, double& x, double& y, double& z) {
+    if (!data().set[kBase].elp_ok) return false;
+    eval(data().set[kBase].elp, jd_tt, x, y, z);
+    return true;
 }
 
 }  // namespace eph

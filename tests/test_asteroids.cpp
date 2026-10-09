@@ -4,6 +4,7 @@
 #include <cstdio>
 
 #include "ephemeris/ephemeris.h"
+#include "load_data.h"
 #include "asteroid_ref.h"
 
 static const double R2D = 180.0 / 3.14159265358979323846;
@@ -13,7 +14,8 @@ static double wrap180(double d) {
     return d - 180.0;
 }
 
-int main() {
+int main(int argc, char** argv) {
+    if (!load_data_args(argc, argv)) return 1;
     double maxlon = 0.0, maxlat = 0.0;
     for (const AstRef& r : kAstRef) {
         eph_position p;

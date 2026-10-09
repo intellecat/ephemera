@@ -11,6 +11,7 @@ endif()
 
 option(EPHEMERIS_BUILD_TESTS "Build the test suite" ON)
 option(EPHEMERIS_BUILD_EXAMPLES "Build the example programs" ON)
+option(EPHEMERIS_BUILD_TOOLS "Build tools/pack_series (data file generator)" OFF)
 
 add_library(ephemeris STATIC
     src/time.cpp
@@ -24,12 +25,7 @@ add_library(ephemeris STATIC
     src/asteroids.cpp
     src/pluto.cpp
     src/ephemeris.cpp
-    data/vsop87d_data.cpp
-    data/pluto_data.cpp
-    data/elp_data.cpp
-    data/corr_data.cpp
-    data/corr_moon.cpp
-    data/asteroid_data.cpp
+    src/data.cpp
     data/delta_t_data.cpp
 )
 
@@ -48,19 +44,27 @@ if(EPHEMERIS_BUILD_EXAMPLES)
     target_link_libraries(ephcliapp PRIVATE ephemeris)
 endif()
 
+if(EPHEMERIS_BUILD_TOOLS)
+    add_executable(pack_series tools/pack_series.cpp
+        data/vsop87d_data.cpp data/elp_data.cpp data/pluto_data.cpp
+        data/corr_data.cpp data/corr_moon.cpp data/asteroid_data.cpp)
+    target_include_directories(pack_series PRIVATE src data)
+endif()
+
 if(EPHEMERIS_BUILD_TESTS)
     enable_testing()
+    set(DATA ${CMAKE_CURRENT_SOURCE_DIR}/data)
     add_executable(test_ephemeris tests/test_ephemeris.cpp)
     target_link_libraries(test_ephemeris PRIVATE ephemeris)
-    add_test(NAME ephemeris COMMAND test_ephemeris)
+    add_test(NAME ephemeris COMMAND test_ephemeris ${DATA}/eph-full.bin)
 
     add_executable(test_compressed tests/test_compressed.cpp)
     target_link_libraries(test_compressed PRIVATE ephemeris)
-    add_test(NAME compressed COMMAND test_compressed ${CMAKE_CURRENT_SOURCE_DIR}/data/ephem.bin)
+    add_test(NAME compressed COMMAND test_compressed ${DATA}/ephem.bin)
 
     add_executable(test_topocentric tests/test_topocentric.cpp)
     target_link_libraries(test_topocentric PRIVATE ephemeris)
-    add_test(NAME topocentric COMMAND test_topocentric)
+    add_test(NAME topocentric COMMAND test_topocentric ${DATA}/eph-full.bin)
 
     add_executable(test_houses tests/test_houses.cpp)
     target_link_libraries(test_houses PRIVATE ephemeris)
@@ -68,5 +72,10 @@ if(EPHEMERIS_BUILD_TESTS)
 
     add_executable(test_asteroids tests/test_asteroids.cpp)
     target_link_libraries(test_asteroids PRIVATE ephemeris)
-    add_test(NAME asteroids COMMAND test_asteroids)
+    add_test(NAME asteroids COMMAND test_asteroids ${DATA}/eph-full.bin
+             ${DATA}/eph-asteroids.bin)
+
+    add_executable(test_data tests/test_data.cpp)
+    target_link_libraries(test_data PRIVATE ephemeris)
+    add_test(NAME data COMMAND test_data ${DATA})
 endif()

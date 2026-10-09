@@ -1,11 +1,12 @@
 /*
  * ephemeris.h -- lightweight analytical ephemeris engine.
  *
- * Pure-code positions of the Sun, Moon, Pluto, the eight planets and
+ * Positions of the Sun, Moon, Pluto, the eight planets and
  * Ceres/Pallas/Juno/Vesta using the VSOP87D planetary theory (Bretagnon &
- * Francou 1988), the full ELP2000-82B lunar theory and compact series
- * fitted to JPL data, with small DE440 corrections.  No external data file
- * is needed: the series coefficients are compiled into the library.
+ * Francou 1988), the ELP2000-82B lunar theory and compact series fitted to
+ * JPL data, with small DE440 corrections.  The series coefficients are
+ * not compiled in: load a data file first (see "data files" below).
+ * Time, nutation, frames, sidereal time and houses need no data.
  *
  * Conventions:
  *   - Angles are radians on output.
@@ -22,6 +23,8 @@
  */
 #ifndef EPHEMERIS_H
 #define EPHEMERIS_H
+
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -150,10 +153,30 @@ int eph_houses(double jd_ut, const eph_observer* observer,
 
 const char* eph_body_name(eph_body body);
 
-/* ---- optional compressed ephemeris backend -------------------------- *
- * Loads a Chebyshev table produced by tools/pack_ephemeris.py.  When
- * loaded, eph_position_* use it (for dates in its range) instead of the
- * analytical series, reaching ~0.01 arcsec.  Returns 0 on success. */
+/* ---- data files ------------------------------------------------------ *
+ * Positions need series data from a file made by tools/pack_series or
+ * tools/pack_ephemeris.py.  Pick one series level:
+ *   data/eph-1as.bin    ~1"   (truncated series)
+ *   data/eph-01as.bin   ~0.1" (truncated series)
+ *   data/eph-full.bin   the full series (~0.05")
+ * and optionally add data/eph-asteroids.bin (Ceres, Pallas, Juno, Vesta)
+ * and/or data/ephem.bin (DE440 residual table, ~0.001" over 1850-2140,
+ * self-contained: it works without a series file inside its range).
+ * Several files can be loaded; a later file overrides what an earlier one
+ * provides.  Position functions return -1 for bodies with no data loaded.
+ * Loading is not thread-safe: load before computing from other threads. */
+
+/* Load a data file from memory (the buffer is copied) or from a path.
+ * Returns 0 on success, -1 if the data is invalid. */
+int eph_load_data(const void* data, size_t size);
+int eph_load_file(const char* path);
+
+/* Unload all data files. */
+void eph_unload_data(void);
+
+/* Earlier names: eph_load_compressed loads any data file,
+ * eph_unload_compressed unloads the files holding a residual table, and
+ * eph_compressed_available tells whether a residual table is loaded. */
 int eph_load_compressed(const char* path);
 void eph_unload_compressed(void);
 int eph_compressed_available(void);

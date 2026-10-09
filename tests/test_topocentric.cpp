@@ -3,6 +3,7 @@
 #include <cstdio>
 
 #include "ephemeris/ephemeris.h"
+#include "load_data.h"
 #include "topo_ref.h"
 
 static const double R2D = 180.0 / 3.14159265358979323846;
@@ -14,7 +15,8 @@ static double wrap180(double d) {
     return d - 180.0;
 }
 
-int main() {
+int main(int argc, char** argv) {
+    if (!load_data_args(argc, argv)) return 1;
     double maxang = 0.0, maxdist = 0.0;
     for (const TopoRef& r : kTopoRef) {
         eph_observer obs = {r.lon * D2R, r.lat * D2R, r.elev};

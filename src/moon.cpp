@@ -9,9 +9,9 @@ namespace eph {
  * converted to spherical form and precessed to the mean ecliptic and
  * equinox of date (IAU 1976), matching the frame used by VSOP87D.
  */
-void moon_position(double jd_tt, double& lon, double& lat, double& dist_au) {
+bool moon_position(double jd_tt, double& lon, double& lat, double& dist_au) {
     double x, y, z;
-    elp_moon_j2000(jd_tt, x, y, z);
+    if (!elp_moon_j2000(jd_tt, x, y, z)) return false;
 
     const double r_km = std::sqrt(x * x + y * y + z * z);
     double l = std::atan2(y, x);
@@ -24,6 +24,7 @@ void moon_position(double jd_tt, double& lon, double& lat, double& dist_au) {
     lon = normalize(l);
     lat = b;
     dist_au = dist;
+    return true;
 }
 
 }  // namespace eph
