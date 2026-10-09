@@ -2,7 +2,7 @@
 // Usage: node tests/test_wasm.mjs <build dir> <data dir>
 import { readFileSync } from 'fs';
 import { execFileSync } from 'child_process';
-import { createEphemeris, Body } from '../examples/wasm/ephemeris.mjs';
+import { createEphemeris, Body, HouseSystem } from '../examples/wasm/ephemeris.mjs';
 
 const [build, data] = process.argv.slice(2);
 let fails = 0;
@@ -28,6 +28,11 @@ const core = await createEphemeris(readFileSync(`${build}/wasm/ephemeris.wasm`))
 check(core.positionTT(Body.Sun, 2451545.0) === null, 'core without data');
 check(Math.abs(core.julianDate(2000, 1, 1.5) - 2451545.0) < 1e-9, 'julian date');
 check(core.houses(2451545.0, 10, 50) !== null, 'houses without data');
+{
+  const c = core.houses(2451545.0, 10, 50, HouseSystem.Placidus);
+  check(c !== null && Math.abs(core.housePosition(c, c[4] + 1e-7) - 5) < 1e-6,
+        'Placidus cusps and house position');
+}
 check(core.loadEmbedded() === false, 'core has no built-in data');
 check(core.loadData(readFileSync(`${data}/eph-1as.bin`)), 'loadData');
 compare(core, 'core + eph-1as.bin');

@@ -258,10 +258,20 @@ double cusps[12];
 eph_houses(jd_ut, &obs, EPH_HOUSES_PORPHYRY, cusps);
 ```
 
-House systems: Whole Sign, Equal, Porphyry (Placidus/Koch are future work).
-Asc/MC use apparent sidereal time and match Swiss Ephemeris to <1"
-(median 0.07"); the Lahiri ayanamsa uses the IAU-2006 general precession,
-consistent with the output frame.
+House systems: Whole Sign, Equal, Porphyry, Placidus, Koch,
+Regiomontanus, Campanus, Alcabitius and Topocentric (Polich–Page), from
+their standard definitions; no data file is needed.  They match Swiss
+Ephemeris to <0.03" for 1900–2030 at latitudes up to ±66°, and Asc/MC use
+the IAU 2006 sidereal time.  Placidus and Koch are undefined inside the
+polar circles (|latitude| > 90° − obliquity): `eph_houses` then returns
+Porphyry cusps and 1.  There the great-circle systems (Regiomontanus,
+Campanus, Topocentric) may run backwards around the ecliptic, the MC
+taking the opposite meridian point so the houses stay in order (as Swiss
+Ephemeris does; for Topocentric, which has no accepted polar form, other
+software may differ).  `eph_house_position(cusps, longitude)` gives the
+house of a longitude as 1.0–12.999 (by longitude only).  The Lahiri
+ayanamsa uses the IAU-2006 general precession, consistent with the output
+frame.
 
 ## Conventions
 

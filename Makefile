@@ -72,7 +72,7 @@ $(BUILD)/test_compressed: tests/test_compressed.cpp $(LIB)
 $(BUILD)/test_topocentric: tests/test_topocentric.cpp tests/topo_ref.h $(LIB)
 	$(CXX) $(CXXFLAGS) -Iinclude -Itests $< $(LIB) -lm -o $@
 
-$(BUILD)/test_houses: tests/test_houses.cpp $(LIB)
+$(BUILD)/test_houses: tests/test_houses.cpp tests/houses_ref.h $(LIB)
 	$(CXX) $(CXXFLAGS) -Iinclude -Itests $< $(LIB) -lm -o $@
 
 $(BUILD)/test_asteroids: tests/test_asteroids.cpp tests/asteroid_ref.h $(LIB)

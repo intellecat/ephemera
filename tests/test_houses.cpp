@@ -1,8 +1,10 @@
 /* Sanity checks for ayanamsa, Ascendant/Midheaven and houses. */
 #include <cmath>
 #include <cstdio>
+#include <initializer_list>
 
 #include "ephemeris/ephemeris.h"
+#include "houses_ref.h"
 
 static const double R2D = 180.0 / 3.14159265358979323846;
 static const double D2R = 3.14159265358979323846 / 180.0;
@@ -78,6 +80,69 @@ int main() {
         if (da * 3600.0 > 1.0 || dm * 3600.0 > 1.0) {
             std::printf("FAIL: asc/mc off by %.2f\"/%.2f\" (jd %.2f)\n",
                         da * 3600.0, dm * 3600.0, r.jd);
+            fails++;
+        }
+    }
+
+    /* All systems vs Swiss Ephemeris: 1900-2030, |latitude| <= 65 degrees
+     * and polar cases for the systems defined there. */
+    double worst[9] = {0};
+    for (const HouseRef& r : kHouseRef) {
+        eph_observer ob = {r.lon * D2R, r.lat * D2R, 0.0};
+        double c[12];
+        if (eph_houses(r.jd_ut, &ob, (eph_house_system)r.system, c) != 0) {
+            std::printf("FAIL: system %d undefined at latitude %.2f\n",
+                        r.system, r.lat);
+            fails++;
+            continue;
+        }
+        for (int i = 0; i < 12; ++i)
+            worst[r.system] = std::fmax(
+                worst[r.system],
+                std::fabs(wrap180(c[i] * R2D - r.cusp[i])) * 3600.0);
+    }
+    static const char* kNames[9] = {"Whole Sign", "Equal",    "Porphyry",
+                                    "Placidus",   "Koch",     "Regiomontanus",
+                                    "Campanus",   "Alcabitius", "Topocentric"};
+    for (int s = 1; s < 9; ++s) {
+        std::printf("%-14s max %.3f\" vs Swiss Ephemeris\n", kNames[s], worst[s]);
+        if (worst[s] > 0.5) {
+            std::printf("FAIL: %s\n", kNames[s]);
+            fails++;
+        }
+    }
+
+    /* Placidus and Koch are undefined inside the polar circles: Porphyry
+     * cusps and return code 1. */
+    {
+        eph_observer ob = {0.0, 70.0 * D2R, 0.0};
+        double c[12], p[12];
+        eph_houses(jd, &ob, EPH_HOUSES_PORPHYRY, p);
+        for (eph_house_system s : {EPH_HOUSES_PLACIDUS, EPH_HOUSES_KOCH}) {
+            const int rc = eph_houses(jd, &ob, s, c);
+            if (rc != 1 || std::fabs(wrap180((c[1] - p[1]) * R2D)) > 1e-9) {
+                std::printf("FAIL: polar fallback for system %d (rc %d)\n", s, rc);
+                fails++;
+            }
+        }
+    }
+
+    /* House positions: the start of each house, and halfway in Equal. */
+    {
+        eph_observer ob = {0.3, 0.8, 0.0};
+        double c[12];
+        eph_houses(jd, &ob, EPH_HOUSES_PLACIDUS, c);
+        for (int i = 0; i < 12; ++i) {
+            const double h = eph_house_position(c, c[i] + 1e-9);
+            if (std::fabs(h - (i + 1)) > 1e-6) {
+                std::printf("FAIL: house position %.6f at cusp %d\n", h, i + 1);
+                fails++;
+            }
+        }
+        eph_houses(jd, &ob, EPH_HOUSES_EQUAL, c);
+        const double h = eph_house_position(c, c[4] + 15.0 * D2R);
+        if (std::fabs(h - 5.5) > 1e-9) {
+            std::printf("FAIL: house position %.6f, expected 5.5\n", h);
             fails++;
         }
     }

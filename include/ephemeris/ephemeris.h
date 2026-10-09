@@ -150,12 +150,27 @@ int eph_asc_mc(double jd_ut, const eph_observer* observer, double* asc,
 typedef enum {
     EPH_HOUSES_WHOLE_SIGN = 0,
     EPH_HOUSES_EQUAL,
-    EPH_HOUSES_PORPHYRY
+    EPH_HOUSES_PORPHYRY,
+    EPH_HOUSES_PLACIDUS,
+    EPH_HOUSES_KOCH,
+    EPH_HOUSES_REGIOMONTANUS,
+    EPH_HOUSES_CAMPANUS,
+    EPH_HOUSES_ALCABITIUS,
+    EPH_HOUSES_TOPOCENTRIC /* Polich-Page */
 } eph_house_system;
 
-/* House cusps 1..12 as ecliptic longitudes (radians, tropical). */
+/* House cusps 1..12 as ecliptic longitudes (radians, tropical).  Returns
+ * 0, -1 on bad arguments, or 1 where the system is undefined (Placidus,
+ * Koch and Alcabitius near the poles, when a needed point never rises or
+ * sets): the cusps are then Porphyry's.  Needs no data file. */
 int eph_houses(double jd_ut, const eph_observer* observer,
                eph_house_system system, double cusps[12]);
+
+/* House position of an ecliptic longitude (radians) in the given cusps:
+ * 1.0 at the start of house 1 up to 12.999..., linear in longitude within
+ * each house.  (Swiss Ephemeris' swe_house_pos also uses the latitude for
+ * some systems; this uses the longitude only.) */
+double eph_house_position(const double cusps[12], double longitude);
 
 const char* eph_body_name(eph_body body);
 

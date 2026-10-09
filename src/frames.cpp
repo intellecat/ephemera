@@ -324,11 +324,20 @@ Vec3 frame_1976_to_2006(double jd_tt, const Vec3& v) {
             r.m[2][0] * v.x + r.m[2][1] * v.y + r.m[2][2] * v.z};
 }
 
+/* IAU 2006 GMST: the Earth rotation angle plus the accumulated precession
+ * in right ascension (Capitaine et al. 2003).  The polynomial is in TT;
+ * using UT for it changes the result by ~1e-4". */
 double gmst_degrees(double jd_ut) {
     const double d = jd_ut - J2000;
-    const double T = d / DAYS_PER_CENTURY;
-    return 280.46061837 + 360.98564736629 * d + 0.000387933 * T * T -
-           T * T * T / 38710000.0;
+    const double era = 0.7790572732640 + 0.00273781191135448 * d +
+                       (d - std::floor(d)) + std::floor(d);
+    const double t = d / DAYS_PER_CENTURY;
+    const double p = 0.014506 +
+                     t * (4612.156534 +
+                          t * (1.3915817 +
+                               t * (-0.00000044 +
+                                    t * (-0.000029956 - t * 0.0000000368))));
+    return std::fmod(era, 1.0) * 360.0 + p / 3600.0;
 }
 
 double gast_degrees(double jd_ut) {

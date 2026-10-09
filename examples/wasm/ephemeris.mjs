@@ -13,10 +13,14 @@
 export const Body = Object.freeze({
   Mercury: 0, Venus: 1, Earth: 2, Mars: 3, Jupiter: 4, Saturn: 5, Uranus: 6,
   Neptune: 7, Pluto: 8, Sun: 9, Moon: 10, Ceres: 11, Pallas: 12, Juno: 13,
-  Vesta: 14, Chiron: 15,
+  Vesta: 14, Chiron: 15, MeanNode: 16, TrueNode: 17, MeanLilith: 18,
+  OscuLilith: 19,
 });
 
-export const HouseSystem = Object.freeze({ WholeSign: 0, Equal: 1, Porphyry: 2 });
+export const HouseSystem = Object.freeze({
+  WholeSign: 0, Equal: 1, Porphyry: 2, Placidus: 3, Koch: 4, Regiomontanus: 5,
+  Campanus: 6, Alcabitius: 7, Topocentric: 8,
+});
 
 const DEG = 180 / Math.PI;
 
@@ -92,10 +96,19 @@ export async function createEphemeris(source) {
       const obs = observer(lonDeg, latDeg);
       const cusps = e.malloc(96);
       const rc = e.eph_houses(jdUt, obs, system, cusps);
-      const out = rc === 0 ? Array.from(f64(cusps, 12), (c) => c * DEG) : null;
+      // rc 1: the system is undefined there (polar); Porphyry cusps.
+      const out = rc >= 0 ? Array.from(f64(cusps, 12), (c) => c * DEG) : null;
       e.free(cusps);
       e.free(obs);
       return out;
+    },
+    // House (1.0 .. 12.999) of an ecliptic longitude, cusps from houses().
+    housePosition(cusps, lonDeg) {
+      const p = e.malloc(96);
+      f64(p, 12).set(cusps.map((c) => c / DEG));
+      const h = e.eph_house_position(p, lonDeg / DEG);
+      e.free(p);
+      return h;
     },
     ayanamsaLahiri: (jdTt) => e.eph_ayanamsa_lahiri(jdTt) * DEG,
   };
