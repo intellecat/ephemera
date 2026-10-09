@@ -53,6 +53,8 @@ export const Ayanamsa = Object.freeze({
   LahiriVp285: 32,
   KrishnamurtiSenthilathiban: 33,
   LahiriIcrc: 34,
+  TrueCitra: 35, TrueRevati: 36, TruePushya: 37, TrueMula: 38,
+  GalacticCenter: 39, GalacticCenterBrand: 40, GalacticCenterCochrane: 41,
 });
 
 export const HouseSystem = Object.freeze({
@@ -186,6 +188,19 @@ export async function createEphemeris(source) {
     station(body, jdTt, direction = 1, maxDays = 800) {
       const rc = e.eph_station(body, jdTt, direction, maxDays, scratch);
       return rc < 1 ? null : { jd: f64(scratch, 1)[0], turns: rc === 1 ? 'retrograde' : 'direct' };
+    },
+    // Fixed stars (load eph-stars.bin): index by name, "alf Leo" or "HIP n".
+    starFind(name) {
+      const bytes = new TextEncoder().encode(name + '\0');
+      const p = e.malloc(bytes.length);
+      new Uint8Array(e.memory.buffer, p, bytes.length).set(bytes);
+      const i = e.eph_star_find(p);
+      e.free(p);
+      return i;
+    },
+    starPosition(index, jdUt, { year } = {}) {
+      const y = year ?? 2000 + (jdUt - 2451545.0) / 365.25;
+      return readPosition(e.eph_star_position_apparent_ut(index, jdUt, y, scratch));
     },
     ayanamsa: (system, jdTt) => e.eph_ayanamsa(system, jdTt) * DEG,
     ayanamsaCustom: (jdT0, valueDegT0, jdTt) =>

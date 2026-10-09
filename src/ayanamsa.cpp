@@ -1,5 +1,7 @@
 #include "internal.h"
 
+#include <cstdio>
+
 #include "../include/ephemeris/ephemeris.h"
 
 namespace {
@@ -58,8 +60,42 @@ const struct {
     {23.780364957, "Krishnamurti-Senthilathiban"},
     {23.856788988, "Lahiri ICRC"},
 };
-static_assert(sizeof kSystems / sizeof kSystems[0] == EPH_AYANAMSA_COUNT,
+
+/* Star-based systems: a catalogue star (by Hipparcos number; 0: the
+ * Galactic Center) at a fixed sidereal longitude (degrees). */
+const struct {
+    unsigned hip;
+    double longitude;
+    const char* name;
+} kStarSystems[] = {
+    {65474, 180.0, "True Citra"},           /* Spica           */
+    {5737, 359.0 + 50.0 / 60.0, "True Revati"}, /* zeta Psc    */
+    {42911, 106.0, "True Pushya"},          /* delta Cnc       */
+    {85927, 240.0, "True Mula"},            /* lambda Sco      */
+    {0, 240.0, "Galactic Center = 0 Sag"},
+    {0, 244.376973, "Galactic Center (Gil Brand)"},
+    {0, 270.0, "Galactic Center = 0 Cap (Cochrane)"},
+};
+constexpr int kTableSystems = sizeof kSystems / sizeof kSystems[0];
+static_assert(kTableSystems + sizeof kStarSystems / sizeof kStarSystems[0] ==
+                  EPH_AYANAMSA_COUNT,
               "one entry per eph_ayanamsa_system");
+
+/* The star's apparent longitude without nutation, or NaN. */
+double star_longitude(unsigned hip, double jd_tt) {
+    char id[24];
+    if (hip)
+        std::snprintf(id, sizeof id, "HIP %u", hip);
+    else
+        std::snprintf(id, sizeof id, "Galactic Center");
+    eph_position p;
+    const int index = eph_star_find(id);
+    if (index < 0 || eph_star_position_apparent_tt(index, jd_tt, &p) != 0)
+        return std::nan("");
+    double dpsi, deps;
+    eph_nutation(jd_tt, &dpsi, &deps);
+    return p.longitude - dpsi;
+}
 
 }  // namespace
 
@@ -67,12 +103,17 @@ extern "C" {
 
 double eph_ayanamsa(eph_ayanamsa_system system, double jd_tt) {
     if (system < 0 || system >= EPH_AYANAMSA_COUNT) return std::nan("");
-    return kSystems[system].j2000 * eph::DEG + precession(jd_tt);
+    if (system < kTableSystems)
+        return kSystems[system].j2000 * eph::DEG + precession(jd_tt);
+    const auto& s = kStarSystems[system - kTableSystems];
+    const double lon = star_longitude(s.hip, jd_tt);
+    return eph::normalize(lon - s.longitude * eph::DEG + eph::PI) - eph::PI;
 }
 
 const char* eph_ayanamsa_name(eph_ayanamsa_system system) {
     if (system < 0 || system >= EPH_AYANAMSA_COUNT) return nullptr;
-    return kSystems[system].name;
+    return system < kTableSystems ? kSystems[system].name
+                                  : kStarSystems[system - kTableSystems].name;
 }
 
 double eph_ayanamsa_custom(double jd_t0, double value_t0, double jd_tt) {

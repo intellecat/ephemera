@@ -193,6 +193,14 @@ typedef enum {
     EPH_AYANAMSA_LAHIRI_VP285,
     EPH_AYANAMSA_KRISHNAMURTI_SENTHILATHIBAN,
     EPH_AYANAMSA_LAHIRI_ICRC,
+    /* Star-based (need data/eph-stars.bin and the Earth's data): */
+    EPH_AYANAMSA_TRUE_CITRA,      /* Spica at 180 deg                 */
+    EPH_AYANAMSA_TRUE_REVATI,     /* zeta Piscium at 359 deg 50'      */
+    EPH_AYANAMSA_TRUE_PUSHYA,     /* delta Cancri at 106 deg          */
+    EPH_AYANAMSA_TRUE_MULA,       /* lambda Scorpii at 240 deg        */
+    EPH_AYANAMSA_GALACTIC_CENTER, /* Galactic Center at 0 Sagittarius */
+    EPH_AYANAMSA_GALACTIC_CENTER_BRAND,
+    EPH_AYANAMSA_GALACTIC_CENTER_COCHRANE, /* at 0 Capricorn          */
     EPH_AYANAMSA_COUNT
 } eph_ayanamsa_system;
 
@@ -200,8 +208,9 @@ typedef enum {
  * NaN for an unknown system.  Needs no data file.  Each system is its
  * defining value carried by the IAU-2006 general precession; this matches
  * Swiss Ephemeris within 0.01" for the modern definitions and 0.3" (over
- * 1600-2500) for those fixed at an ancient epoch.  Star-based systems
- * (True Citra, galactic centre, ...) are not included. */
+ * 1600-2500) for those fixed at an ancient epoch.  The star-based
+ * systems put a star at a fixed sidereal longitude (its apparent position
+ * without nutation); they return NaN without the star and Earth data. */
 double eph_ayanamsa(eph_ayanamsa_system system, double jd_tt);
 
 /* Display name of a system ("Lahiri", ...), or NULL. */
@@ -322,6 +331,29 @@ double eph_midpoint(double a, double b);
  * minutes and seconds within the sign.  Any output pointer may be NULL. */
 void eph_split_longitude(double longitude, int* sign, int* degrees,
                          int* minutes, double* seconds);
+
+/* ---- fixed stars ----------------------------------------------------- *
+ * Needs data/eph-stars.bin (the IAU-named Hipparcos stars and the
+ * Galactic Center) and the Earth from a series file or DE440 table.
+ * Stars are numbered 0 .. eph_star_count() - 1. */
+int eph_star_count(void);
+
+/* Index of a star by IAU name ("Regulus"), Bayer designation ("alf Leo",
+ * "alpha Leo") or Hipparcos number ("HIP 49669"); case-insensitive.
+ * -1 if not found. */
+int eph_star_find(const char* name);
+
+const char* eph_star_name(int index);        /* IAU name                 */
+const char* eph_star_designation(int index); /* e.g. "alf Leo", or ""    */
+double eph_star_magnitude(int index);        /* V                        */
+
+/* Geocentric ecliptic position of date: astrometric (proper motion,
+ * parallax, precession) or apparent (also light deflection, aberration
+ * and nutation).  Distance in AU (0 without a parallax). */
+int eph_star_position_tt(int index, double jd_tt, eph_position* out);
+int eph_star_position_apparent_tt(int index, double jd_tt, eph_position* out);
+int eph_star_position_apparent_ut(int index, double jd_ut, double year,
+                                  eph_position* out);
 
 /* ---- data files ------------------------------------------------------ *
  * Positions need series data from a file made by tools/pack_series or

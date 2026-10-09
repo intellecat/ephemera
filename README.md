@@ -267,6 +267,28 @@ date, distance 0, no parallax; the apparent functions add nutation):
   The node magnifies the Moon's latitude error ~11x and the apogee its
   velocity error ~20x.  (Swiss Ephemeris' Moshier mode is 37" / 233" off.)
 
+## Fixed stars
+
+`data/eph-stars.bin` (26 KB) holds the 410 stars with IAU-approved names
+that have a Hipparcos number, plus the Galactic Center (Sgr A*):
+positions, proper motions and parallaxes from the Hipparcos new reduction
+(van Leeuwen 2007), radial velocities from SIMBAD, names from the IAU
+Working Group on Star Names; built by `tools/make_stars.py`.
+
+```c
+int i = eph_star_find("Regulus");        /* or "alf Leo", "HIP 49669" */
+eph_position p;
+eph_star_position_apparent_ut(i, jd_ut, year, &p);
+```
+
+Positions follow the stars' space motion (with parallax and radial
+velocity, as ERFA's `pmsafe`) and then the same reduction as the planets
+(aberration with the Earth's barycentric velocity); they agree with ERFA +
+Skyfield/DE440 within 0.015" over 1600–2500.  The star-based ayanamsas
+(True Citra, True Revati, True Pushya, True Mula, Galactic Center at 0°
+Sagittarius, Gil Brand's and Cochrane's) use this file and match Swiss
+Ephemeris within 0.02" (0.3" for the Galactic Center ones).
+
 ## Sidereal zodiac and houses
 
 ```c
@@ -299,12 +321,12 @@ Krishnamurti (and Senthilathiban), Sri Yukteshwar, De Luce, Usha/Shashi,
 Djwhal Khul, J.N. Bhasin, the Babylonian ones (Kugler 1-3, Huber, Eta
 Piscium, Aldebaran, Britton), Hipparchos, Sassanian, Suryasiddhanta and
 Aryabhata (true and mean Sun, SS Revati/Citra, Aryabhata 522), Vettius
-Valens, Skydram, Fiorenza's galactic equator and J2000/J1900/B1950 -- plus
-user-defined ones (`eph_ayanamsa_custom`).  Each is its defining value
+Valens, Skydram, Fiorenza's galactic equator and J2000/J1900/B1950, and
+seven star-based ones (see Fixed stars) -- plus user-defined ones
+(`eph_ayanamsa_custom`).  Each is its defining value
 carried by the IAU-2006 general precession: within 0.01" of Swiss
 Ephemeris for the modern definitions and 0.25" (1700-2400) for those fixed
-at an ancient epoch.  The star-based systems (True Citra, True Revati,
-True Pushya, True Mula, galactic centre) are not included yet.  Lahiri follows the Calendar Reform Committee's 1956 definition
+at an ancient epoch.  Lahiri follows the Calendar Reform Committee's 1956 definition
 (23°51'25.5" at J2000; earlier versions of this library used 23°51'11.6").
 
 ## Conventions
@@ -366,6 +388,7 @@ without measurable loss:
 | `data/eph-*-chiron.bin`      | +60 KB | +55 KB | each level above with Chiron (1600–2500)       |
 | `data/eph-chiron.bin`        | 60 KB  | 56 KB  | Chiron alone, to add to any series file        |
 | `data/eph-asteroids.bin`     | 425 KB | 397 KB | Ceres, Pallas, Juno, Vesta, Chiron, 1600–2500  |
+| `data/eph-stars.bin`         | 26 KB  |        | 410 named stars and the Galactic Center        |
 | `data/de440/de440-YEAR.bin`  | ~330 KB each | ~310 KB | DE440 table for YEAR..YEAR+100, ~0.002″ |
 
 Chiron comes three ways with the same data: inside a series file

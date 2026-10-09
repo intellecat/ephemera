@@ -6,6 +6,7 @@
  *   pack_series base      OUT VSOP ELP   base series of a residual table
  *   pack_series asteroids OUT            Ceres, Pallas, Juno, Vesta, Chiron
  *   pack_series chiron    OUT            Chiron only
+ *   pack_series stars     OUT            the fixed-star catalogue
  *
  * VSOP is one threshold (radians) or eight, comma-separated, for Mercury..
  * Neptune; ELP is one threshold.  A term is kept when its amplitude, times
@@ -28,6 +29,7 @@
 #include "data.h"
 #include "elp_data.h"
 #include "pluto_data.h"
+#include "stars_data.h"
 #include "vsop87d_data.h"
 
 using namespace eph;
@@ -154,6 +156,29 @@ void add_asteroids() {
         add_chebyshev(kSectionAsteroid, i, ast::bodies[i]);
 }
 
+void add_stars() {
+    std::string pool(1, '\0'); /* offset 0: the empty string */
+    auto intern = [&](const char* text) -> uint32_t {
+        if (!*text) return 0;
+        const uint32_t at = (uint32_t)pool.size();
+        pool += text;
+        pool += '\0';
+        return at;
+    };
+    std::vector<StarRecord> records;
+    for (int i = 0; i < stars::count; ++i) {
+        const stars::Star& s = stars::catalogue[i];
+        records.push_back({s.ra, s.dec, s.pm_ra, s.pm_dec, s.parallax, s.rv, s.vmag,
+                           s.hip, intern(s.name), intern(s.designation)});
+    }
+    Section s{kSectionStars, 0, {}};
+    s.put((uint32_t)records.size());
+    s.put((uint32_t)pool.size());
+    s.put_bytes(records.data(), records.size() * sizeof(StarRecord));
+    s.put_bytes(pool.data(), pool.size());
+    g_sections.push_back(std::move(s));
+}
+
 void add_info(const std::string& text) {
     Section s{kSectionInfo, 0, {}};
     s.put_bytes(text.data(), text.size());
@@ -228,6 +253,10 @@ int main(int argc, char** argv) {
     if (mode == "asteroids" && argc == 3) {
         add_info("asteroids: Ceres, Pallas, Juno, Vesta, Chiron (fit to JPL Horizons)");
         add_asteroids();
+    } else if (mode == "stars" && argc == 3) {
+        add_info("fixed stars: IAU-named Hipparcos stars (new reduction), "
+                 "SIMBAD radial velocities, Sgr A*");
+        add_stars();
     } else if (mode == "chiron" && argc == 3) {
         add_info("Chiron (fit to JPL Horizons)");
         add_chebyshev(kSectionAsteroid, chiron, ast::bodies[chiron]);
@@ -254,7 +283,7 @@ int main(int argc, char** argv) {
     } else {
         std::fprintf(stderr,
                      "usage: pack_series series|series+chiron|base OUT VSOP ELP\n"
-                     "       pack_series asteroids|chiron OUT\n");
+                     "       pack_series asteroids|chiron|stars OUT\n");
         return 1;
     }
     if (!write(argv[2])) {

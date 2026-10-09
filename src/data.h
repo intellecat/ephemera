@@ -31,6 +31,7 @@ enum SectionType {
     kSectionAsteroid = 5,   /* id: 0..4 (Ceres..Chiron) */
     kSectionTable = 6,      /* DE440 residual table    */
     kSectionInfo = 7,       /* free text               */
+    kSectionStars = 8,      /* fixed-star catalogue    */
 };
 
 /* Series role: the theory used for analytical positions, or the truncated
@@ -46,6 +47,17 @@ struct SeriesSet {
 };
 
 constexpr int kMaxTables = 32;
+
+/* A fixed star in the star section: ICRS position at J2000.0 (radians),
+ * proper motion (mas/yr, RA as dRA/dt cos dec), parallax (mas), radial
+ * velocity (km/s), V magnitude, Hipparcos number, and offsets of its
+ * name and designation in the section's string pool (NUL-terminated). */
+struct StarRecord {
+    double ra, dec;
+    float pm_ra, pm_dec, parallax, rv, vmag;
+    uint32_t hip, name, designation;
+};
+static_assert(sizeof(StarRecord) == 48, "StarRecord layout");
 constexpr int kAsteroids = 5; /* Ceres, Pallas, Juno, Vesta, Chiron */
 
 struct Data {
@@ -62,6 +74,11 @@ struct Data {
         const unsigned char* p;
         uint64_t size;
     } tables[kMaxTables];
+    /* Fixed stars: records and their string pool. */
+    const StarRecord* stars;
+    int nstars;
+    const char* star_strings;
+    uint64_t star_strings_size;
     int ntables;
     /* CRC-32 of the base series sections in effect (see compressed.cpp). */
     const unsigned char* base_section[9]; /* VSOP Mercury..Neptune, ELP */

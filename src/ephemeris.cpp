@@ -522,6 +522,26 @@ bool topocentric_eval(eph_body body, double jd_tt, double jd_ut,
 
 }  // namespace
 
+bool earth_heliocentric_state(double jd_tt, Vec3& p, Vec3& v) {
+    const bool table = eph_compressed_available() && compressed_covers(jd_tt);
+    State e;
+    if (!cached_state(EPH_EARTH, jd_tt, table, e) &&
+        !(table && cached_state(EPH_EARTH, jd_tt, false, e)))
+        return false;
+    p = e.p;
+    v = e.v;
+    return true;
+}
+
+void reduce_direction(double jd_tt, bool apparent, const Vec3& g, const Vec3& e,
+                      const Vec3& ev, double& lon, double& lat) {
+    reduce(EPH_MERCURY, jd_tt, apparent, g, e, ev, lon, lat); /* a generic body */
+}
+
+Vec3 ecliptic_j2000_to_date(double jd_tt, const Vec3& v) {
+    return j2000_to_date(jd_tt, v);
+}
+
 extern "C" {
 
 int eph_position_tt(eph_body body, double jd_tt, eph_position* out) {

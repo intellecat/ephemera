@@ -24,7 +24,9 @@ int main() {
      * modern definitions agree within 0.01", those fixed at an ancient
      * epoch within ~0.3" (a different long-term precession). */
     double worst_ayan = 0.0;
-    for (int m = 0; m < EPH_AYANAMSA_COUNT; ++m)
+    /* The table-defined systems (the star-based ones are in test_stars). */
+    const int ntable = EPH_AYANAMSA_TRUE_CITRA;
+    for (int m = 0; m < ntable; ++m)
         for (int k = 0; k < 5; ++k) {
             const double d = std::fabs(
                 eph_ayanamsa((eph_ayanamsa_system)m, kAyanamsaDates[k]) * R2D -
@@ -37,7 +39,7 @@ int main() {
             }
         }
     std::printf("Ayanamsas      max %.3f\" vs Swiss Ephemeris (%d systems)\n",
-                worst_ayan, (int)EPH_AYANAMSA_COUNT);
+                worst_ayan, ntable);
     if (std::fabs(eph_ayanamsa_lahiri(jd) - eph_ayanamsa(EPH_AYANAMSA_LAHIRI, jd)) > 0 ||
         !std::isnan(eph_ayanamsa((eph_ayanamsa_system)99, jd)) ||
         eph_ayanamsa_name((eph_ayanamsa_system)99) != nullptr ||

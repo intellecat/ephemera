@@ -10,6 +10,7 @@ CORE_SRC = src/time.cpp src/frames.cpp src/vsop87.cpp src/moon.cpp \
            src/elp.cpp src/pluto.cpp src/ephemeris.cpp src/correction.cpp \
            src/compressed.cpp src/houses.cpp src/asteroids.cpp src/data.cpp \
            src/util.cpp src/ayanamsa.cpp src/search.cpp src/phenomena.cpp \
+           src/stars.cpp \
            data/delta_t_data.cpp
 LIB_SRC = $(CORE_SRC)
 
@@ -33,7 +34,7 @@ DE440_1800_2200 = $(foreach y,1800 1900 2000 2100,data/de440/de440-$(y).bin)
 TESTS = $(BUILD)/test_ephemeris $(BUILD)/test_compressed $(BUILD)/test_topocentric \
         $(BUILD)/test_houses $(BUILD)/test_asteroids $(BUILD)/test_data \
         $(BUILD)/test_lunar_points $(BUILD)/test_time $(BUILD)/test_search \
-        $(BUILD)/test_phenomena
+        $(BUILD)/test_phenomena $(BUILD)/test_stars
 
 all: $(LIB) $(BUILD)/ephcliapp $(TESTS)
 
@@ -70,6 +71,7 @@ test: $(TESTS)
 	$(BUILD)/test_time data/eph-full.bin
 	$(BUILD)/test_search data/eph-full.bin
 	$(BUILD)/test_phenomena data/eph-full.bin data/eph-asteroids.bin
+	$(BUILD)/test_stars data/eph-full.bin data/eph-stars.bin
 
 $(BUILD)/test_compressed: tests/test_compressed.cpp $(LIB)
 	$(CXX) $(CXXFLAGS) -Iinclude -Itests $< $(LIB) -lm -o $@
@@ -98,9 +100,12 @@ $(BUILD)/test_search: tests/test_search.cpp $(LIB)
 $(BUILD)/test_phenomena: tests/test_phenomena.cpp tests/phenomena_ref.h $(LIB)
 	$(CXX) $(CXXFLAGS) -Iinclude -Itests $< $(LIB) -lm -o $@
 
+$(BUILD)/test_stars: tests/test_stars.cpp tests/stars_ref.h $(LIB)
+	$(CXX) $(CXXFLAGS) -Iinclude -Itests $< $(LIB) -lm -o $@
+
 # Development tools and the series data files (see README).
 SERIES_SRC = data/vsop87d_data.cpp data/elp_data.cpp data/pluto_data.cpp \
-             data/corr_data.cpp data/asteroid_data.cpp
+             data/corr_data.cpp data/asteroid_data.cpp data/stars_data.cpp
 
 tools: $(BUILD)/pack_series
 
@@ -124,6 +129,7 @@ data: $(BUILD)/pack_series
 	$(BUILD)/pack_series series+chiron data/eph-1as-chiron.bin $(LEVEL_1AS)
 	$(BUILD)/pack_series chiron data/eph-chiron.bin
 	$(BUILD)/pack_series asteroids data/eph-asteroids.bin
+	$(BUILD)/pack_series stars data/eph-stars.bin
 
 # WebAssembly (wasm32-wasi reactor modules exporting the C API plus
 # malloc/free; no file I/O, data comes from JavaScript as bytes):

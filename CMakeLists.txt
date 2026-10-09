@@ -44,6 +44,7 @@ add_library(ephemeris STATIC
     src/ayanamsa.cpp
     src/search.cpp
     src/phenomena.cpp
+    src/stars.cpp
     ${EMBED_SRC}
     data/delta_t_data.cpp
 )
@@ -66,7 +67,7 @@ endif()
 if(EPHEMERIS_BUILD_TOOLS)
     add_executable(pack_series tools/pack_series.cpp
         data/vsop87d_data.cpp data/elp_data.cpp data/pluto_data.cpp
-        data/corr_data.cpp data/asteroid_data.cpp)
+        data/corr_data.cpp data/asteroid_data.cpp data/stars_data.cpp)
     target_include_directories(pack_series PRIVATE src data)
 endif()
 
@@ -116,4 +117,8 @@ if(EPHEMERIS_BUILD_TESTS)
     target_link_libraries(test_phenomena PRIVATE ephemeris)
     add_test(NAME phenomena COMMAND test_phenomena ${DATA}/eph-full.bin
              ${DATA}/eph-asteroids.bin)
+
+    add_executable(test_stars tests/test_stars.cpp)
+    target_link_libraries(test_stars PRIVATE ephemeris)
+    add_test(NAME stars COMMAND test_stars ${DATA}/eph-full.bin ${DATA}/eph-stars.bin)
 endif()

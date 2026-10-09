@@ -108,6 +108,17 @@ bool chebyshev_body(const double* t, const float* c, int nseg, int ncoef,
  * (Ceres, Pallas, Juno, Vesta, Chiron).  src/asteroids.cpp. */
 bool asteroid_heliocentric(int idx, double jd_tt, double anchor, Vec3& v);
 
+/* For the fixed stars (src/ephemeris.cpp): the Earth's heliocentric
+ * position and velocity in the IAU-1976 ecliptic of date; a geocentric
+ * vector of that frame reduced to IAU-2006 ecliptic longitude/latitude of
+ * date (apparent: light deflection by the Sun, aberration with the Earth
+ * velocity ev, nutation); and the mean ecliptic J2000 -> of date rotation
+ * of the series. */
+bool earth_heliocentric_state(double jd_tt, Vec3& p, Vec3& v);
+void reduce_direction(double jd_tt, bool apparent, const Vec3& g, const Vec3& e,
+                      const Vec3& ev, double& lon, double& lat);
+Vec3 ecliptic_j2000_to_date(double jd_tt, const Vec3& v);
+
 }  // namespace eph
 
 #endif

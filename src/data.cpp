@@ -163,6 +163,23 @@ bool parse_correction(Reader r, Data& d, int body) {
     return true;
 }
 
+/* Stars: u32 count, u32 string pool size, records, string pool. */
+bool parse_stars(Reader r, Data& d) {
+    uint32_t n, pool;
+    const StarRecord* stars;
+    const char* strings;
+    if (!r.read(n) || !r.read(pool) || n > 100000 || !r.array(n, &stars) ||
+        !r.array(pool, &strings) || pool == 0 || strings[pool - 1] != '\0')
+        return false;
+    for (uint32_t i = 0; i < n; ++i)
+        if (stars[i].name >= pool || stars[i].designation >= pool) return false;
+    d.stars = stars;
+    d.nstars = (int)n;
+    d.star_strings = strings;
+    d.star_strings_size = pool;
+    return true;
+}
+
 /* Apply every section of a file to d (later files override earlier
  * ones).  False if the file is malformed. */
 bool apply(const unsigned char* p, uint64_t size, Data& d, bool& has_table) {
@@ -204,6 +221,9 @@ bool apply(const unsigned char* p, uint64_t size, Data& d, bool& has_table) {
             case kSectionAsteroid:
                 ok = id < kAsteroids &&
                      (d.asteroid_ok[id] = parse_chebyshev(r, d.asteroid[id]));
+                break;
+            case kSectionStars:
+                ok = parse_stars(r, d);
                 break;
             case kSectionTable:
                 ok = d.ntables < kMaxTables;
