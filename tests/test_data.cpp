@@ -127,6 +127,35 @@ int main(int argc, char** argv) {
     check(eph_position_tt(EPH_MOON, 2300000.0, &p) != 0, "outside both");
     eph_unload_data();
 
+    /* Chiron three ways: in a series file, alone next to one, and with the
+     * other minor bodies -- the same data each time. */
+    {
+        const double jd = 2451545.0;
+        eph_position a, b, c;
+        check(eph_load_file((dir + "eph-1as.bin").c_str()) == 0 &&
+                  eph_position_tt(EPH_CHIRON, jd, &a) != 0,
+              "eph-1as.bin has no Chiron");
+        eph_unload_data();
+        check(eph_load_file((dir + "eph-1as-chiron.bin").c_str()) == 0 &&
+                  eph_position_tt(EPH_CHIRON, jd, &a) == 0 &&
+                  eph_position_tt(EPH_CERES, jd, &p) != 0,
+              "eph-1as-chiron.bin: Chiron, no Ceres");
+        eph_unload_data();
+        check(eph_load_file((dir + "eph-1as.bin").c_str()) == 0 &&
+                  eph_load_file((dir + "eph-chiron.bin").c_str()) == 0 &&
+                  eph_position_tt(EPH_CHIRON, jd, &b) == 0,
+              "eph-1as.bin + eph-chiron.bin");
+        eph_unload_data();
+        check(eph_load_file((dir + "eph-1as.bin").c_str()) == 0 &&
+                  eph_load_file((dir + "eph-asteroids.bin").c_str()) == 0 &&
+                  eph_position_tt(EPH_CHIRON, jd, &c) == 0,
+              "eph-1as.bin + eph-asteroids.bin");
+        eph_unload_data();
+        check(a.longitude == b.longitude && b.longitude == c.longitude &&
+                  a.latitude == c.latitude,
+              "Chiron identical in all three");
+    }
+
     /* Each series level within its accuracy (max over the reference,
      * arcsec; the Moon is ~0.45" at the 1850/2140 ends at every level). */
     struct {

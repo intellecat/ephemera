@@ -192,8 +192,9 @@ const char* eph_body_name(eph_body body);
  *   data/eph-1as.bin    ~0.5" (truncated series)
  *   data/eph-01as.bin   ~0.2" (truncated series)
  *   data/eph-full.bin   the full series (~0.1")
- * and optionally add data/eph-asteroids.bin (Ceres, Pallas, Juno, Vesta,
- * Chiron; 1600-2500) and/or DE440 tables data/de440/de440-YEAR.bin (one century
+ * (each also as eph-*-chiron.bin, with Chiron), and optionally add
+ * data/eph-chiron.bin (Chiron) or data/eph-asteroids.bin (Ceres, Pallas,
+ * Juno, Vesta, Chiron; 1600-2500) and/or DE440 tables data/de440/de440-YEAR.bin (one century
  * each, ~0.002"; self-contained: they work without a series file).
  * Several files can be loaded; a later file overrides what an earlier one
  * provides.  Position functions return -1 for bodies with no data loaded.

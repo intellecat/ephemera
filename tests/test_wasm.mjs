@@ -46,6 +46,12 @@ check(builtIn.positionTT(Body.Sun, 2451545.0) === null, 'unload');
 check(builtIn.loadEmbedded(), 'reload built-in data');
 check(builtIn.positionTT(Body.Moon, 2451545.0) !== null, 'after reload');
 
+// Built-in 1" data with and without Chiron.
+check(builtIn.positionTT(Body.Chiron, 2451545.0) === null, 'ephemeris-1as.wasm has no Chiron');
+const withChiron = await createEphemeris(readFileSync(`${build}/wasm/ephemeris-1as-chiron.wasm`));
+check(withChiron.positionTT(Body.Chiron, 2451545.0) !== null, 'ephemeris-1as-chiron.wasm: Chiron');
+compare(withChiron, 'ephemeris-1as-chiron.wasm');
+
 // The table and asteroids load into the core as well.
 check(core.loadData(readFileSync(`${data}/eph-asteroids.bin`)), 'asteroids');
 check(core.positionTT(Body.Ceres, 2451545.0) !== null, 'Ceres');

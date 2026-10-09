@@ -3,7 +3,7 @@
 A small, dependency-free C/C++ library that computes positions of the Sun,
 Moon, Pluto, the eight planets, Chiron and the four largest asteroids
 (Ceres, Pallas, Juno, Vesta) from analytical series.  No JPL kernel and no SPICE:
-a ~44 KB core (as WebAssembly; ~20 KB brotli) loads one small data file
+a ~51 KB core (as WebAssembly; ~22 KB brotli) loads one small data file
 with the series coefficients at the accuracy you need -- from 145 KB for
 ~0.5" to DE440 tables at ~320 KB per century for ~0.002", over 1550–2650
 (see [Data files](#data-files)).
@@ -152,10 +152,11 @@ make wasm-test     # compares the modules with the native library (needs node)
 builds two modules that need **no imports** (no WASI, no Emscripten
 runtime: `WebAssembly.instantiate(bytes, {})` is enough):
 
-| Module                          | Size   | brotli | Data                         |
-|---------------------------------|--------|--------|------------------------------|
-| `build/wasm/ephemeris.wasm`     | 44 KB  | ~20 KB | none: load a file            |
-| `build/wasm/ephemeris-1as.wasm` | 159 KB | ~92 KB | `eph-1as.bin` built in (~1″) |
+| Module                                 | Size   | brotli | Data built in               |
+|----------------------------------------|--------|--------|-----------------------------|
+| `build/wasm/ephemeris.wasm`            | 51 KB  | 22 KB  | none: load a file           |
+| `build/wasm/ephemeris-1as.wasm`        | 196 KB | 134 KB | `eph-1as.bin`               |
+| `build/wasm/ephemeris-1as-chiron.wasm` | 255 KB | 190 KB | `eph-1as-chiron.bin`        |
 
 `examples/wasm/ephemeris.mjs` wraps them for browsers and Node (angles in
 degrees), and `examples/wasm/index.html` is a small demo page:
@@ -328,13 +329,19 @@ without measurable loss:
 
 ## Data files
 
-| File                       | Size   | brotli | Contents                                      |
-|----------------------------|--------|--------|-----------------------------------------------|
-| `data/eph-1as.bin`         | 145 KB | 112 KB | series truncated to ~0.5″ (4,719 terms)        |
-| `data/eph-01as.bin`        | 303 KB | 213 KB | series truncated to ~0.2″ (14,176 terms)       |
-| `data/eph-full.bin`        | 649 KB | 420 KB | the full series (34,530 terms)                 |
-| `data/eph-asteroids.bin`   | 425 KB | 397 KB | Ceres, Pallas, Juno, Vesta, Chiron, 1600–2500  |
-| `data/de440/de440-YEAR.bin`| ~330 KB each | ~310 KB | DE440 table for YEAR..YEAR+100, ~0.002″ |
+| File                         | Size   | brotli | Contents                                      |
+|------------------------------|--------|--------|-----------------------------------------------|
+| `data/eph-1as.bin`           | 145 KB | 112 KB | series truncated to ~0.5″ (4,719 terms)        |
+| `data/eph-01as.bin`          | 303 KB | 213 KB | series truncated to ~0.2″ (14,176 terms)       |
+| `data/eph-full.bin`          | 649 KB | 420 KB | the full series (34,530 terms)                 |
+| `data/eph-*-chiron.bin`      | +60 KB | +55 KB | each level above with Chiron (1600–2500)       |
+| `data/eph-chiron.bin`        | 60 KB  | 56 KB  | Chiron alone, to add to any series file        |
+| `data/eph-asteroids.bin`     | 425 KB | 397 KB | Ceres, Pallas, Juno, Vesta, Chiron, 1600–2500  |
+| `data/de440/de440-YEAR.bin`  | ~330 KB each | ~310 KB | DE440 table for YEAR..YEAR+100, ~0.002″ |
+
+Chiron comes three ways with the same data: inside a series file
+(`eph-1as-chiron.bin`), as its own file next to one (`eph-chiron.bin`),
+or with the other minor bodies (`eph-asteroids.bin`).
 
 The series files cover 1550–2650 (Pluto and the corrections) and work,
 less accurately, outside it.  Load one series file, plus the asteroids if

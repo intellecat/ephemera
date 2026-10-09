@@ -2,8 +2,10 @@
  *
  *   pack_series series    OUT VSOP ELP   theory: VSOP87D, ELP2000-82B, Pluto
  *                                         and the DE440 corrections
+ *   pack_series series+chiron OUT VSOP ELP   the same plus Chiron
  *   pack_series base      OUT VSOP ELP   base series of a residual table
- *   pack_series asteroids OUT            Ceres, Pallas, Juno, Vesta
+ *   pack_series asteroids OUT            Ceres, Pallas, Juno, Vesta, Chiron
+ *   pack_series chiron    OUT            Chiron only
  *
  * VSOP is one threshold (radians) or eight, comma-separated, for Mercury..
  * Neptune; ELP is one threshold.  A term is kept when its amplitude, times
@@ -21,6 +23,7 @@
 #include <vector>
 
 #include "asteroid_data.h"
+#include "../include/ephemeris/ephemeris.h"
 #include "corr_data.h"
 #include "data.h"
 #include "elp_data.h"
@@ -221,12 +224,16 @@ int main(int argc, char** argv) {
     }
     const std::string mode = argc > 2 ? argv[1] : "";
     double vsop[8];
+    const uint32_t chiron = EPH_CHIRON - EPH_CERES; /* asteroid index */
     if (mode == "asteroids" && argc == 3) {
         add_info("asteroids: Ceres, Pallas, Juno, Vesta, Chiron (fit to JPL Horizons)");
         add_asteroids();
-    } else if ((mode == "series" || mode == "base") && argc == 5 &&
-               parse_thresholds(argv[3], vsop)) {
-        const bool theory = (mode == "series");
+    } else if (mode == "chiron" && argc == 3) {
+        add_info("Chiron (fit to JPL Horizons)");
+        add_chebyshev(kSectionAsteroid, chiron, ast::bodies[chiron]);
+    } else if ((mode == "series" || mode == "series+chiron" || mode == "base") &&
+               argc == 5 && parse_thresholds(argv[3], vsop)) {
+        const bool theory = (mode != "base");
         const double elp = std::atof(argv[4]);
         add_info(std::string(theory ? "series" : "table base") + ": VSOP87D " +
                  argv[3] + ", ELP2000-82B " + argv[4]);
@@ -242,10 +249,12 @@ int main(int argc, char** argv) {
             for (uint32_t p = 0; p < 8; ++p) add_correction(p, *c[p]);
             add_correction(10, corr::moon);
         }
+        if (mode == "series+chiron")
+            add_chebyshev(kSectionAsteroid, chiron, ast::bodies[chiron]);
     } else {
         std::fprintf(stderr,
-                     "usage: pack_series series|base OUT VSOP ELP\n"
-                     "       pack_series asteroids OUT\n");
+                     "usage: pack_series series|series+chiron|base OUT VSOP ELP\n"
+                     "       pack_series asteroids|chiron OUT\n");
         return 1;
     }
     if (!write(argv[2])) {

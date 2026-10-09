@@ -99,16 +99,23 @@ $(BUILD)/pack_series: tools/pack_series.cpp $(SERIES_SRC)
 LEVEL_01AS = 3e-8,1e-8,3e-9,1e-9,1e-8,3e-9,1e-8,1e-8 1e-8
 LEVEL_1AS  = 3e-7,1e-7,3e-8,3e-8,1e-7,1e-7,1e-7,3e-7 5e-8
 
+# Each series level with and without Chiron, Chiron alone, and all five
+# minor bodies.
 data: $(BUILD)/pack_series
 	$(BUILD)/pack_series series data/eph-full.bin 0 0
 	$(BUILD)/pack_series series data/eph-01as.bin $(LEVEL_01AS)
 	$(BUILD)/pack_series series data/eph-1as.bin $(LEVEL_1AS)
+	$(BUILD)/pack_series series+chiron data/eph-full-chiron.bin 0 0
+	$(BUILD)/pack_series series+chiron data/eph-01as-chiron.bin $(LEVEL_01AS)
+	$(BUILD)/pack_series series+chiron data/eph-1as-chiron.bin $(LEVEL_1AS)
+	$(BUILD)/pack_series chiron data/eph-chiron.bin
 	$(BUILD)/pack_series asteroids data/eph-asteroids.bin
 
 # WebAssembly (wasm32-wasi reactor modules exporting the C API plus
 # malloc/free; no file I/O, data comes from JavaScript as bytes):
-#   build/wasm/ephemeris.wasm       core only
-#   build/wasm/ephemeris-1as.wasm   core with data/eph-1as.bin built in
+#   build/wasm/ephemeris.wasm              core only
+#   build/wasm/ephemeris-1as.wasm          core with data/eph-1as.bin built in
+#   build/wasm/ephemeris-1as-chiron.wasm   ... with data/eph-1as-chiron.bin
 # WASM_CXX can also be a wasi-sdk clang, e.g.
 #   make wasm WASM_CXX="clang++ --target=wasm32-wasi --sysroot=/opt/wasi-sdk/share/wasi-sysroot"
 WASM_CXX   ?= zig c++ -target wasm32-wasi
@@ -120,17 +127,19 @@ WASM_API   := $(shell sed -n 's/^[a-z].*[ *]\(eph_[a-z0-9_]*\)$(lparen).*/\1/p' 
                 include/ephemeris/ephemeris.h)
 WASM_LINK   = $(addprefix -Wl$(comma)--export=,$(WASM_API) malloc free)
 
-wasm: $(BUILD)/wasm/ephemeris.wasm $(BUILD)/wasm/ephemeris-1as.wasm
+wasm: $(BUILD)/wasm/ephemeris.wasm $(BUILD)/wasm/ephemeris-1as.wasm \
+      $(BUILD)/wasm/ephemeris-1as-chiron.wasm
 
 $(BUILD)/wasm/ephemeris.wasm: $(CORE_SRC) src/embedded_none.cpp
 	@mkdir -p $(dir $@)
 	$(WASM_CXX) $(WASM_FLAGS) $^ $(WASM_LINK) -o $@
 
-$(BUILD)/wasm/embedded_1as.cpp: data/eph-1as.bin tools/embed.cmake
+.PRECIOUS: $(BUILD)/wasm/embedded_%.cpp
+$(BUILD)/wasm/embedded_%.cpp: data/eph-%.bin tools/embed.cmake
 	@mkdir -p $(dir $@)
 	cmake -DIN=$< -DOUT=$@ -P tools/embed.cmake
 
-$(BUILD)/wasm/ephemeris-1as.wasm: $(CORE_SRC) $(BUILD)/wasm/embedded_1as.cpp
+$(BUILD)/wasm/ephemeris-%.wasm: $(CORE_SRC) $(BUILD)/wasm/embedded_%.cpp
 	@mkdir -p $(dir $@)
 	$(WASM_CXX) $(WASM_FLAGS) $^ $(WASM_LINK) -o $@
 
