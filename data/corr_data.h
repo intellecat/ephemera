@@ -10,7 +10,8 @@ struct Series {
     int n;
 };
 
-extern const Series uranus, neptune, moon;
+extern const Series earth, mercury, venus, mars, jupiter,
+                    saturn, uranus, neptune, moon;
 
 }  // namespace corr
 }  // namespace eph

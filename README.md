@@ -29,20 +29,20 @@ reflect the theories, not a frame-model difference:
 
 | Body    | geometric | apparent | notes                          |
 |---------|-----------|----------|--------------------------------|
-| Mercury | 0.12″     | 0.13″    |                                |
-| Venus   | 0.14″     | 0.21″    |                                |
-| Mars    | 0.09″     | 0.10″    |                                |
-| Jupiter | 0.49″     | 0.49″    | DE barycenter reference        |
-| Saturn  | 0.37″     | 0.35″    | DE barycenter reference        |
-| Uranus  | 0.01″     | 0.05″    | VSOP87 + DE440 correction      |
+| Mercury | 0.04″     | 0.05″    | VSOP87 + DE440 correction      |
+| Venus   | 0.05″     | 0.16″    | VSOP87 + DE440 correction      |
+| Mars    | 0.09″     | 0.11″    | VSOP87 + DE440 correction      |
+| Jupiter | 0.07″     | 0.07″    | VSOP87 + DE440 correction      |
+| Saturn  | 0.02″     | 0.03″    | VSOP87 + DE440 correction      |
+| Uranus  | 0.01″     | 0.06″    | VSOP87 + DE440 correction      |
 | Neptune | 0.01″     | 0.05″    | VSOP87 + DE440 correction      |
-| Pluto   | 0.04″     | 0.07″    | Poisson fit to DE440s          |
-| Sun     | 0.13″     | 0.13″    |                                |
+| Pluto   | 0.04″     | 0.08″    | Poisson fit to DE440s          |
+| Sun     | 0.05″     | 0.05″    | VSOP87 + DE440 correction      |
 | Moon    | 0.20″     | 0.20″    | full ELP2000-82B + DE440 corr  |
 
-Inner planets are one to three arcseconds as advertised; the outer planets
-are better than that over the fitted span, Pluto is sub-arcsecond over 1850–2140, and the Moon is ~0.1" near
-J2000 (up to a few arcseconds at the edges, reflecting its DE200 fit).
+Every planet, the Sun and Pluto are now sub-0.1" over 1850–2140 (VSOP87
+plus small DE440 corrections); the Moon is ~0.1" near J2000 and ~0.2"
+across the span.  Add the optional compressed backend for ~0.01".
 
 ### Where the remaining error comes from
 
