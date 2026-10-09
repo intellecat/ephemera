@@ -34,16 +34,17 @@ TESTS = $(BUILD)/test_ephemeris $(BUILD)/test_compressed $(BUILD)/test_topocentr
 
 all: $(LIB) $(BUILD)/ephcliapp $(TESTS)
 
+# -MMD -MP: rebuild objects when a header they include changes.
 $(BUILD)/%.o: %.cpp
 	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -MMD -MP -c $< -o $@
 
 $(BUILD)/embedded_data.cpp: $(EMBED) tools/embed.cmake
 	@mkdir -p $(BUILD)
 	cmake -DIN=$(EMBED) -DOUT=$@ -P tools/embed.cmake
 
 $(BUILD)/embedded_data.o: $(BUILD)/embedded_data.cpp
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -MMD -MP -c $< -o $@
 
 $(LIB): $(LIB_OBJ)
 	rm -f $@
@@ -136,3 +137,5 @@ wasm-test: wasm $(BUILD)/test_wasm_ref
 
 clean:
 	rm -rf $(BUILD)
+
+-include $(LIB_OBJ:.o=.d)
