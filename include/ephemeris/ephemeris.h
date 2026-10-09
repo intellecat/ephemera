@@ -124,6 +124,25 @@ int eph_position_topocentric_tt(eph_body body, double jd_tt, double jd_ut,
                                 const eph_observer* observer,
                                 eph_position* out);
 
+/* ---- sidereal zodiac and houses ------------------------------------ */
+
+/* Lahiri ayanamsa (radians): sidereal longitude = tropical - ayanamsa. */
+double eph_ayanamsa_lahiri(double jd_tt);
+
+/* Ascendant and Midheaven ecliptic longitudes (radians, tropical). */
+int eph_asc_mc(double jd_ut, const eph_observer* observer, double* asc,
+               double* mc);
+
+typedef enum {
+    EPH_HOUSES_WHOLE_SIGN = 0,
+    EPH_HOUSES_EQUAL,
+    EPH_HOUSES_PORPHYRY
+} eph_house_system;
+
+/* House cusps 1..12 as ecliptic longitudes (radians, tropical). */
+int eph_houses(double jd_ut, const eph_observer* observer,
+               eph_house_system system, double cusps[12]);
+
 const char* eph_body_name(eph_body body);
 
 /* ---- optional compressed ephemeris backend -------------------------- *

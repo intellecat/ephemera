@@ -131,6 +131,20 @@ model).  The Moon's ~1 degree parallax is the dominant effect.  Refraction
 is not applied (it affects altitude, not the ecliptic longitude used in
 charts).
 
+## Sidereal zodiac and houses
+
+```c
+double ayan = eph_ayanamsa_lahiri(jd_tt);      /* sidereal = tropical - ayan */
+double asc, mc;
+eph_asc_mc(jd_ut, &obs, &asc, &mc);
+double cusps[12];
+eph_houses(jd_ut, &obs, EPH_HOUSES_PORPHYRY, cusps);
+```
+
+House systems: Whole Sign, Equal, Porphyry (Placidus/Koch are future work).
+Asc/MC are validated geometrically (the Ascendant lies on the horizon to
+<0.01 degree); the Lahiri ayanamsa uses the IAU-1976 general precession.
+
 ## Conventions
 
 * VSOP87D is referred to the **mean dynamical ecliptic and equinox of

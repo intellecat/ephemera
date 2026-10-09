@@ -20,6 +20,7 @@ add_library(ephemeris STATIC
     src/elp.cpp
     src/correction.cpp
     src/compressed.cpp
+    src/houses.cpp
     src/pluto.cpp
     src/ephemeris.cpp
     data/vsop87d_data.cpp
@@ -57,4 +58,8 @@ if(EPHEMERIS_BUILD_TESTS)
     add_executable(test_topocentric tests/test_topocentric.cpp)
     target_link_libraries(test_topocentric PRIVATE ephemeris)
     add_test(NAME topocentric COMMAND test_topocentric)
+
+    add_executable(test_houses tests/test_houses.cpp)
+    target_link_libraries(test_houses PRIVATE ephemeris)
+    add_test(NAME houses COMMAND test_houses)
 endif()
