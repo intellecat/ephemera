@@ -48,9 +48,15 @@ void apply_correction(int planet, double jd_tt, double& lon, double& lat,
 void apply_moon_correction(double jd_tt, double& lon, double& lat, double& r);
 
 /* Optional Chebyshev compressed ephemeris backend (src/compressed.cpp).
- * Returns the geocentric vector in the mean ecliptic J2000 frame. */
-bool compressed_geocentric(int body, double jd, bool light_time, Vec3& out,
-                           double& dist);
+ * compressed_raw: mean ecliptic J2000 position (AU), heliocentric for the
+ * planets and the Earth, geocentric for the Moon, and optionally velocity
+ * and acceleration (per day) from the same segment.  compressed_covers: the
+ * advertised date range.  compressed_generation changes on every
+ * load/unload. */
+bool compressed_raw(int body, double jd, Vec3& p, Vec3* v = nullptr,
+                    Vec3* a = nullptr);
+bool compressed_covers(double jd);
+int compressed_generation();
 
 /* Frame helpers (src/frames.cpp). */
 Vec3 spherical_to_cartesian(double lon, double lat, double r);

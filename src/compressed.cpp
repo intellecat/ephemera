@@ -27,6 +27,7 @@ int g_nentries = 0;
 double g_jd0 = 0.0, g_jd1 = 0.0;      /* advertised range */
 double g_data0 = 0.0, g_data1 = 0.0;  /* actual stored range (with margin) */
 int g_cbytes = 3;                     /* coefficient width: 3 (int24) or 4 (int32) */
+int g_generation = 1;                 /* bumped on every load/unload */
 
 template <typename T>
 T load_at(const unsigned char* p, long off) {
@@ -113,6 +114,7 @@ extern "C" void eph_unload_compressed(void) {
     g_data = nullptr;
     g_size = 0;
     g_nentries = 0;
+    ++g_generation;
 }
 
 extern "C" int eph_compressed_available(void) { return g_data ? 1 : 0; }
@@ -121,7 +123,18 @@ namespace {
 
 /* Evaluate the stored position (heliocentric, or geocentric for the Moon)
  * in the mean ecliptic J2000 frame. */
-bool eval_entry(const Entry* e, double jd, Vec3& v) {
+/* Derivative of a Chebyshev series with respect to its argument u. */
+void chebyshev_derivative(const double* c, int n, double* d) {
+    d[n - 1] = 0.0;
+    if (n > 1) d[n - 2] = 2.0 * (n - 1) * c[n - 1];
+    for (int k = n - 3; k >= 0; --k) d[k] = d[k + 2] + 2.0 * (k + 1) * c[k + 1];
+    d[0] *= 0.5;
+}
+
+/* Position, and optionally velocity and acceleration (per day), from the
+ * single segment containing jd, so the derivatives are smooth. */
+bool eval_entry(const Entry* e, double jd, Vec3& p, Vec3* v = nullptr,
+                Vec3* a = nullptr) {
     int lo = 0, hi = e->nseg - 1;
     while (lo < hi) {
         const int mid = (lo + hi + 1) / 2;
@@ -133,87 +146,52 @@ bool eval_entry(const Entry* e, double jd, Vec3& v) {
     const int i = lo;
     const double t0 = e->tstart[i], t1 = e->tstart[i + 1];
     const double u = (2.0 * jd - (t0 + t1)) / (t1 - t0);
+    const double du = 2.0 / (t1 - t0); /* du/dt */
 
-    double out[3];
+    double out[3][3];
     for (int c = 0; c < 3; ++c) {
         const unsigned char* q =
             e->coef + (i * 3 + c) * e->ncoef * g_cbytes;
-        double cc[24];
+        double cc[24], d1[24], d2[24];
         const int n = e->ncoef;
         for (int k = 0; k < n; ++k) {
-            int32_t v;
+            int32_t w;
             if (g_cbytes == 4) {
-                v = (int32_t)(q[4 * k] | (q[4 * k + 1] << 8) |
+                w = (int32_t)(q[4 * k] | (q[4 * k + 1] << 8) |
                               (q[4 * k + 2] << 16) | (uint32_t)(q[4 * k + 3] << 24));
             } else {
-                v = q[3 * k] | (q[3 * k + 1] << 8) | (q[3 * k + 2] << 16);
-                if (v & 0x800000) v |= ~0xFFFFFF; /* sign-extend */
+                w = q[3 * k] | (q[3 * k + 1] << 8) | (q[3 * k + 2] << 16);
+                if (w & 0x800000) w |= ~0xFFFFFF; /* sign-extend */
             }
-            cc[k] = v * (double)e->scale[i * 3 + c];
+            cc[k] = w * (double)e->scale[i * 3 + c];
         }
-        out[c] = chebyshev(cc, n, u);
+        out[0][c] = chebyshev(cc, n, u);
+        if (v || a) {
+            chebyshev_derivative(cc, n, d1);
+            out[1][c] = chebyshev(d1, n, u) * du;
+            chebyshev_derivative(d1, n, d2);
+            out[2][c] = chebyshev(d2, n, u) * du * du;
+        }
     }
-    v = {out[0], out[1], out[2]};
+    p = {out[0][0], out[0][1], out[0][2]};
+    if (v) *v = {out[1][0], out[1][1], out[1][2]};
+    if (a) *a = {out[2][0], out[2][1], out[2][2]};
     return true;
 }
 
 }  // namespace
 
-bool compressed_raw(int body, double jd, Vec3& v) {
+bool compressed_raw(int body, double jd, Vec3& p, Vec3* v, Vec3* a) {
     if (!g_data || jd < g_data0 || jd > g_data1) return false;
     const Entry* e = find_entry(body);
     if (!e) return false;
-    return eval_entry(e, jd, v);
+    return eval_entry(e, jd, p, v, a);
 }
 
-bool compressed_geocentric(int body, double jd, bool light_time, Vec3& out,
-                           double& dist) {
-    if (!g_data || jd < g_jd0 || jd > g_jd1) return false;
-
-    if (body == EPH_MOON) {
-        Vec3 p;
-        if (!compressed_raw(EPH_MOON, jd, p)) return false;
-        if (light_time) {
-            for (int i = 0; i < 2; ++i) {
-                double te = jd - length(p) / AU_PER_LIGHT_DAY;
-                if (te < g_data0) te = g_data0;
-                if (te > g_data1) te = g_data1;
-                Vec3 q;
-                if (!compressed_raw(EPH_MOON, te, q)) break;
-                p = q;
-            }
-        }
-        out = p;
-        dist = length(p);
-        return true;
-    }
-
-    if (body == EPH_SUN) {
-        Vec3 e;
-        if (!compressed_raw(EPH_EARTH, jd, e)) return false;
-        out = Vec3{-e.x, -e.y, -e.z};
-        dist = length(out);
-        return true;
-    }
-
-    Vec3 e;
-    if (!compressed_raw(EPH_EARTH, jd, e)) return false;
-    Vec3 p;
-    if (!compressed_raw(body, jd, p)) return false;
-    out = p - e;
-    dist = length(out);
-    if (light_time) {
-        for (int i = 0; i < 3; ++i) {
-            double te = jd - dist / AU_PER_LIGHT_DAY;
-            if (te < g_data0) te = g_data0;
-            if (te > g_data1) te = g_data1;
-            Vec3 q;
-            if (!compressed_raw(body, te, q)) break;
-            out = q - e;
-            dist = length(out);
-        }
-    }
-    return true;
+bool compressed_covers(double jd) {
+    return g_data && jd >= g_jd0 && jd <= g_jd1;
 }
+
+int compressed_generation() { return g_generation; }
 
 }  // namespace eph

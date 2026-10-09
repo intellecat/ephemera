@@ -81,6 +81,15 @@ median is 0.01–0.05" and the compressed median ~0.005".
   `eph_tdb_minus_tt()` is provided for callers that want the TDB timescale
   used by the dynamical theories.
 
+## Performance
+
+Each position evaluates the body's series three times (position, velocity
+and acceleration together); light-time uses that expansion instead of
+re-evaluating, speeds come from the same velocities, and the Earth is
+cached per date and thread.  A full chart (14 bodies with speeds, Asc/MC,
+houses) takes ~1.4 ms with the analytical series and ~0.07 ms with the
+compressed table, on one core of a 2024 desktop CPU.
+
 ## Building
 
 With CMake:
