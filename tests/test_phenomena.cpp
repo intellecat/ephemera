@@ -1,4 +1,5 @@
-/* Phenomena vs Swiss Ephemeris (tests/phenomena_ref.h).
+/* Phenomena vs JPL DE440 with Skyfield (tests/phenomena_ref.h, made by
+ * tools/make_phenomena_reference.py).
  * Usage: test_phenomena <series data file> <asteroid data file> */
 #include <cmath>
 #include <cstdio>
@@ -12,33 +13,44 @@ static const double R2D = 180.0 / 3.14159265358979323846;
 int main(int argc, char** argv) {
     if (!load_data_args(argc, argv)) return 1;
     int fails = 0;
-    double worst[5] = {0};
+    double worst[5] = {0}, worst_mag_outer = 0.0;
     for (const PhenoRef& r : kPhenoRef) {
         eph_phenomena p;
         if (eph_phenomena_tt((eph_body)r.body, r.jd_tt, &p) != 0) {
             std::printf("FAIL: no phenomena for body %d\n", r.body);
             return 1;
         }
-        const double e[5] = {
+        const double e[4] = {
             std::fabs(p.phase_angle * R2D - r.phase_angle) * 3600.0,
-            /* Swiss Ephemeris gives the Sun phase 0; ours is 1 (fully lit). */
-            r.body == EPH_SUN ? 0.0 : std::fabs(p.phase - r.phase),
+            std::fabs(p.phase - r.phase),
             std::fabs(p.elongation * R2D - r.elongation) * 3600.0,
-            std::fabs(p.diameter * R2D - r.diameter) / r.diameter,
-            /* The Moon's magnitude formula holds to phase angles ~150 deg. */
-            (r.body == EPH_MOON && r.phase_angle > 150.0)
-                ? 0.0 : std::fabs(p.magnitude - r.magnitude)};
-        for (int i = 0; i < 5; ++i) worst[i] = std::fmax(worst[i], e[i]);
+            std::fabs(p.diameter * R2D - r.diameter) / r.diameter};
+        for (int i = 0; i < 4; ++i) worst[i] = std::fmax(worst[i], e[i]);
+        /* No reference magnitude for the Moon and Pluto (NaN). */
+        if (std::isnan(r.magnitude)) continue;
+        const double dm = std::fabs(p.magnitude - r.magnitude);
+        if (r.body == EPH_SATURN || r.body == EPH_URANUS || r.body == EPH_NEPTUNE)
+            worst_mag_outer = std::fmax(worst_mag_outer, dm);
+        else
+            worst[4] = std::fmax(worst[4], dm);
     }
-    std::printf("vs Swiss Ephemeris: phase angle %.1f\", phase %.1e, elongation "
-                "%.2f\", diameter %.1e (relative), magnitude %.3f\n",
-                worst[0], worst[1], worst[2], worst[3], worst[4]);
-    const double limit[5] = {30.0, 1e-4, 2.0, 1e-3, 0.15};
+    std::printf("vs DE440: phase angle %.3f\", phase %.1e, elongation %.3f\", "
+                "diameter %.1e (relative), magnitude %.4f (Saturn-Neptune %.3f)\n",
+                worst[0], worst[1], worst[2], worst[3], worst[4], worst_mag_outer);
+    /* Measured with eph-full.bin: 0.03", 5e-8, 0.05", 1.5e-7, <1e-4 mag. */
+    const double limit[5] = {0.2, 1e-6, 0.2, 1e-6, 1e-4};
     for (int i = 0; i < 5; ++i)
         if (worst[i] > limit[i]) {
             std::printf("FAIL: quantity %d exceeds %g\n", i, limit[i]);
             fails++;
         }
+    /* Saturn, Uranus and Neptune: ours use the Earth's sub-latitude only
+     * (Mallama & Hilton average it with the Sun's) and apply the phase
+     * term at all phase angles; up to 0.04 mag. */
+    if (worst_mag_outer > 0.05) {
+        std::printf("FAIL: Saturn-Neptune magnitudes\n");
+        fails++;
+    }
 
     /* Minor bodies: plausible magnitudes; the lunar points have none. */
     eph_phenomena p;
