@@ -171,6 +171,13 @@ double outline_distance(const Bessel& b, double* t_out = nullptr) {
     return gamma_of(b) < 1.0 ? -d : d;
 }
 
+/* The distance on the fundamental plane at which a shadow cone of radius r
+ * there and half-angle f (tan f = tanf) touches the Earth: the cone's
+ * surface is tilted, so it reaches the limb when (d - r) cos f = 1, i.e.
+ * d - 1 = r + sec f - 1 (1e-5 Earth radii: 0.1 s, seconds when the shadow
+ * grazes). */
+double touch_radius(double r, double tanf) { return r + std::sqrt(1.0 + tanf * tanf) - 1.0; }
+
 /* The observer in the fundamental frame: xi, eta, zeta (Earth radii). */
 void observer_frame(const Bessel& b, const eph_observer& o, double& xi, double& eta,
                     double& zeta) {
@@ -416,7 +423,7 @@ bool solar_next(double jd_tt, int direction, eph_solar_eclipse* out, Track& tr) 
         Bessel b;
         bessel(t, tmax, b);
         const double dmin = outline_distance(b);
-        if (dmin > b.l1) continue; /* the penumbra misses the Earth */
+        if (dmin > touch_radius(b.l1, b.tan1)) continue; /* the penumbra misses */
 
         out->maximum = tmax;
         out->gamma = (b.y >= 0 ? 1.0 : -1.0) * std::hypot(b.x, b.y);
@@ -427,7 +434,9 @@ bool solar_next(double jd_tt, int direction, eph_solar_eclipse* out, Track& tr) 
             return [&, which](double x, double& v) {
                 Bessel e;
                 if (!bessel(t, x, e)) return false;
-                const double r = which == 0 ? e.l1 : which == 1 ? std::fabs(e.l2) : 0.0;
+                const double r = which == 0   ? touch_radius(e.l1, e.tan1)
+                                 : which == 1 ? touch_radius(std::fabs(e.l2), e.tan2)
+                                              : 0.0;
                 v = outline_distance(e) - r;
                 return true;
             };
@@ -436,7 +445,7 @@ bool solar_next(double jd_tt, int direction, eph_solar_eclipse* out, Track& tr) 
         out->partial_begin = root(contact(0), tmax - 0.3, tmax, c) ? c : 0.0;
         out->partial_end = root(contact(0), tmax, tmax + 0.3, c) ? c : 0.0;
         const bool central = dmin < 0.0;
-        const bool umbral = dmin < std::fabs(b.l2);
+        const bool umbral = dmin < touch_radius(std::fabs(b.l2), b.tan2);
         out->central_begin = out->central_end = 0.0;
         out->center_line_begin = out->center_line_end = 0.0;
         if (umbral) {
