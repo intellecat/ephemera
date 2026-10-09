@@ -171,6 +171,16 @@ const char* eph_body_name(eph_body body);
 int eph_load_data(const void* data, size_t size);
 int eph_load_file(const char* path);
 
+/* Load a data file used in place, without a copy: the buffer must be
+ * 8-byte aligned and stay valid and unchanged until it is unloaded (e.g. a
+ * static array or a memory-mapped file). */
+int eph_load_static(const void* data, size_t size);
+
+/* Builds with EPHEMERIS_EMBED_DATA carry a data file (e.g. eph-1as.bin)
+ * that is loaded when the program starts; this loads it again after
+ * eph_unload_data().  Returns -1 if the library has none. */
+int eph_load_embedded(void);
+
 /* Unload all data files. */
 void eph_unload_data(void);
 

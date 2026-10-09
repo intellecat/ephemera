@@ -6,14 +6,25 @@ CFLAGS   ?= -O2 -std=c99 -Wall -Wextra
 INCLUDES  = -Iinclude -Isrc -Idata
 BUILD     = build
 
-LIB_SRC = src/time.cpp src/frames.cpp src/vsop87.cpp src/moon.cpp \
-          src/elp.cpp src/pluto.cpp src/ephemeris.cpp src/correction.cpp \
-          src/compressed.cpp src/houses.cpp src/asteroids.cpp src/data.cpp \
-          data/delta_t_data.cpp
-LIB_OBJ = $(patsubst %.cpp,$(BUILD)/%.o,$(LIB_SRC))
+CORE_SRC = src/time.cpp src/frames.cpp src/vsop87.cpp src/moon.cpp \
+           src/elp.cpp src/pluto.cpp src/ephemeris.cpp src/correction.cpp \
+           src/compressed.cpp src/houses.cpp src/asteroids.cpp src/data.cpp \
+           data/delta_t_data.cpp
+LIB_SRC = $(CORE_SRC)
+
+# make EMBED=data/eph-1as.bin BUILD=build-1as compiles that data file into
+# the library (loaded at start-up; cmake generates the source).  Use a
+# separate BUILD directory per EMBED setting.
+EMBED ?=
+ifeq ($(EMBED),)
+LIB_SRC += src/embedded_none.cpp
+else
+LIB_SRC += $(BUILD)/embedded_data.cpp
+endif
+LIB_OBJ = $(patsubst %.cpp,$(BUILD)/%.o,$(patsubst $(BUILD)/%,%,$(LIB_SRC)))
 LIB     = $(BUILD)/libephemeris.a
 
-.PHONY: all test tools data clean
+.PHONY: all test tools data wasm wasm-test clean
 
 TESTS = $(BUILD)/test_ephemeris $(BUILD)/test_compressed $(BUILD)/test_topocentric \
         $(BUILD)/test_houses $(BUILD)/test_asteroids $(BUILD)/test_data
@@ -22,6 +33,13 @@ all: $(LIB) $(BUILD)/ephcliapp $(TESTS)
 
 $(BUILD)/%.o: %.cpp
 	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
+$(BUILD)/embedded_data.cpp: $(EMBED) tools/embed.cmake
+	@mkdir -p $(BUILD)
+	cmake -DIN=$(EMBED) -DOUT=$@ -P tools/embed.cmake
+
+$(BUILD)/embedded_data.o: $(BUILD)/embedded_data.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 $(LIB): $(LIB_OBJ)
@@ -77,6 +95,41 @@ data: $(BUILD)/pack_series
 	$(BUILD)/pack_series series data/eph-01as.bin $(LEVEL_01AS)
 	$(BUILD)/pack_series series data/eph-1as.bin $(LEVEL_1AS)
 	$(BUILD)/pack_series asteroids data/eph-asteroids.bin
+
+# WebAssembly (wasm32-wasi reactor modules exporting the C API plus
+# malloc/free; no file I/O, data comes from JavaScript as bytes):
+#   build/wasm/ephemeris.wasm       core only
+#   build/wasm/ephemeris-1as.wasm   core with data/eph-1as.bin built in
+# WASM_CXX can also be a wasi-sdk clang, e.g.
+#   make wasm WASM_CXX="clang++ --target=wasm32-wasi --sysroot=/opt/wasi-sdk/share/wasi-sysroot"
+WASM_CXX   ?= zig c++ -target wasm32-wasi
+WASM_FLAGS  = -Os -std=c++17 -fno-exceptions -fno-rtti -DEPHEMERIS_NO_FILE_IO \
+              -mexec-model=reactor -Wl,--strip-all $(INCLUDES)
+comma  := ,
+lparen := (
+WASM_API   := $(shell sed -n 's/^[a-z].*[ *]\(eph_[a-z0-9_]*\)$(lparen).*/\1/p' \
+                include/ephemeris/ephemeris.h)
+WASM_LINK   = $(addprefix -Wl$(comma)--export=,$(WASM_API) malloc free)
+
+wasm: $(BUILD)/wasm/ephemeris.wasm $(BUILD)/wasm/ephemeris-1as.wasm
+
+$(BUILD)/wasm/ephemeris.wasm: $(CORE_SRC) src/embedded_none.cpp
+	@mkdir -p $(dir $@)
+	$(WASM_CXX) $(WASM_FLAGS) $^ $(WASM_LINK) -o $@
+
+$(BUILD)/wasm/embedded_1as.cpp: data/eph-1as.bin tools/embed.cmake
+	@mkdir -p $(dir $@)
+	cmake -DIN=$< -DOUT=$@ -P tools/embed.cmake
+
+$(BUILD)/wasm/ephemeris-1as.wasm: $(CORE_SRC) $(BUILD)/wasm/embedded_1as.cpp
+	@mkdir -p $(dir $@)
+	$(WASM_CXX) $(WASM_FLAGS) $^ $(WASM_LINK) -o $@
+
+$(BUILD)/test_wasm_ref: tests/test_wasm_ref.c $(LIB)
+	$(CC) $(CFLAGS) -Iinclude $< $(LIB) -lm -o $@
+
+wasm-test: wasm $(BUILD)/test_wasm_ref
+	node tests/test_wasm.mjs $(BUILD) data
 
 clean:
 	rm -rf $(BUILD)

@@ -3,6 +3,7 @@
  * Usage: test_data <data directory> */
 #include <cmath>
 #include <cstdio>
+#include <algorithm>
 #include <cstdlib>
 #include <string>
 #include <vector>
@@ -59,6 +60,18 @@ int main(int argc, char** argv) {
     const std::string dir = std::string(argv[1]) + "/";
     eph_position p;
 
+    /* A build with EPHEMERIS_EMBED_DATA works without any load call;
+     * eph_load_embedded() reloads it after an unload. */
+    const bool embedded = eph_position_tt(EPH_SUN, 2451545.0, &p) == 0;
+    std::printf("embedded data: %s\n", embedded ? "yes" : "no");
+    eph_unload_data();
+    check(eph_load_embedded() == (embedded ? 0 : -1), "eph_load_embedded");
+    if (embedded) {
+        check(eph_position_apparent_tt(EPH_MOON, 2451545.0, &p) == 0,
+              "embedded data reloads");
+        eph_unload_data();
+    }
+
     /* The core alone: no positions, but time and houses work. */
     check(eph_position_tt(EPH_SUN, 2451545.0, &p) != 0, "position without data");
     check(std::fabs(eph_julian_date(2000, 1, 1.5) - 2451545.0) < 1e-9,
@@ -83,6 +96,15 @@ int main(int argc, char** argv) {
         if (eph_load_data(bad.data(), bad.size()) == 0) eph_unload_data();
     }
     check(eph_position_tt(EPH_SUN, 2451545.0, &p) != 0, "nothing left loaded");
+
+    /* In place: needs 8-byte alignment. */
+    std::vector<double> aligned((full.size() + 15) / 8);
+    unsigned char* a = reinterpret_cast<unsigned char*>(aligned.data());
+    std::copy(full.begin(), full.end(), a);
+    check(eph_load_static(a + 1, full.size()) != 0, "misaligned static data");
+    check(eph_load_static(a, full.size()) == 0, "static data");
+    check(eph_position_tt(EPH_SUN, 2451545.0, &p) == 0, "position from static");
+    eph_unload_data();
 
     /* From memory, then unload. */
     check(eph_load_data(full.data(), full.size()) == 0, "load from memory");

@@ -12,6 +12,20 @@ endif()
 option(EPHEMERIS_BUILD_TESTS "Build the test suite" ON)
 option(EPHEMERIS_BUILD_EXAMPLES "Build the example programs" ON)
 option(EPHEMERIS_BUILD_TOOLS "Build tools/pack_series (data file generator)" OFF)
+set(EPHEMERIS_EMBED_DATA "" CACHE FILEPATH
+    "Data file to compile into the library (e.g. data/eph-1as.bin)")
+
+if(EPHEMERIS_EMBED_DATA)
+    get_filename_component(EMBED_IN "${EPHEMERIS_EMBED_DATA}" ABSOLUTE)
+    set(EMBED_SRC ${CMAKE_CURRENT_BINARY_DIR}/embedded_data.cpp)
+    add_custom_command(OUTPUT ${EMBED_SRC}
+        COMMAND ${CMAKE_COMMAND} -DIN=${EMBED_IN} -DOUT=${EMBED_SRC}
+                -P ${CMAKE_CURRENT_SOURCE_DIR}/tools/embed.cmake
+        DEPENDS ${EMBED_IN} ${CMAKE_CURRENT_SOURCE_DIR}/tools/embed.cmake
+        COMMENT "Embedding ${EPHEMERIS_EMBED_DATA}")
+else()
+    set(EMBED_SRC src/embedded_none.cpp)
+endif()
 
 add_library(ephemeris STATIC
     src/time.cpp
@@ -26,6 +40,7 @@ add_library(ephemeris STATIC
     src/pluto.cpp
     src/ephemeris.cpp
     src/data.cpp
+    ${EMBED_SRC}
     data/delta_t_data.cpp
 )
 

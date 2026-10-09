@@ -31,8 +31,9 @@ namespace {
 constexpr int kMaxFiles = 8;
 
 struct File {
-    unsigned char* p;
+    const unsigned char* p;
     uint64_t size;
+    bool owned; /* copied by eph_load_data */
     bool has_table;
 };
 
@@ -232,7 +233,7 @@ bool rebuild() {
 }
 
 void remove_file(int i) {
-    std::free(g_files[i].p);
+    if (g_files[i].owned) std::free(const_cast<unsigned char*>(g_files[i].p));
     for (int k = i + 1; k < g_nfiles; ++k) g_files[k - 1] = g_files[k];
     --g_nfiles;
 }
@@ -247,21 +248,17 @@ int data_generation() { return g_generation; }
 
 using namespace eph;
 
-extern "C" int eph_load_data(const void* buffer, size_t size) {
-    const uint32_t one = 1;
-    unsigned char little;
-    std::memcpy(&little, &one, 1);
-    if (!buffer || !little || g_nfiles == kMaxFiles) return -1;
-    unsigned char* p = static_cast<unsigned char*>(std::malloc(size ? size : 1));
-    if (!p) return -1;
-    std::memcpy(p, buffer, size);
+namespace {
+
+/* Validate and register a file kept at p (owned: free it on unload). */
+int add_file(const unsigned char* p, uint64_t size, bool owned) {
     Data scratch = Data();
     bool has_table;
-    if (!apply(p, size, scratch, has_table)) {
-        std::free(p);
+    if (g_nfiles == kMaxFiles || !apply(p, size, scratch, has_table)) {
+        if (owned) std::free(const_cast<unsigned char*>(p));
         return -1;
     }
-    g_files[g_nfiles++] = {p, size, has_table};
+    g_files[g_nfiles++] = {p, size, owned, has_table};
     if (!rebuild()) {
         remove_file(g_nfiles - 1);
         rebuild();
@@ -270,7 +267,42 @@ extern "C" int eph_load_data(const void* buffer, size_t size) {
     return 0;
 }
 
+bool little_endian() {
+    const uint32_t one = 1;
+    unsigned char b;
+    std::memcpy(&b, &one, 1);
+    return b == 1;
+}
+
+}  // namespace
+
+extern "C" int eph_load_data(const void* buffer, size_t size) {
+    if (!buffer || !little_endian()) return -1;
+    unsigned char* p = static_cast<unsigned char*>(std::malloc(size ? size : 1));
+    if (!p) return -1;
+    std::memcpy(p, buffer, size);
+    return add_file(p, size, true);
+}
+
+extern "C" int eph_load_static(const void* buffer, size_t size) {
+    /* Used in place: the sections hold doubles. */
+    if (!buffer || !little_endian() || reinterpret_cast<uintptr_t>(buffer) % 8)
+        return -1;
+    return add_file(static_cast<const unsigned char*>(buffer), size, false);
+}
+
+extern "C" int eph_load_embedded(void) {
+    const unsigned char* p;
+    size_t n;
+    if (!embedded_data(p, n)) return -1;
+    return eph_load_static(p, n);
+}
+
 extern "C" int eph_load_file(const char* path) {
+#ifdef EPHEMERIS_NO_FILE_IO
+    (void)path;
+    return -1;
+#else
     FILE* f = std::fopen(path, "rb");
     if (!f) return -1;
     int rc = -1;
@@ -284,6 +316,7 @@ extern "C" int eph_load_file(const char* path) {
     }
     std::fclose(f);
     return rc;
+#endif
 }
 
 extern "C" void eph_unload_data(void) {

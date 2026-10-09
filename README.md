@@ -3,7 +3,7 @@
 A small, dependency-free C/C++ library that computes positions of the Sun,
 Moon, Pluto, the eight planets and the four largest asteroids (Ceres,
 Pallas, Juno, Vesta) from analytical series.  No JPL kernel and no SPICE:
-a ~50 KB core (as WebAssembly; ~22 KB brotli) loads one small data file
+a ~44 KB core (as WebAssembly; ~20 KB brotli) loads one small data file
 with the series coefficients at the accuracy you need -- from 115 KB for
 ~1" to a 865 KB DE440 table for ~0.001" (see [Data files](#data-files)).
 
@@ -123,6 +123,49 @@ The data files are generated from the coefficient tables in `data/` (see
 ```sh
 make tools && make data     # or cmake -DEPHEMERIS_BUILD_TOOLS=ON
 ```
+
+**Built-in data.**  To get a library that works without any data file,
+compile one in; it is loaded (in place, without a copy) when the program
+starts:
+
+```sh
+cmake -S . -B build-1as -DEPHEMERIS_EMBED_DATA=data/eph-1as.bin
+make EMBED=data/eph-1as.bin BUILD=build-1as      # Makefile equivalent
+```
+
+Other files can still be loaded on top (e.g. the asteroids or the DE440
+table), and `eph_load_embedded()` reloads the built-in data after
+`eph_unload_data()`.
+
+## WebAssembly
+
+```sh
+make wasm          # needs zig, or WASM_CXX="clang++ --target=wasm32-wasi --sysroot=..."
+make wasm-test     # compares the modules with the native library (needs node)
+```
+
+builds two modules that need **no imports** (no WASI, no Emscripten
+runtime: `WebAssembly.instantiate(bytes, {})` is enough):
+
+| Module                          | Size   | brotli | Data                         |
+|---------------------------------|--------|--------|------------------------------|
+| `build/wasm/ephemeris.wasm`     | 44 KB  | ~20 KB | none: load a file            |
+| `build/wasm/ephemeris-1as.wasm` | 159 KB | ~92 KB | `eph-1as.bin` built in (~1″) |
+
+`examples/wasm/ephemeris.mjs` wraps them for browsers and Node (angles in
+degrees), and `examples/wasm/index.html` is a small demo page:
+
+```js
+import { createEphemeris, Body } from './ephemeris.mjs';
+const eph = await createEphemeris(await (await fetch('ephemeris-1as.wasm')).arrayBuffer());
+const jd = eph.julianDate(2026, 1, 1.5);            // UT
+const moon = eph.position(Body.Moon, jd);           // { longitude, latitude, ..., longitudeSpeed }
+const { asc, mc } = eph.ascMc(jd, -0.1278, 51.5074); // observer lon, lat (degrees)
+```
+
+With the core module, fetch a data file and pass it to
+`eph.loadData(bytes)` first; the asteroid file and the DE440 table load
+the same way into either module.
 
 ## Using the API
 

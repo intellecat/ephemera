@@ -4,7 +4,8 @@
  * Run:    ./build/ephcliapp 2026 1 1 12      (year month day [UT hours])
  *
  * Data files come from $EPH_DATA (paths separated by ':'), or by default
- * data/eph-full.bin, data/eph-asteroids.bin and data/ephem.bin.
+ * data/eph-full.bin, data/eph-asteroids.bin and data/ephem.bin; a build
+ * with embedded data needs none.
  */
 #include <math.h>
 #include <stdio.h>
@@ -57,7 +58,9 @@ static int load_data(void) {
 }
 
 int main(int argc, char** argv) {
-    if (load_data() == 0) {
+    /* A build with embedded data needs no file. */
+    eph_position probe;
+    if (load_data() == 0 && eph_position_tt(EPH_SUN, 2451545.0, &probe) != 0) {
         fprintf(stderr, "no data file loaded: set EPH_DATA or run from the "
                         "source directory\n");
         return 1;

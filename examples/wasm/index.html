@@ -1,0 +1,52 @@
+<!doctype html>
+<!-- Minimal browser demo.  After `make wasm`, copy this directory's files
+     and build/wasm/ephemeris-1as.wasm into one folder and serve it, e.g.
+       cp build/wasm/ephemeris-1as.wasm examples/wasm/
+       python3 -m http.server -d examples/wasm 8000 -->
+<html lang="en">
+<meta charset="utf-8">
+<title>Ephemeris demo</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; margin: 2em; }
+  table { border-collapse: collapse; }
+  td, th { padding: 2px 12px; text-align: right; }
+  th:first-child, td:first-child { text-align: left; }
+</style>
+<p>
+  <input id="when" type="datetime-local" value="2026-01-01T12:00"> UT
+</p>
+<table>
+  <thead><tr><th>Body</th><th>Longitude</th><th>Latitude</th><th>Speed/day</th></tr></thead>
+  <tbody id="rows"></tbody>
+</table>
+<script type="module">
+  import { createEphemeris, Body } from './ephemeris.mjs';
+
+  const wasm = await (await fetch('ephemeris-1as.wasm')).arrayBuffer();
+  const eph = await createEphemeris(wasm); // 1" data built in
+
+  const signs = ['Ari', 'Tau', 'Gem', 'Can', 'Leo', 'Vir',
+                 'Lib', 'Sco', 'Sag', 'Cap', 'Aqu', 'Pis'];
+  const zodiac = (lon) => {
+    const d = Math.floor(lon % 30), m = Math.floor((lon % 1) * 60);
+    return `${d}° ${String(m).padStart(2, '0')}' ${signs[Math.floor(lon / 30)]}`;
+  };
+
+  function render() {
+    const t = new Date(document.getElementById('when').value + 'Z');
+    const day = t.getUTCDate() + (t.getUTCHours() + t.getUTCMinutes() / 60) / 24;
+    const jd = eph.julianDate(t.getUTCFullYear(), t.getUTCMonth() + 1, day);
+    document.getElementById('rows').innerHTML = Object.entries(Body)
+      .filter(([, b]) => b !== Body.Earth)
+      .map(([name, b]) => {
+        const p = eph.position(b, jd);
+        if (!p) return ''; // asteroids need eph-asteroids.bin
+        return `<tr><td>${name}</td><td>${zodiac(p.longitude)}</td>` +
+               `<td>${p.latitude.toFixed(4)}°</td>` +
+               `<td>${p.longitudeSpeed.toFixed(4)}°${p.longitudeSpeed < 0 ? ' R' : ''}</td></tr>`;
+      }).join('');
+  }
+  document.getElementById('when').addEventListener('input', render);
+  render();
+</script>
+</html>
