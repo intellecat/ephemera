@@ -18,7 +18,41 @@ export const Body = Object.freeze({
 });
 
 export const Ayanamsa = Object.freeze({
-  Lahiri: 0, FaganBradley: 1, Raman: 2, Krishnamurti: 3, Yukteshwar: 4,
+  Lahiri: 0,
+  FaganBradley: 1,
+  Raman: 2,
+  Krishnamurti: 3,
+  Yukteshwar: 4,
+  DeLuce: 5,
+  UshaShashi: 6,
+  DjwhalKhul: 7,
+  JnBhasin: 8,
+  BabylonianKugler1: 9,
+  BabylonianKugler2: 10,
+  BabylonianKugler3: 11,
+  BabylonianHuber: 12,
+  BabylonianEtaPiscium: 13,
+  BabylonianAldebaran: 14,
+  Hipparchos: 15,
+  Sassanian: 16,
+  J2000: 17,
+  J1900: 18,
+  B1950: 19,
+  Suryasiddhanta: 20,
+  SuryasiddhantaMeanSun: 21,
+  Aryabhata: 22,
+  AryabhataMeanSun: 23,
+  SsRevati: 24,
+  SsCitra: 25,
+  Skydram: 26,
+  Aryabhata522: 27,
+  BabylonianBritton: 28,
+  GalacticEquatorFiorenza: 29,
+  VettiusValens: 30,
+  Lahiri1940: 31,
+  LahiriVp285: 32,
+  KrishnamurtiSenthilathiban: 33,
+  LahiriIcrc: 34,
 });
 
 export const HouseSystem = Object.freeze({
@@ -129,6 +163,8 @@ export async function createEphemeris(source) {
       return h;
     },
     ayanamsa: (system, jdTt) => e.eph_ayanamsa(system, jdTt) * DEG,
+    ayanamsaCustom: (jdT0, valueDegT0, jdTt) =>
+      e.eph_ayanamsa_custom(jdT0, valueDegT0 / DEG, jdTt) * DEG,
     ayanamsaLahiri: (jdTt) => e.eph_ayanamsa_lahiri(jdTt) * DEG,
   };
 }

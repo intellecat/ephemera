@@ -161,13 +161,55 @@ typedef enum {
     EPH_AYANAMSA_LAHIRI = 0,
     EPH_AYANAMSA_FAGAN_BRADLEY,
     EPH_AYANAMSA_RAMAN,
-    EPH_AYANAMSA_KRISHNAMURTI, /* KP */
-    EPH_AYANAMSA_YUKTESHWAR
+    EPH_AYANAMSA_KRISHNAMURTI,
+    EPH_AYANAMSA_YUKTESHWAR,
+    EPH_AYANAMSA_DE_LUCE,
+    EPH_AYANAMSA_USHA_SHASHI,
+    EPH_AYANAMSA_DJWHAL_KHUL,
+    EPH_AYANAMSA_JN_BHASIN,
+    EPH_AYANAMSA_BABYLONIAN_KUGLER1,
+    EPH_AYANAMSA_BABYLONIAN_KUGLER2,
+    EPH_AYANAMSA_BABYLONIAN_KUGLER3,
+    EPH_AYANAMSA_BABYLONIAN_HUBER,
+    EPH_AYANAMSA_BABYLONIAN_ETA_PISCIUM,
+    EPH_AYANAMSA_BABYLONIAN_ALDEBARAN,
+    EPH_AYANAMSA_HIPPARCHOS,
+    EPH_AYANAMSA_SASSANIAN,
+    EPH_AYANAMSA_J2000,
+    EPH_AYANAMSA_J1900,
+    EPH_AYANAMSA_B1950,
+    EPH_AYANAMSA_SURYASIDDHANTA,
+    EPH_AYANAMSA_SURYASIDDHANTA_MEAN_SUN,
+    EPH_AYANAMSA_ARYABHATA,
+    EPH_AYANAMSA_ARYABHATA_MEAN_SUN,
+    EPH_AYANAMSA_SS_REVATI,
+    EPH_AYANAMSA_SS_CITRA,
+    EPH_AYANAMSA_SKYDRAM,
+    EPH_AYANAMSA_ARYABHATA_522,
+    EPH_AYANAMSA_BABYLONIAN_BRITTON,
+    EPH_AYANAMSA_GALACTIC_EQUATOR_FIORENZA,
+    EPH_AYANAMSA_VETTIUS_VALENS,
+    EPH_AYANAMSA_LAHIRI_1940,
+    EPH_AYANAMSA_LAHIRI_VP285,
+    EPH_AYANAMSA_KRISHNAMURTI_SENTHILATHIBAN,
+    EPH_AYANAMSA_LAHIRI_ICRC,
+    EPH_AYANAMSA_COUNT
 } eph_ayanamsa_system;
 
 /* Mean ayanamsa (radians): sidereal longitude = tropical - ayanamsa.
- * NaN for an unknown system.  Needs no data file. */
+ * NaN for an unknown system.  Needs no data file.  Each system is its
+ * defining value carried by the IAU-2006 general precession; this matches
+ * Swiss Ephemeris within 0.01" for the modern definitions and 0.3" (over
+ * 1600-2500) for those fixed at an ancient epoch.  Star-based systems
+ * (True Citra, galactic centre, ...) are not included. */
 double eph_ayanamsa(eph_ayanamsa_system system, double jd_tt);
+
+/* Display name of a system ("Lahiri", ...), or NULL. */
+const char* eph_ayanamsa_name(eph_ayanamsa_system system);
+
+/* A user-defined ayanamsa: value_t0 (radians) at jd_t0, carried by the
+ * general precession to jd_tt. */
+double eph_ayanamsa_custom(double jd_t0, double value_t0, double jd_tt);
 
 /* eph_ayanamsa(EPH_AYANAMSA_LAHIRI, jd_tt). */
 double eph_ayanamsa_lahiri(double jd_tt);

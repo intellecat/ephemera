@@ -9,7 +9,7 @@ BUILD     = build
 CORE_SRC = src/time.cpp src/frames.cpp src/vsop87.cpp src/moon.cpp \
            src/elp.cpp src/pluto.cpp src/ephemeris.cpp src/correction.cpp \
            src/compressed.cpp src/houses.cpp src/asteroids.cpp src/data.cpp \
-           src/util.cpp \
+           src/util.cpp src/ayanamsa.cpp \
            data/delta_t_data.cpp
 LIB_SRC = $(CORE_SRC)
 

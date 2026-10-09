@@ -20,66 +20,32 @@ int main() {
     int fails = 0;
     const double jd = 2451545.0; /* 2000-01-01 12h UT */
 
-    /* Ayanamsas (degrees) vs Swiss Ephemeris (swe_get_ayanamsa) for
-     * Lahiri, Fagan/Bradley, Raman, Krishnamurti, Yukteshwar. */
-    const struct {
-        double jd;
-        double deg[5];
-    } ayan[] = {
-        {2415020.5, {22.460530593, 23.343738216, 21.014229126, 22.363678126, 21.082241114}},
-        {2451545.0, {23.857092325, 24.740299966, 22.410791012, 23.760240012, 22.478803000}},
-        {2469807.5, {24.555613070, 25.438820717, 23.109311808, 24.458760808, 23.177323796}},
-    };
-    for (const auto& a : ayan)
-        for (int m = 0; m < 5; ++m) {
-            const double d =
-                eph_ayanamsa((eph_ayanamsa_system)m, a.jd) * R2D - a.deg[m];
-            if (std::fabs(d) * 3600.0 > 0.01) {
-                std::printf("FAIL: ayanamsa %d at %.1f off by %.4f\"\n", m,
-                            a.jd, d * 3600.0);
+    /* Ayanamsas vs Swiss Ephemeris (swe_get_ayanamsa), 1700-2400: the
+     * modern definitions agree within 0.01", those fixed at an ancient
+     * epoch within ~0.3" (a different long-term precession). */
+    double worst_ayan = 0.0;
+    for (int m = 0; m < EPH_AYANAMSA_COUNT; ++m)
+        for (int k = 0; k < 5; ++k) {
+            const double d = std::fabs(
+                eph_ayanamsa((eph_ayanamsa_system)m, kAyanamsaDates[k]) * R2D -
+                kAyanamsaRef[m][k]) * 3600.0;
+            worst_ayan = std::fmax(worst_ayan, d);
+            if (d > (m < 5 ? 0.01 : 0.5)) {
+                std::printf("FAIL: ayanamsa %s off by %.4f\"\n",
+                            eph_ayanamsa_name((eph_ayanamsa_system)m), d);
                 fails++;
             }
         }
-    if (std::fabs(eph_ayanamsa_lahiri(jd) -
-                  eph_ayanamsa(EPH_AYANAMSA_LAHIRI, jd)) > 0 ||
-        !std::isnan(eph_ayanamsa((eph_ayanamsa_system)99, jd))) {
+    std::printf("Ayanamsas      max %.3f\" vs Swiss Ephemeris (%d systems)\n",
+                worst_ayan, (int)EPH_AYANAMSA_COUNT);
+    if (std::fabs(eph_ayanamsa_lahiri(jd) - eph_ayanamsa(EPH_AYANAMSA_LAHIRI, jd)) > 0 ||
+        !std::isnan(eph_ayanamsa((eph_ayanamsa_system)99, jd)) ||
+        eph_ayanamsa_name((eph_ayanamsa_system)99) != nullptr ||
+        std::fabs(eph_ayanamsa_custom(2451545.0, 0.4, 2451545.0) - 0.4) > 1e-15 ||
+        std::fabs(eph_ayanamsa_custom(2415020.5, 0.0, 2451545.0) / D2R -
+                  kAyanamsaRef[EPH_AYANAMSA_J1900][2]) > 1e-4) {
         std::printf("FAIL: ayanamsa API\n");
         fails++;
-    }
-
-    struct {
-        double lat, lon;
-    } obs[] = {{40.7128, -74.0060}, {-33.8688, 151.2093}, {51.5074, -0.1278}};
-
-    for (const auto& o : obs) {
-        eph_observer ob = {o.lon * D2R, o.lat * D2R, 0.0};
-        double asc, mc;
-        eph_asc_mc(jd, &ob, &asc, &mc);
-
-        /* The MC's right ascension is the local sidereal time; the Asc must
-         * lie on the horizon (altitude 0). */
-        double ra_mc, dec_mc, ra_asc, dec_asc;
-        eph_ecliptic_to_equatorial(mc, 0.0, jd, &ra_mc, &dec_mc);
-        eph_ecliptic_to_equatorial(asc, 0.0, jd, &ra_asc, &dec_asc);
-        const double H = ra_mc - ra_asc; /* LST - RA_asc */
-        const double alt =
-            std::asin(std::sin(ob.latitude) * std::sin(dec_asc) +
-                      std::cos(ob.latitude) * std::cos(dec_asc) * std::cos(H)) *
-            R2D;
-        if (std::fabs(alt) > 0.01) {
-            std::printf("FAIL: asc altitude %.4f deg (lat %.4f)\n", alt, o.lat);
-            fails++;
-        }
-
-        /* Porphyry cusp relations. */
-        double cusps[12];
-        eph_houses(jd, &ob, EPH_HOUSES_PORPHYRY, cusps);
-        if (std::fabs(wrap180((cusps[0] - asc) * R2D)) > 1e-6 ||
-            std::fabs(wrap180((cusps[9] - mc) * R2D)) > 1e-6 ||
-            std::fabs(wrap180((cusps[3] - mc - PI) * R2D)) > 1e-6) {
-            std::printf("FAIL: porphyry angular cusps (lat %.4f)\n", o.lat);
-            fails++;
-        }
     }
 
     /* Asc/MC vs Swiss Ephemeris 2.10 (swe_houses_ex), UT. */

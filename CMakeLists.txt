@@ -41,6 +41,7 @@ add_library(ephemeris STATIC
     src/ephemeris.cpp
     src/data.cpp
     src/util.cpp
+    src/ayanamsa.cpp
     ${EMBED_SRC}
     data/delta_t_data.cpp
 )

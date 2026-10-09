@@ -17,6 +17,9 @@ SYSTEMS = [(1, b"A"), (2, b"O"), (3, b"P"), (4, b"K"), (5, b"R"), (6, b"C"),
            (7, b"B"), (8, b"T"), (9, b"V"), (10, b"D"), (11, b"N"), (12, b"X"),
            (13, b"M")]
 POLAR_OK = (1, 2, 5, 6, 7, 9, 10, 11, 12, 13)  # defined in the polar circles
+# Swiss Ephemeris sidereal modes in eph_ayanamsa_system order.
+AYANAMSAS = [1, 0, 3, 5, 7, 2, 4, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 22, 23, 24, 25, 26, 34, 37, 38, 41, 42, 43, 44, 45, 46]
+AYANAMSA_DATES = [2341972.5, 2415020.5, 2451545.0, 2469807.5, 2597641.5]
 
 
 def main():
@@ -55,6 +58,17 @@ def main():
         for r in angles:
             f.write("    {%.10f, %.10f, %.10f, {%s}},\n"
                     % (r[0], r[1], r[2], ", ".join("%.10f" % c for c in r[3:])))
+        f.write("};\n\n")
+        f.write("/* Mean ayanamsa (degrees) per eph_ayanamsa_system at 1700, 1900,\n"
+                " * 2000, 2050 and 2400. */\n")
+        f.write("static const double kAyanamsaDates[5] = {%s};\n"
+                % ", ".join("%.1f" % d for d in AYANAMSA_DATES))
+        f.write("static const double kAyanamsaRef[%d][5] = {\n" % len(AYANAMSAS))
+        for m in AYANAMSAS:
+            swe.set_sid_mode(m)
+            vals = [swe.get_ayanamsa(d) for d in AYANAMSA_DATES]
+            vals = [v - 360.0 if v > 180.0 else v for v in vals]
+            f.write("    {%s},\n" % ", ".join("%.9f" % v for v in vals))
         f.write("};\n")
     print("wrote", out, len(rows), "rows")
 
