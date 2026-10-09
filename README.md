@@ -36,18 +36,18 @@ Skyfield, reduced with ERFA to the IAU-2006/2000A ecliptic of date -- the
 same frame Swiss Ephemeris and Horizons report -- and includes dates
 within ~1° of the Sun:
 
-| Body    | geometric | apparent | compressed (int32) | notes                         |
-|---------|-----------|----------|--------------------|-------------------------------|
-| Mercury | 0.05″     | 0.05″    | 0.02″              | VSOP87 + DE440 correction     |
-| Venus   | 0.06″     | 0.06″    | 0.02″              | VSOP87 + DE440 correction     |
-| Mars    | 0.05″     | 0.05″    | 0.04″              | VSOP87 + DE440 correction     |
-| Jupiter | 0.07″     | 0.08″    | 0.02″              | VSOP87 + DE440 correction     |
-| Saturn  | 0.02″     | 0.03″    | 0.01″              | VSOP87 + DE440 correction     |
-| Uranus  | 0.01″     | 0.03″    | 0.02″              | VSOP87 + DE440 correction     |
-| Neptune | 0.01″     | 0.04″    | 0.01″              | VSOP87 + DE440 correction     |
-| Pluto   | 0.04″     | 0.07″    | 0.01″              | Poisson fit to DE440s         |
-| Sun     | 0.05″     | 0.05″    | 0.02″              | VSOP87 + DE440 correction     |
-| Moon    | 0.20″     | 0.20″    | 0.02″              | full ELP2000-82B + DE440 corr |
+| Body    | geometric | apparent | compressed | notes                         |
+|---------|-----------|----------|------------|-------------------------------|
+| Mercury | 0.05″     | 0.05″    | 0.01″      | VSOP87 + DE440 correction     |
+| Venus   | 0.06″     | 0.06″    | 0.01″      | VSOP87 + DE440 correction     |
+| Mars    | 0.05″     | 0.05″    | 0.01″      | VSOP87 + DE440 correction     |
+| Jupiter | 0.07″     | 0.08″    | 0.01″      | VSOP87 + DE440 correction     |
+| Saturn  | 0.02″     | 0.03″    | 0.01″      | VSOP87 + DE440 correction     |
+| Uranus  | 0.01″     | 0.03″    | 0.01″      | VSOP87 + DE440 correction     |
+| Neptune | 0.01″     | 0.04″    | 0.01″      | VSOP87 + DE440 correction     |
+| Pluto   | 0.04″     | 0.07″    | 0.01″      | Poisson fit to DE440s         |
+| Sun     | 0.05″     | 0.05″    | 0.01″      | VSOP87 + DE440 correction     |
+| Moon    | 0.20″     | 0.20″    | 0.01″      | full ELP2000-82B + DE440 corr |
 
 Every planet, the Sun and Pluto are sub-0.1" over 1850–2140; the Moon is
 ~0.05" typical and ~0.2" at the range edges.  With the optional compressed
@@ -87,7 +87,7 @@ Each position evaluates the body's series three times (position, velocity
 and acceleration together); light-time uses that expansion instead of
 re-evaluating, speeds come from the same velocities, and the Earth is
 cached per date and thread.  A full chart (14 bodies with speeds, Asc/MC,
-houses) takes ~1.4 ms with the analytical series and ~0.07 ms with the
+houses) takes ~1.4 ms with the analytical series and ~0.11 ms with the
 compressed table, on one core of a 2024 desktop CPU.
 
 ## Building
@@ -217,25 +217,30 @@ without measurable loss:
 Together these cut the tables roughly in half: a stripped, self-contained
 binary is now **~670 KB** (down from ~1.15 MB) with identical accuracy.
 
-## Optional compressed backend (~0.01 arcsec)
+## Optional compressed backend (~0.001 arcsec)
 
-For near-mas accuracy the library can load a Chebyshev table generated
-from JPL DE440s:
+For near-mas accuracy the library can load a table generated from JPL
+DE440s:
 
 ```c
 eph_load_compressed("data/ephem.bin");
 ```
 
-When loaded, positions for dates in 1850-2140 come from the table
-(**~0.005" typical, <0.07" max**); outside that range, or if it is
-not loaded, the analytical engine is used.  The table (`data/ephem.bin`,
-~3.3 MB) is our own format -- piecewise Chebyshev polynomials of the
-geocentric ecliptic-J2000 positions with **adaptive intervals** (long
-where the body moves slowly) and int32 per-segment quantization -- built
-from public-domain JPL data, so no third-party license applies.
-Regenerate with `python3 tools/pack_ephemeris.py` (needs numpy + skyfield
-+ pyerfa + a DE440s kernel); add `--bits 24` for a ~2.6 MB table at
-~0.05-0.1" (int24's precision floor).
+When loaded, positions for dates in 1850-2140 come from the table;
+outside that range, or if it is not loaded, the analytical engine is used.
+The table (`data/ephem.bin`, ~830 KB) stores **DE440 minus the library's
+own series**: the residual is small and smooth, so it packs into
+fixed-length Chebyshev segments with one absolute quantization step per
+body and a fixed bit width per coefficient.  To keep it fast, the series
+under the Moon and the inner planets are truncated to terms above 1e-7 rad
+(~0.02"), and the outer planets and the Earth-Moon barycentre are stored
+without a base series.  Each body is fitted to 0.002" (seen from the Earth
+at its closest) and its speed to 0.01"/day; the Earth comes from the
+barycentre and the Moon.  The format is our own, built from public-domain
+JPL data, so no third-party license applies.  Regenerate with
+`python3 tools/pack_ephemeris.py` (needs numpy + skyfield + pyerfa + a
+DE440s kernel and a built `build/libephemeris.a`; `--target` sets the
+accuracy).  A table must be regenerated whenever the series change.
 
 ## Layout
 
@@ -245,7 +250,7 @@ src/                            VSOP87, ELP2000 Moon, Pluto, asteroids,
                                 DE440 corrections, compressed backend,
                                 frames, time, houses
 data/*_data.{h,cpp}             generated coefficient tables
-data/ephem.bin                  optional compressed Chebyshev table
+data/ephem.bin                  optional DE440 residual table
 tools/                          coefficient, fit and reference generators
 tests/                          DE440s / Skyfield / Horizons validation,
                                 topocentric, houses, compressed backend

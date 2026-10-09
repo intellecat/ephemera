@@ -1,4 +1,4 @@
-/* Validation of the optional Chebyshev compressed backend against DE440s.
+/* Validation of the optional residual table against DE440s.
  * Usage: test_compressed <path to ephem.bin> */
 #include <cmath>
 #include <cstdio>
@@ -49,8 +49,10 @@ int main(int argc, char** argv) {
         if (i == EPH_EARTH || gmax[i] == 0.0) continue;
         std::printf("%-8s %12.4f %12.4f\n", eph_body_name((eph_body)i),
                     gmax[i], amax[i]);
-        if (gmax[i] > 0.08 || amax[i] > 0.08) {
-            std::printf("FAIL: %s exceeds 0.08\"\n",
+        /* The table is fitted to 0.002"; the apparent place adds the
+         * reduction's own error (IAU-1980 nutation). */
+        if (gmax[i] > 0.005 || amax[i] > 0.03) {
+            std::printf("FAIL: %s exceeds 0.005\" / 0.03\"\n",
                         eph_body_name((eph_body)i));
             failures++;
         }

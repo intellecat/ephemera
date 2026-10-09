@@ -55,18 +55,12 @@ double dot(const Vec3& a, const Vec3& b) {
 
 double angle_diff(double a, double b) { return normalize(a - b + PI) - PI; }
 
-/* Position of a body in the IAU-1976 ecliptic of date: heliocentric for the
- * planets and the Earth, geocentric for the Moon, zero for the Sun.  From
- * the compressed table when `table` is set, else the analytical series. */
-bool source(eph_body body, double jd, bool table, Vec3& v) {
+/* Position of a body in the IAU-1976 ecliptic of date from the analytical
+ * series: heliocentric for the planets and the Earth, geocentric for the
+ * Moon, zero for the Sun. */
+bool source(eph_body body, double jd, Vec3& v) {
     if (body == EPH_SUN) {
         v = {0.0, 0.0, 0.0};
-        return true;
-    }
-    if (table) {
-        Vec3 j;
-        if (!compressed_raw((int)body, jd, j)) return false;
-        v = j2000_to_date(jd, j);
         return true;
     }
     if (body == EPH_MOON) {
@@ -78,10 +72,58 @@ bool source(eph_body body, double jd, bool table, Vec3& v) {
     return body_heliocentric(body, jd, v);
 }
 
-/* Position, velocity and acceleration from three evaluations. */
+/* The truncated series under the residual table, same frame. */
+Vec3 base(eph_body body, double jd) {
+    if (body == EPH_MOON) {
+        double x, y, z;
+        elp_truncated_j2000(jd, x, y, z);
+        return j2000_to_date(jd, {x / AU_KM, y / AU_KM, z / AU_KM});
+    }
+    double l, b, r;
+    vsop87_truncated((int)body, jd, l, b, r);
+    return spherical_to_cartesian(l, b, r);
+}
+
+/* Position, velocity and acceleration. */
 struct State {
     Vec3 p, v, a;
 };
+
+/* Finite differences of a function over jd - h, jd, jd + h. */
+void differentiate(const Vec3& m, const Vec3& c, const Vec3& pl, double h,
+                   State& s) {
+    s.p = c;
+    s.v = scale(pl - m, 1.0 / (2.0 * h));
+    s.a = scale(add(pl, m) - scale(c, 2.0), 1.0 / (h * h));
+}
+
+/* Moon/Earth mass ratio + 1 (DE440). */
+constexpr double kEarthMoonRatio1 = 82.3005682214972154;
+
+bool state(eph_body body, double jd, bool table, State& s);
+
+/* The Earth and the Moon are needed for every body at the same instant;
+ * keep the last ones (per thread, keyed on the table generation). */
+struct Cache {
+    double jd = -1.0;
+    int generation = -1;
+    State s;
+};
+thread_local Cache g_earth, g_moon;
+
+bool cached_state(eph_body body, double jd, bool table, State& s) {
+    Cache& c = (body == EPH_EARTH) ? g_earth : g_moon;
+    const int gen = table ? compressed_generation() : 0;
+    if (c.jd == jd && c.generation == gen) {
+        s = c.s;
+        return true;
+    }
+    if (!state(body, jd, table, s)) return false;
+    c.jd = jd;
+    c.generation = gen;
+    c.s = s;
+    return true;
+}
 
 bool state(eph_body body, double jd, bool table, State& s) {
     /* Small enough for the fast inner bodies, large enough not to amplify
@@ -91,44 +133,33 @@ bool state(eph_body body, double jd, bool table, State& s) {
                                body >= EPH_CERES
                          ? 0.1
                          : 0.01;
-    Vec3 m, c, pl;
     if (table && body != EPH_SUN) {
-        /* Table segments join with small steps, so take the derivatives
-         * from the segment containing jd and expand it to jd +- h. */
+        /* Residual derivatives come from its own Chebyshev series. */
+        bool has_base;
         Vec3 p, v, a;
-        if (!compressed_raw((int)body, jd, p, &v, &a)) return false;
-        m = j2000_to_date(jd - h, add(p - scale(v, h), scale(a, 0.5 * h * h)));
-        c = j2000_to_date(jd, p);
-        pl = j2000_to_date(jd + h, add(add(p, scale(v, h)), scale(a, 0.5 * h * h)));
-    } else if (!source(body, jd - h, table, m) || !source(body, jd, table, c) ||
-               !source(body, jd + h, table, pl)) {
-        return false;
-    }
-    s.p = c;
-    s.v = scale(pl - m, 1.0 / (2.0 * h));
-    s.a = scale(add(pl, m) - scale(c, 2.0), 1.0 / (h * h));
-    return true;
-}
-
-/* The Earth is needed for every body at the same instant; keep the last one
- * (per thread, keyed on the table generation). */
-struct EarthCache {
-    double jd = -1.0;
-    int generation = -1;
-    State s;
-};
-thread_local EarthCache g_earth;
-
-bool earth_state(double jd, bool table, State& s) {
-    const int gen = table ? compressed_generation() : 0;
-    if (g_earth.jd == jd && g_earth.generation == gen) {
-        s = g_earth.s;
+        if (!compressed_residual((int)body, jd, p, v, a, has_base))
+            return false;
+        s = {p, v, a};
+        if (has_base) {
+            State b;
+            differentiate(base(body, jd - h), base(body, jd),
+                          base(body, jd + h), h, b);
+            s = {add(s.p, b.p), add(s.v, b.v), add(s.a, b.a)};
+        }
+        if (body == EPH_EARTH) {
+            /* The table holds the Earth-Moon barycentre. */
+            State m;
+            if (!cached_state(EPH_MOON, jd, true, m)) return false;
+            const double k = 1.0 / kEarthMoonRatio1;
+            s = {s.p - scale(m.p, k), s.v - scale(m.v, k), s.a - scale(m.a, k)};
+        }
         return true;
     }
-    if (!state(EPH_EARTH, jd, table, s)) return false;
-    g_earth.jd = jd;
-    g_earth.generation = gen;
-    g_earth.s = s;
+    Vec3 m, c, pl;
+    if (!source(body, jd - h, m) || !source(body, jd, c) ||
+        !source(body, jd + h, pl))
+        return false;
+    differentiate(m, c, pl, h, s);
     return true;
 }
 
@@ -230,10 +261,14 @@ bool compute(eph_body body, double jd_tt, Kind kind, eph_position* out) {
      * series; bodies the table lacks (asteroids) fall back individually. */
     const bool table = eph_compressed_available() && compressed_covers(jd_tt);
     State e, b;
-    if (!earth_state(jd_tt, table, e) && !(table && earth_state(jd_tt, false, e)))
+    if (!cached_state(EPH_EARTH, jd_tt, table, e) &&
+        !(table && cached_state(EPH_EARTH, jd_tt, false, e)))
         return false;
-    if (!state(body, jd_tt, table, b) && !(table && state(body, jd_tt, false, b)))
-        return false;
+    auto body_state = [&](bool t) {
+        return body == EPH_MOON ? cached_state(body, jd_tt, t, b)
+                                : state(body, jd_tt, t, b);
+    };
+    if (!body_state(table) && !(table && body_state(false))) return false;
 
     Vec3 g, gv;
     geocentric(body, b, e, light_time, g, gv);

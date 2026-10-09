@@ -40,6 +40,13 @@ inline double normalize(double a) {
 void vsop87_heliocentric(int planet, double jd_tt, double& lon, double& lat,
                          double& r);
 
+/* VSOP87D without the terms whose amplitude within tmax_days of J2000 is
+ * below threshold (radians; scaled by the mean distance for R), and
+ * without the DE440 correction: the base of the residual table. */
+void vsop87_truncate(int planet, double threshold, double tmax_days);
+void vsop87_truncated(int planet, double jd_tt, double& lon, double& lat,
+                      double& r);
+
 /* Small fitted DE440 corrections (Mercury..Neptune, Earth); src/correction.cpp. */
 void apply_correction(int planet, double jd_tt, double& lon, double& lat,
                       double& r);
@@ -47,14 +54,14 @@ void apply_correction(int planet, double jd_tt, double& lon, double& lat,
 /* DE440 correction for the Moon (geocentric of date, AU); src/correction.cpp. */
 void apply_moon_correction(double jd_tt, double& lon, double& lat, double& r);
 
-/* Optional Chebyshev compressed ephemeris backend (src/compressed.cpp).
- * compressed_raw: mean ecliptic J2000 position (AU), heliocentric for the
- * planets and the Earth, geocentric for the Moon, and optionally velocity
- * and acceleration (per day) from the same segment.  compressed_covers: the
- * advertised date range.  compressed_generation changes on every
- * load/unload. */
-bool compressed_raw(int body, double jd, Vec3& p, Vec3* v = nullptr,
-                    Vec3* a = nullptr);
+/* Optional residual table (src/compressed.cpp): DE440 minus the base
+ * series, IAU-1976 ecliptic of date (AU), heliocentric for the planets and
+ * the Earth, geocentric for the Moon, with its velocity and acceleration
+ * (per day).  `base` tells whether the truncated series must be
+ * added.  compressed_covers: the advertised date range.
+ * compressed_generation changes on every load/unload. */
+bool compressed_residual(int body, double jd, Vec3& p, Vec3& v, Vec3& a,
+                         bool& base);
 bool compressed_covers(double jd);
 int compressed_generation();
 
@@ -80,6 +87,10 @@ Vec3 frame_1976_to_2006(double jd_tt, const Vec3& v);
 
 /* ELP2000-82B geocentric rectangular, J2000 ecliptic, km (src/elp.cpp). */
 void elp_moon_j2000(double jd_tt, double& x, double& y, double& z);
+
+/* The same truncation for ELP2000-82B (src/elp.cpp). */
+void elp_truncate(double threshold, double tmax_days);
+void elp_truncated_j2000(double jd_tt, double& x, double& y, double& z);
 
 /* Lunar position, geocentric mean ecliptic of date (src/moon.cpp). */
 void moon_position(double jd_tt, double& lon, double& lat, double& dist_au);
