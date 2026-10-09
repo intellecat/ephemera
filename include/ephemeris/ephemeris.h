@@ -81,7 +81,7 @@ double eph_tt_to_ut(double jd_tt, double year);
 /* Mean obliquity of the ecliptic (radians), IAU 2006. */
 double eph_mean_obliquity(double jd_tt);
 
-/* Nutation in longitude and obliquity (radians), IAU 1980, 63 terms. */
+/* Nutation in longitude and obliquity (radians), IAU 2000B, 77 terms. */
 void eph_nutation(double jd_tt, double* dpsi, double* deps);
 
 /* Convert apparent (true-equinox-of-date) ecliptic coordinates, such as

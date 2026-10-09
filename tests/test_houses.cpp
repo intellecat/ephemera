@@ -8,9 +8,10 @@ static const double R2D = 180.0 / 3.14159265358979323846;
 static const double D2R = 3.14159265358979323846 / 180.0;
 static const double PI = 3.14159265358979323846;
 
-static double wrap360(double d) {
-    d = std::fmod(d, 360.0);
-    return d < 0.0 ? d + 360.0 : d;
+/* Angle difference in degrees, wrapped to [-180, 180). */
+static double wrap180(double d) {
+    d = std::fmod(d + 180.0, 360.0);
+    return (d < 0.0 ? d + 360.0 : d) - 180.0;
 }
 
 int main() {
@@ -51,9 +52,9 @@ int main() {
         /* Porphyry cusp relations. */
         double cusps[12];
         eph_houses(jd, &ob, EPH_HOUSES_PORPHYRY, cusps);
-        if (std::fabs(wrap360((cusps[0] - asc) * R2D)) > 1e-6 ||
-            std::fabs(wrap360((cusps[9] - mc) * R2D)) > 1e-6 ||
-            std::fabs(wrap360((cusps[3] - mc - PI) * R2D)) > 1e-6) {
+        if (std::fabs(wrap180((cusps[0] - asc) * R2D)) > 1e-6 ||
+            std::fabs(wrap180((cusps[9] - mc) * R2D)) > 1e-6 ||
+            std::fabs(wrap180((cusps[3] - mc - PI) * R2D)) > 1e-6) {
             std::printf("FAIL: porphyry angular cusps (lat %.4f)\n", o.lat);
             fails++;
         }

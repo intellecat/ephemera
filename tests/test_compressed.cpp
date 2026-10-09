@@ -50,9 +50,9 @@ int main(int argc, char** argv) {
         std::printf("%-8s %12.4f %12.4f\n", eph_body_name((eph_body)i),
                     gmax[i], amax[i]);
         /* The table is fitted to 0.002"; the apparent place adds the
-         * reduction's own error (IAU-1980 nutation). */
-        if (gmax[i] > 0.005 || amax[i] > 0.03) {
-            std::printf("FAIL: %s exceeds 0.005\" / 0.03\"\n",
+         * reduction's own error (IAU 2000B nutation, ~1-3 mas). */
+        if (gmax[i] > 0.005 || amax[i] > 0.006) {
+            std::printf("FAIL: %s exceeds 0.005\" / 0.006\"\n",
                         eph_body_name((eph_body)i));
             failures++;
         }

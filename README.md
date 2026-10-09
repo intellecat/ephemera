@@ -19,7 +19,7 @@ Internally it evaluates:
   Apparent positions from UT match Horizons to ~0.04".
 * A compact Poisson series for Pluto fitted to JPL DE440s over 1850-2140,
   and small Chebyshev DE440 corrections for Uranus and Neptune.
-* **IAU 1980** nutation (63 terms), a rotation from the series' native
+* **IAU 2000B** nutation (77 terms), a rotation from the series' native
   IAU-1976 frame to the **IAU-2006** ecliptic of date (the frame Swiss
   Ephemeris and JPL Horizons use), and a yearly ΔT table for UT↔TT
   (IERS observations; Stephenson, Morrison & Hohenkerk 2016 before 1973
@@ -38,22 +38,22 @@ within ~1° of the Sun:
 
 | Body    | geometric | apparent | compressed | notes                         |
 |---------|-----------|----------|------------|-------------------------------|
-| Mercury | 0.05″     | 0.05″    | 0.01″      | VSOP87 + DE440 correction     |
-| Venus   | 0.06″     | 0.06″    | 0.01″      | VSOP87 + DE440 correction     |
-| Mars    | 0.05″     | 0.05″    | 0.01″      | VSOP87 + DE440 correction     |
-| Jupiter | 0.07″     | 0.08″    | 0.01″      | VSOP87 + DE440 correction     |
-| Saturn  | 0.02″     | 0.03″    | 0.01″      | VSOP87 + DE440 correction     |
-| Uranus  | 0.01″     | 0.03″    | 0.01″      | VSOP87 + DE440 correction     |
-| Neptune | 0.01″     | 0.04″    | 0.01″      | VSOP87 + DE440 correction     |
-| Pluto   | 0.04″     | 0.07″    | 0.01″      | Poisson fit to DE440s         |
-| Sun     | 0.05″     | 0.05″    | 0.01″      | VSOP87 + DE440 correction     |
-| Moon    | 0.20″     | 0.20″    | 0.01″      | full ELP2000-82B + DE440 corr |
+| Mercury | 0.05″     | 0.05″    | 0.002″     | VSOP87 + DE440 correction     |
+| Venus   | 0.06″     | 0.06″    | 0.002″     | VSOP87 + DE440 correction     |
+| Mars    | 0.05″     | 0.05″    | 0.002″     | VSOP87 + DE440 correction     |
+| Jupiter | 0.07″     | 0.08″    | 0.002″     | VSOP87 + DE440 correction     |
+| Saturn  | 0.02″     | 0.03″    | 0.003″     | VSOP87 + DE440 correction     |
+| Uranus  | 0.01″     | 0.02″    | 0.002″     | VSOP87 + DE440 correction     |
+| Neptune | 0.01″     | 0.01″    | 0.002″     | VSOP87 + DE440 correction     |
+| Pluto   | 0.04″     | 0.04″    | 0.002″     | Poisson fit to DE440s         |
+| Sun     | 0.05″     | 0.05″    | 0.002″     | VSOP87 + DE440 correction     |
+| Moon    | 0.20″     | 0.20″    | 0.002″     | full ELP2000-82B + DE440 corr |
 
 Every planet, the Sun and Pluto are sub-0.1" over 1850–2140; the Moon is
-~0.05" typical and ~0.2" at the range edges.  With the optional compressed
-backend the typical error is ~0.005".  On 3000 random dates, where Swiss
-Ephemeris (.se1 files) itself agrees with DE440s to ~0.001", the analytic
-median is 0.01–0.05" and the compressed median ~0.005".
+~0.05" typical and ~0.2" at the range edges.  On 3000 random dates the
+analytic median is 0.003–0.05"; with the optional compressed backend it is
+**~0.001" (max 0.004")**, on par with Swiss Ephemeris' .se1 files
+(0.0005–0.0007" median, 0.002" for the Moon).
 
 ### Where the remaining error comes from
 
@@ -71,8 +71,9 @@ median is 0.01–0.05" and the compressed median ~0.005".
 * **Frame.**  The series are evaluated in their native IAU-1976 frame and
   rotated to the IAU-2006 ecliptic of date (`frame_1976_to_2006`, checked
   against ERFA to <0.001 mas).  Without it longitudes drift by 0.3"/century
-  and the ecliptic is tilted by 0.04".  Nutation is still IAU 1980 (a few
-  mas from IAU 2000A).
+  and the ecliptic is tilted by 0.04".  Nutation is IAU 2000B, within
+  ~1 mas of IAU 2000A near J2000 and ~3 mas at the 1850/2140 ends (IAU
+  1980 was off by up to 18 mas).
 * **Apparent place.**  Iterated light-time, relativistic light deflection
   by the Sun (finite-distance form: up to ~1.7" for a body behind the Sun,
   ~0 for one in front of it), first-order annual aberration and nutation.
