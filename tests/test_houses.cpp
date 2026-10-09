@@ -20,60 +20,83 @@ int main() {
     int fails = 0;
     const double jd = 2451545.0; /* 2000-01-01 12h UT */
 
-    /* Ayanamsas vs Swiss Ephemeris (swe_get_ayanamsa), 1700-2400: the
-     * modern definitions agree within 0.01", those fixed at an ancient
-     * epoch within ~0.3" (a different long-term precession). */
+    /* Table ayanamsas: each moves with the IAU 2006 general precession in
+     * longitude (ERFA p06e) from its J2000 value, 1700-2400. */
     double worst_ayan = 0.0;
-    /* The table-defined systems (the star-based ones are in test_stars). */
-    const int ntable = EPH_AYANAMSA_TRUE_CITRA;
-    for (int m = 0; m < ntable; ++m)
+    const int ntable = EPH_AYANAMSA_TRUE_CITRA; /* star-based: test_stars */
+    for (int m = 0; m < ntable; ++m) {
+        const double a0 = eph_ayanamsa((eph_ayanamsa_system)m, 2451545.0) * R2D;
         for (int k = 0; k < 5; ++k) {
             const double d = std::fabs(
-                eph_ayanamsa((eph_ayanamsa_system)m, kAyanamsaDates[k]) * R2D -
-                kAyanamsaRef[m][k]) * 3600.0;
+                eph_ayanamsa((eph_ayanamsa_system)m, kAyanamsaDates[k]) * R2D - a0 -
+                kPrecession[k]) * 3600.0;
             worst_ayan = std::fmax(worst_ayan, d);
-            if (d > (m < 5 ? 0.01 : 0.5)) {
-                std::printf("FAIL: ayanamsa %s off by %.4f\"\n",
+            if (d > 1e-4) {
+                std::printf("FAIL: ayanamsa %s precession off by %.6f\"\n",
                             eph_ayanamsa_name((eph_ayanamsa_system)m), d);
                 fails++;
             }
         }
-    std::printf("Ayanamsas      max %.3f\" vs Swiss Ephemeris (%d systems)\n",
+    }
+    std::printf("Ayanamsas      max %.6f\" vs IAU 2006 precession (%d systems)\n",
                 worst_ayan, ntable);
+
+    /* Definitions: J2000, J1900 (JD 2415020.0) and B1950 (JD 2433282.4235)
+     * are zero at their epochs; Lahiri (Indian Calendar Reform Committee)
+     * is 23 deg 15' 00.658" on 1956-03-21 0h including nutation;
+     * Fagan/Bradley's SVP at B1950.0 is 335 deg 57' 28.64" (ayanamsa
+     * 24 deg 02' 31.36").  The J2000 values of these two follow Swiss
+     * Ephemeris' realisation, which carries the definition to J2000 with a
+     * different precession treatment: +0.14" and -0.41" from the literal
+     * definition plus IAU 2006 precession. */
+    struct {
+        eph_ayanamsa_system system;
+        double jd, value, nutation, limit; /* degrees; limit in arcseconds */
+    } anchors[] = {
+        {EPH_AYANAMSA_J2000, 2451545.0, 0.0, 0.0, 1e-6},
+        {EPH_AYANAMSA_J1900, 2415020.0, 0.0, 0.0, 1e-3},
+        {EPH_AYANAMSA_B1950, 2433282.4235, 0.0, 0.0, 1e-3},
+        {EPH_AYANAMSA_LAHIRI, 2435553.5, 23.0 + 15.0 / 60 + 0.658 / 3600, kNutation1956,
+         0.5},
+        {EPH_AYANAMSA_FAGAN_BRADLEY, 2433282.4235, 24.0 + 2.0 / 60 + 31.36 / 3600, 0.0,
+         0.5},
+    };
+    for (const auto& a : anchors) {
+        const double d =
+            (eph_ayanamsa(a.system, a.jd) * R2D + a.nutation - a.value) * 3600.0;
+        std::printf("  %-14s %+.4f\" at its defining epoch\n", eph_ayanamsa_name(a.system),
+                    d);
+        if (std::fabs(d) > a.limit) {
+            std::printf("FAIL: %s definition\n", eph_ayanamsa_name(a.system));
+            fails++;
+        }
+    }
     if (std::fabs(eph_ayanamsa_lahiri(jd) - eph_ayanamsa(EPH_AYANAMSA_LAHIRI, jd)) > 0 ||
         !std::isnan(eph_ayanamsa((eph_ayanamsa_system)99, jd)) ||
         eph_ayanamsa_name((eph_ayanamsa_system)99) != nullptr ||
         std::fabs(eph_ayanamsa_custom(2451545.0, 0.4, 2451545.0) - 0.4) > 1e-15 ||
-        std::fabs(eph_ayanamsa_custom(2415020.5, 0.0, 2451545.0) / D2R -
-                  kAyanamsaRef[EPH_AYANAMSA_J1900][2]) > 1e-4) {
+        std::fabs(eph_ayanamsa_custom(2415020.0, 0.0, 2451545.0) -
+                  eph_ayanamsa(EPH_AYANAMSA_J1900, 2451545.0)) > 1e-8) {
         std::printf("FAIL: ayanamsa API\n");
         fails++;
     }
 
-    /* Asc/MC vs Swiss Ephemeris 2.10 (swe_houses_ex), UT. */
-    struct {
-        double jd, lat, lon, asc, mc;
-    } ref[] = {
-        {2451545.0, 51.5, 0.0, 24.2873051, 279.6110878},
-        {2460676.5, 40.7, -74.0, 130.3345811, 28.9401645},
-        {2447892.75, -33.9, 151.2, 59.7829494, 340.3196221},
-        {2469807.3, 64.1, -21.9, 133.0235458, 7.3529408},
-    };
-    for (const auto& r : ref) {
+    /* eph_asc_mc against the reference angles. */
+    for (const AngleRef& r : kAngleRef) {
         eph_observer ob = {r.lon * D2R, r.lat * D2R, 0.0};
         double asc, mc;
-        eph_asc_mc(r.jd, &ob, &asc, &mc);
-        const double da = std::fabs(std::remainder(asc * R2D - r.asc, 360.0));
-        const double dm = std::fabs(std::remainder(mc * R2D - r.mc, 360.0));
-        if (da * 3600.0 > 1.0 || dm * 3600.0 > 1.0) {
-            std::printf("FAIL: asc/mc off by %.2f\"/%.2f\" (jd %.2f)\n",
-                        da * 3600.0, dm * 3600.0, r.jd);
+        eph_asc_mc(r.jd_ut, &ob, &asc, &mc);
+        const double da = std::fabs(wrap180(asc * R2D - r.value[0])) * 3600.0;
+        const double dm = std::fabs(wrap180(mc * R2D - r.value[1])) * 3600.0;
+        if (da > 0.02 || dm > 0.02) {
+            std::printf("FAIL: asc/mc off by %.4f\"/%.4f\" (jd %.2f)\n", da, dm, r.jd_ut);
             fails++;
         }
     }
 
-    /* All systems vs Swiss Ephemeris: 1900-2030, |latitude| <= 65 degrees
-     * and polar cases for the systems defined there. */
+    /* All systems vs the reference (tools/make_houses_reference.py, an
+     * independent implementation): 1900-2030, |latitude| <= 65 degrees and
+     * polar cases for the systems defined there. */
     double worst[14] = {0};
     for (const HouseRef& r : kHouseRef) {
         eph_observer ob = {r.lon * D2R, r.lat * D2R, 0.0};
@@ -94,14 +117,14 @@ int main() {
         "Regiomontanus", "Campanus", "Alcabitius", "Topocentric", "Vehlow",
         "Equal (MC)", "Equal (Aries)", "Meridian", "Morinus"};
     for (int s = 1; s < 14; ++s) {
-        std::printf("%-14s max %.3f\" vs Swiss Ephemeris\n", kNames[s], worst[s]);
-        if (worst[s] > 0.5) {
+        std::printf("%-14s max %.4f\"\n", kNames[s], worst[s]);
+        if (worst[s] > 0.02) {
             std::printf("FAIL: %s\n", kNames[s]);
             fails++;
         }
     }
 
-    /* Angles and sensitive points vs Swiss Ephemeris. */
+    /* Angles and sensitive points vs the reference. */
     double worst_angle = 0.0;
     for (const AngleRef& r : kAngleRef) {
         eph_observer ob = {r.lon * D2R, r.lat * D2R, 0.0};
@@ -114,8 +137,8 @@ int main() {
             worst_angle = std::fmax(
                 worst_angle, std::fabs(wrap180(v[i] * R2D - r.value[i])) * 3600.0);
     }
-    std::printf("Angles         max %.3f\" vs Swiss Ephemeris\n", worst_angle);
-    if (worst_angle > 0.5) {
+    std::printf("Angles         max %.4f\"\n", worst_angle);
+    if (worst_angle > 0.02) {
         std::printf("FAIL: angles\n");
         fails++;
     }
