@@ -251,7 +251,7 @@ date, distance 0, no parallax; the apparent functions add nutation):
 ## Sidereal zodiac and houses
 
 ```c
-double ayan = eph_ayanamsa_lahiri(jd_tt);      /* sidereal = tropical - ayan */
+double ayan = eph_ayanamsa(EPH_AYANAMSA_LAHIRI, jd_tt); /* sidereal = tropical - ayan */
 double asc, mc;
 eph_asc_mc(jd_ut, &obs, &asc, &mc);
 double cusps[12];
@@ -269,9 +269,13 @@ Campanus, Topocentric) may run backwards around the ecliptic, the MC
 taking the opposite meridian point so the houses stay in order (as Swiss
 Ephemeris does; for Topocentric, which has no accepted polar form, other
 software may differ).  `eph_house_position(cusps, longitude)` gives the
-house of a longitude as 1.0–12.999 (by longitude only).  The Lahiri
-ayanamsa uses the IAU-2006 general precession, consistent with the output
-frame.
+house of a longitude as 1.0–12.999 (by longitude only).
+
+Ayanamsas: Lahiri, Fagan/Bradley, Raman, Krishnamurti (KP) and Sri
+Yukteshwar (mean values: their defining value plus the IAU-2006 general
+precession, consistent with the output frame), within 0.01" of Swiss
+Ephemeris.  Lahiri follows the Calendar Reform Committee's 1956 definition
+(23°51'25.5" at J2000; earlier versions of this library used 23°51'11.6").
 
 ## Conventions
 

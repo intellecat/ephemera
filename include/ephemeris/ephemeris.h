@@ -140,7 +140,19 @@ int eph_position_topocentric_tt(eph_body body, double jd_tt, double jd_ut,
 
 /* ---- sidereal zodiac and houses ------------------------------------ */
 
-/* Lahiri ayanamsa (radians): sidereal longitude = tropical - ayanamsa. */
+typedef enum {
+    EPH_AYANAMSA_LAHIRI = 0,
+    EPH_AYANAMSA_FAGAN_BRADLEY,
+    EPH_AYANAMSA_RAMAN,
+    EPH_AYANAMSA_KRISHNAMURTI, /* KP */
+    EPH_AYANAMSA_YUKTESHWAR
+} eph_ayanamsa_system;
+
+/* Mean ayanamsa (radians): sidereal longitude = tropical - ayanamsa.
+ * NaN for an unknown system.  Needs no data file. */
+double eph_ayanamsa(eph_ayanamsa_system system, double jd_tt);
+
+/* eph_ayanamsa(EPH_AYANAMSA_LAHIRI, jd_tt). */
 double eph_ayanamsa_lahiri(double jd_tt);
 
 /* Ascendant and Midheaven ecliptic longitudes (radians, tropical). */

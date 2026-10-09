@@ -17,6 +17,10 @@ export const Body = Object.freeze({
   OscuLilith: 19,
 });
 
+export const Ayanamsa = Object.freeze({
+  Lahiri: 0, FaganBradley: 1, Raman: 2, Krishnamurti: 3, Yukteshwar: 4,
+});
+
 export const HouseSystem = Object.freeze({
   WholeSign: 0, Equal: 1, Porphyry: 2, Placidus: 3, Koch: 4, Regiomontanus: 5,
   Campanus: 6, Alcabitius: 7, Topocentric: 8,
@@ -110,6 +114,7 @@ export async function createEphemeris(source) {
       e.free(p);
       return h;
     },
+    ayanamsa: (system, jdTt) => e.eph_ayanamsa(system, jdTt) * DEG,
     ayanamsaLahiri: (jdTt) => e.eph_ayanamsa_lahiri(jdTt) * DEG,
   };
 }

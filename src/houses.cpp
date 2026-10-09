@@ -103,17 +103,30 @@ double consistent_mc(double mc, double asc, const double c[4]) {
 
 extern "C" {
 
-double eph_ayanamsa_lahiri(double jd_tt) {
-    /* General precession in longitude since J2000 (IAU 2006, matching the
-     * output frame) plus the Lahiri ayanamsa at J2000 (23 deg 51' 11.6").
-     * Ayanamsa = tropical - sidereal. */
+double eph_ayanamsa(eph_ayanamsa_system system, double jd_tt) {
+    /* Mean ayanamsa = its value at J2000 plus the general precession in
+     * longitude since (IAU 2006, matching the output frame).  The J2000
+     * values follow each definition:
+     *   Lahiri: 23 deg 15' 00.658" (true) on 1956-03-21 0h (Indian
+     *     Calendar Reform Committee), less the nutation of that date;
+     *   Fagan/Bradley: Synetic Vernal Point 24 deg 02' 31.36" in 1950;
+     *   Raman, Krishnamurti (KP): their values for 1900;
+     *   Sri Yukteshwar: 22 deg 28' 43.69" at J2000;
+     * as realised by Swiss Ephemeris, to which they agree within 0.001". */
+    static const double kJ2000[] = {23.857092325, 24.740299966, 22.410791012,
+                                    23.760240012, 22.478803000};
+    if (system < 0 || system > EPH_AYANAMSA_YUKTESHWAR) return std::nan("");
     const double T = (jd_tt - eph::J2000) / eph::DAYS_PER_CENTURY;
     const double p =
         T * (5028.796195 +
              T * (1.1054348 +
                   T * (0.00007964 + T * (-0.000023857 - T * 0.0000000383)))) *
         eph::ARCSEC;
-    return 23.853222 * eph::DEG + p;
+    return kJ2000[system] * eph::DEG + p;
+}
+
+double eph_ayanamsa_lahiri(double jd_tt) {
+    return eph_ayanamsa(EPH_AYANAMSA_LAHIRI, jd_tt);
 }
 
 int eph_asc_mc(double jd_ut, const eph_observer* obs, double* asc,

@@ -20,10 +20,30 @@ int main() {
     int fails = 0;
     const double jd = 2451545.0; /* 2000-01-01 12h UT */
 
-    /* Ayanamsa (Lahiri) ~ 23.853 deg at J2000. */
-    const double ayan = eph_ayanamsa_lahiri(jd) * R2D;
-    if (std::fabs(ayan - 23.8532) > 0.01) {
-        std::printf("FAIL: ayanamsa %.4f deg\n", ayan);
+    /* Ayanamsas (degrees) vs Swiss Ephemeris (swe_get_ayanamsa) for
+     * Lahiri, Fagan/Bradley, Raman, Krishnamurti, Yukteshwar. */
+    const struct {
+        double jd;
+        double deg[5];
+    } ayan[] = {
+        {2415020.5, {22.460530593, 23.343738216, 21.014229126, 22.363678126, 21.082241114}},
+        {2451545.0, {23.857092325, 24.740299966, 22.410791012, 23.760240012, 22.478803000}},
+        {2469807.5, {24.555613070, 25.438820717, 23.109311808, 24.458760808, 23.177323796}},
+    };
+    for (const auto& a : ayan)
+        for (int m = 0; m < 5; ++m) {
+            const double d =
+                eph_ayanamsa((eph_ayanamsa_system)m, a.jd) * R2D - a.deg[m];
+            if (std::fabs(d) * 3600.0 > 0.01) {
+                std::printf("FAIL: ayanamsa %d at %.1f off by %.4f\"\n", m,
+                            a.jd, d * 3600.0);
+                fails++;
+            }
+        }
+    if (std::fabs(eph_ayanamsa_lahiri(jd) -
+                  eph_ayanamsa(EPH_AYANAMSA_LAHIRI, jd)) > 0 ||
+        !std::isnan(eph_ayanamsa((eph_ayanamsa_system)99, jd))) {
+        std::printf("FAIL: ayanamsa API\n");
         fails++;
     }
 
