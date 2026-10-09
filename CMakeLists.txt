@@ -40,6 +40,7 @@ add_library(ephemeris STATIC
     src/pluto.cpp
     src/ephemeris.cpp
     src/data.cpp
+    src/util.cpp
     ${EMBED_SRC}
     data/delta_t_data.cpp
 )
@@ -99,4 +100,8 @@ if(EPHEMERIS_BUILD_TESTS)
     add_executable(test_lunar_points tests/test_lunar_points.cpp)
     target_link_libraries(test_lunar_points PRIVATE ephemeris)
     add_test(NAME lunar_points COMMAND test_lunar_points ${DATA}/eph-full.bin)
+
+    add_executable(test_time tests/test_time.cpp)
+    target_link_libraries(test_time PRIVATE ephemeris)
+    add_test(NAME time COMMAND test_time ${DATA}/eph-full.bin)
 endif()

@@ -73,7 +73,9 @@ double eph_julian_date(int year, int month, double day);
 /* Inverse of eph_julian_date.  Gregorian calendar for jd >= 2299160.5. */
 void eph_calendar_date(double jd, int* year, int* month, double* day);
 
-/* Approximate Delta-T = TT - UT in seconds (Espenak & Meeus polynomials). */
+/* Delta-T = TT - UT in seconds: a yearly table for 1620-2150 (IERS
+ * observations, Stephenson, Morrison & Hohenkerk 2016 and their forecast),
+ * Espenak & Meeus polynomials outside it. */
 double eph_delta_t(double year);
 
 /* TDB - TT in seconds (Fairhead & Bretagnon periodic series, ~1 us).
@@ -84,6 +86,21 @@ double eph_tdb_minus_tt(double jd_tt);
  * calendar year with fraction (used only to evaluate Delta-T). */
 double eph_ut_to_tt(double jd_ut, double year);
 double eph_tt_to_ut(double jd_tt, double year);
+
+/* Civil UTC to TT and UT1 Julian dates.  From 1972 TT is exact (leap
+ * second table; TT = TAI + 32.184 s) and UT1 comes from Delta-T (within
+ * ~0.1 s); before 1972 UTC is taken as UT.  Returns -1 for an invalid date.
+ * Either output pointer may be NULL. */
+int eph_utc_to_jd(int year, int month, int day, int hour, int minute,
+                  double second, double* jd_tt, double* jd_ut);
+
+/* Greenwich apparent sidereal time (radians), IAU 2006.  Local sidereal
+ * time = this + east longitude. */
+double eph_sidereal_time(double jd_ut);
+
+/* Equation of time (days): apparent minus mean solar time.  Local apparent
+ * time = local mean time + e.  Needs the Sun's data; returns -1 without. */
+int eph_equation_of_time(double jd_ut, double* e_days);
 
 /* ---- reference frames ---------------------------------------------- */
 
@@ -185,6 +202,16 @@ int eph_houses(double jd_ut, const eph_observer* observer,
 double eph_house_position(const double cusps[12], double longitude);
 
 const char* eph_body_name(eph_body body);
+
+/* ---- utilities -------------------------------------------------------- */
+
+/* Midpoint (radians) of the shorter arc between two longitudes. */
+double eph_midpoint(double a, double b);
+
+/* Split a longitude (radians) into zodiac sign (0 = Aries .. 11), degrees,
+ * minutes and seconds within the sign.  Any output pointer may be NULL. */
+void eph_split_longitude(double longitude, int* sign, int* degrees,
+                         int* minutes, double* seconds);
 
 /* ---- data files ------------------------------------------------------ *
  * Positions need series data from a file made by tools/pack_series or
