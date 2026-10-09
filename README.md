@@ -239,12 +239,13 @@ charts).
   heliocentric longitude.
 * `eph_node_crossing`: when a body crosses the ecliptic (the Moon's node
   passages); `eph_station`: when a planet turns retrograde or direct.
-* Results are refined to ~1e-8 day; solar and lunar crossings agree with
-  Swiss Ephemeris within its own few-second error.
+* Results are refined to ~1e-8 day; with the full series, solar and lunar
+  crossings agree with JPL DE440 (via Skyfield) within 0.13 s / 0.02 s.
 * `eph_phenomena_tt/_ut`: phase angle, illuminated fraction, elongation,
   apparent diameter and visual magnitude (Mallama & Hilton 2018 for the
   planets, Allen for the Moon to phase angle ~150°, the H-G system for the
-  minor bodies); within 0.12 mag and 23" of Swiss Ephemeris.
+  minor bodies); against DE440 with Skyfield's Mallama & Hilton
+  magnitudes: within 0.05" in angle and 0.002 mag for the planets.
 * `eph_utc_to_jd` (leap seconds; exact TT from 1972), `eph_sidereal_time`
   (IAU 2006), `eph_equation_of_time`, `eph_midpoint` and
   `eph_split_longitude`.
@@ -258,7 +259,8 @@ date, distance 0, no parallax; the apparent functions add nutation):
 * **Mean node, mean Lilith** (mean lunar apogee): the ELP2000-82B
   polynomials as given by Meeus (*Astronomical Algorithms*, ch. 47); the
   mean apogee lies on the inclined mean orbit, so it has a latitude.  No
-  data file is needed.  They agree with Swiss Ephemeris to 0.13" / 0.7".
+  data file is needed.  They agree with the full ELP2000-82B mean
+  elements (IAU 2006 precession) to 0.12" / 0.54".
 * **True node, osculating Lilith**: from the osculating orbit of the
   Moon's position and velocity (inertial, G(M_Earth + M_Moon) of DE440),
   with speeds from its acceleration.  Against the same elements of the
@@ -302,10 +304,11 @@ eph_solar_eclipse_next(jd_tt, +1, &e);   /* -1: previous */
 Against NASA's *Five Millennium Canon* for all 909 eclipses of 1901–2100,
 types and saros series agree everywhere. Gamma and magnitudes agree within
 0.0002, the greatest eclipse within 0.6 s (lunar 3 s), and lunar phase
-durations within 0.5 min.  Contacts agree
-with Swiss Ephemeris (1850–2150) within 2.5 s for local circumstances and
-~45 s for the global ones, where NASA's own figures lie within 2 s of
-ours. With the 1″ file the only change is 1986 Oct 3, a hybrid of
+durations within 0.5 min.  Against a brute-force reference from DE440
+(Skyfield; `tools/make_eclipse_reference.py`), contacts agree within 0.3 s
+(local, and global for non-grazing eclipses; up to 2 s where the shadow
+only grazes the Earth), local magnitudes within 0.0003 and obscuration
+within 0.002. With the 1″ file the only change is 1986 Oct 3, a hybrid of
 magnitude 1.0000 that becomes annular.  A search takes ~8 ms with the full
 series and ~1 ms with the 1″ file.
 
@@ -328,8 +331,8 @@ velocity, as ERFA's `pmsafe`) and then the same reduction as the planets
 (aberration with the Earth's barycentric velocity); they agree with ERFA +
 Skyfield/DE440 within 0.015" over 1600–2500.  The star-based ayanamsas
 (True Citra, True Revati, True Pushya, True Mula, Galactic Center at 0°
-Sagittarius, Gil Brand's and Cochrane's) use this file and match Swiss
-Ephemeris within 0.02" (0.3" for the Galactic Center ones).
+Sagittarius, Gil Brand's and Cochrane's) use this file and agree with
+the same definitions computed with ERFA + DE440 within 0.03".
 
 ## Sidereal zodiac and houses
 
@@ -346,8 +349,10 @@ Aries), Vehlow, Porphyry, Placidus, Koch, Regiomontanus, Campanus,
 Alcabitius, Topocentric (Polich–Page), Meridian (axial rotation) and
 Morinus, from their standard definitions; no data file is needed.
 `eph_house_angles` adds the Vertex, the equatorial Ascendant (East
-point), Koch's and Munkasey's co-Ascendants and the polar Ascendant.  They match Swiss
-Ephemeris to <0.03" for 1900–2030 at latitudes up to ±66°, and Asc/MC use
+point), Koch's and Munkasey's co-Ascendants and the polar Ascendant.  They
+match an independent geometric implementation (ERFA sidereal time and
+IAU 2000A nutation; `tools/make_houses_reference.py`) to 0.011" for
+1900–2030 at latitudes up to ±65° and in the polar cases, and Asc/MC use
 the IAU 2006 sidereal time.  Placidus and Koch are undefined inside the
 polar circles (|latitude| > 90° − obliquity): `eph_houses` then returns
 Porphyry cusps and 1.  There the great-circle systems (Regiomontanus,
@@ -366,9 +371,11 @@ Aryabhata (true and mean Sun, SS Revati/Citra, Aryabhata 522), Vettius
 Valens, Skydram, Fiorenza's galactic equator and J2000/J1900/B1950, and
 seven star-based ones (see Fixed stars) -- plus user-defined ones
 (`eph_ayanamsa_custom`).  Each is its defining value
-carried by the IAU-2006 general precession: within 0.01" of Swiss
-Ephemeris for the modern definitions and 0.25" (1700-2400) for those fixed
-at an ancient epoch.  Lahiri follows the Calendar Reform Committee's 1956 definition
+carried by the IAU-2006 general precession (exactly ERFA's `p06e`).  The
+J2000 values are the common realisations used in astrological software:
+J2000, J1900 and B1950 match their definitions within 0.001", while
+Lahiri is 0.14" and Fagan/Bradley 0.41" from their literal 1956 / 1950
+definitions carried by IAU 2006 precession.  Lahiri follows the Calendar Reform Committee's 1956 definition
 (23°51'25.5" at J2000; earlier versions of this library used 23°51'11.6").
 
 ## Conventions

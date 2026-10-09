@@ -154,7 +154,7 @@ extern "C" {
 
 int eph_phenomena_tt(eph_body body, double jd_tt, eph_phenomena* out) {
     if (!out || body < 0 || body >= EPH_MEAN_NODE || body == EPH_EARTH) return -1;
-    /* Apparent positions (as Swiss Ephemeris; geometric ones change the
+    /* Apparent positions (geometric ones would change the
      * phase angle by ~20-150", the magnitude by <0.001). */
     eph_position b, s;
     if (eph_position_apparent_tt(body, jd_tt, &b) != 0 ||

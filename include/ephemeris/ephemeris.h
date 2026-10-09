@@ -206,9 +206,7 @@ typedef enum {
 
 /* Mean ayanamsa (radians): sidereal longitude = tropical - ayanamsa.
  * NaN for an unknown system.  Needs no data file.  Each system is its
- * defining value carried by the IAU-2006 general precession; this matches
- * Swiss Ephemeris within 0.01" for the modern definitions and 0.3" (over
- * 1600-2500) for those fixed at an ancient epoch.  The star-based
+ * defining value carried by the IAU-2006 general precession.  The star-based
  * systems put a star at a fixed sidereal longitude (its apparent position
  * without nutation); they return NaN without the star and Earth data. */
 double eph_ayanamsa(eph_ayanamsa_system system, double jd_tt);
