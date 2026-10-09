@@ -260,8 +260,180 @@ void reduce(eph_body body, double jd, bool apparent, const Vec3& g,
     }
 }
 
+Vec3 cross(const Vec3& a, const Vec3& b) {
+    return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
+}
+
+/* Longitude and latitude, and their rates, of the direction u (rate ud),
+ * both in the IAU-2006 ecliptic of date. */
+void direction(const Vec3& u, const Vec3& ud, eph_position* out) {
+    double r;
+    cartesian_to_spherical(u, out->longitude, out->latitude, r);
+    const double rho2 = u.x * u.x + u.y * u.y;
+    out->longitude_speed = (u.x * ud.y - u.y * ud.x) / rho2;
+    out->latitude_speed = (ud.z * rho2 - u.z * (u.x * ud.x + u.y * ud.y)) /
+                          (r * r * std::sqrt(rho2));
+    out->distance = 0.0;
+    out->distance_speed = 0.0;
+}
+
+/*
+ * Lunar nodes and apogee ("Black Moon Lilith"), geocentric, ecliptic of
+ * date; apparent positions add nutation (no light-time or aberration, as
+ * these are not bodies).
+ *
+ * Mean node and mean perigee: the polynomials of ELP2000-82B as given by
+ * Meeus, Astronomical Algorithms (2nd ed.), ch. 47.  The mean apogee lies
+ * on the mean lunar orbit (inclination 5.1454 deg), so it has a latitude.
+ * True node and osculating apogee: from the osculating (two-body) orbit of
+ * the Moon's geometric position r and velocity v, with derivatives from
+ * its acceleration: the node is along z x (r x v), the apogee opposite the
+ * eccentricity vector (v x h) / mu - r / |r|.
+ */
+/* The Moon's geometric position alone, from the table or the series. */
+bool moon_at(double jd, bool table, Vec3& p) {
+    if (table) {
+        Vec3 v, a;
+        bool has_base;
+        if (!compressed_residual(EPH_MOON, jd, p, v, a, has_base)) return false;
+        if (!has_base) return true;
+        Vec3 b;
+        if (!base(EPH_MOON, jd, b)) return false;
+        p = add(p, b);
+        return true;
+    }
+    return source(EPH_MOON, jd, jd, p);
+}
+
+/* The Moon's state for the osculating elements: the acceleration from
+ * +-0.02 day, not the +-0.001 day of state(), where the ~5e-10 day
+ * resolution of a double Julian date leaves ~0.2% noise.  The node and
+ * apogee rates depend only on the small (~0.6%) perturbing part of the
+ * acceleration.  Cached per date and thread. */
+struct MoonOsc {
+    double jd = -1.0;
+    int generation = -1;
+    bool table = false;
+    State s;
+};
+thread_local MoonOsc g_moon_osc;
+
+bool moon_osculating_state(double jd, State& s) {
+    bool table = eph_compressed_available() && compressed_covers(jd);
+    MoonOsc& c = g_moon_osc;
+    if (c.jd == jd && c.generation == data_generation() && c.table == table) {
+        s = c.s;
+        return true;
+    }
+    const double H = 0.02;
+    Vec3 m, pl;
+    if (!cached_state(EPH_MOON, jd, table, s) || !moon_at(jd - H, table, m) ||
+        !moon_at(jd + H, table, pl)) {
+        if (!table) return false;
+        table = false;
+        if (!cached_state(EPH_MOON, jd, false, s) || !moon_at(jd - H, false, m) ||
+            !moon_at(jd + H, false, pl))
+            return false;
+    }
+    s.a = scale(add(pl, m) - scale(s.p, 2.0), 1.0 / (H * H));
+    c = {jd, data_generation(), table, s};
+    return true;
+}
+
+bool lunar_point(eph_body body, double jd, bool apparent, eph_position* out) {
+    const double T = (jd - J2000) / DAYS_PER_CENTURY;
+    if (body == EPH_MEAN_NODE || body == EPH_MEAN_LILITH) {
+        const double node =
+            (125.0445479 + T * (-1934.1362891 + T * (0.0020754 +
+                                T * (1.0 / 467441.0 - T / 60616000.0)))) * DEG;
+        const double node_rate =
+            (-1934.1362891 + T * (2 * 0.0020754 + T * (3.0 / 467441.0 -
+                                  T * 4.0 / 60616000.0))) * DEG / DAYS_PER_CENTURY;
+        if (body == EPH_MEAN_NODE) {
+            out->longitude = normalize(node);
+            out->latitude = 0.0;
+            out->longitude_speed = node_rate;
+            out->latitude_speed = 0.0;
+            out->distance = out->distance_speed = 0.0;
+        } else {
+            const double perigee =
+                (83.3532465 + T * (4069.0137287 + T * (-0.0103200 +
+                                   T * (-1.0 / 80053.0 + T / 18999000.0)))) * DEG;
+            const double perigee_rate =
+                (4069.0137287 + T * (-2 * 0.0103200 + T * (-3.0 / 80053.0 +
+                                     T * 4.0 / 18999000.0))) * DEG / DAYS_PER_CENTURY;
+            /* Apogee: argument w from the node along the mean orbit. */
+            const double inc = 5.1453964 * DEG;
+            const double w = perigee + PI - node, wd = perigee_rate - node_rate;
+            const Vec3 q = {std::cos(w), std::sin(w) * std::cos(inc),
+                            std::sin(w) * std::sin(inc)};
+            const Vec3 qd = {-std::sin(w) * wd, std::cos(w) * std::cos(inc) * wd,
+                             std::cos(w) * std::sin(inc) * wd};
+            /* Rotate by the node about the ecliptic pole. */
+            const double c = std::cos(node), sn = std::sin(node);
+            const Vec3 a = {c * q.x - sn * q.y, sn * q.x + c * q.y, q.z};
+            const Vec3 ad = {c * qd.x - sn * qd.y - node_rate * a.y,
+                             sn * qd.x + c * qd.y + node_rate * a.x, qd.z};
+            double r;
+            cartesian_to_spherical(a, out->longitude, out->latitude, r);
+            out->longitude_speed = (a.x * ad.y - a.y * ad.x) / (a.x * a.x + a.y * a.y);
+            out->latitude_speed = ad.z / std::cos(out->latitude);
+            out->distance = out->distance_speed = 0.0;
+        }
+        /* The polynomials refer to the mean ecliptic and equinox of date;
+         * the 1976/2006 frame difference is below 0.1" here. */
+    } else {
+        /* Osculating elements from the Moon's geometric state. */
+        State m;
+        if (!moon_osculating_state(jd, m)) return false;
+        /* The ecliptic of date turns with the precession; osculating
+         * elements need the inertial velocity and acceleration (the frame
+         * term is ~3e-6 of the velocity, ~20" in the apogee). */
+        const Vec3 zv = {-m.v.y, m.v.x, 0.0};
+        const Vec3 v = m.v - Vec3{-kPrecessionRate * m.p.y, kPrecessionRate * m.p.x, 0.0};
+        const Vec3 acc = m.a - scale(zv, 2.0 * kPrecessionRate);
+        m.v = v;
+        m.a = acc;
+        /* The node is where the orbit crosses the IAU-2006 ecliptic, so
+         * the orbit normal goes to that frame first (the 1976 ecliptic is
+         * tilted by 0.04", which moves the node by ~0.5"). */
+        const Vec3 h = frame_1976_to_2006(jd, cross(m.p, m.v));
+        const Vec3 hd = frame_1976_to_2006(jd, cross(m.p, m.a));
+        if (body == EPH_TRUE_NODE) {
+            direction({-h.y, h.x, 0.0}, {-hd.y, hd.x, 0.0}, out);
+            out->latitude = out->latitude_speed = 0.0;
+        } else {
+            /* G (M_Earth + M_Moon), AU^3/day^2 (DE440). */
+            const double mu = 403503.235502 * 86400.0 * 86400.0 /
+                              (AU_KM * AU_KM * AU_KM);
+            const double r = length(m.p);
+            const double rd = dot(m.p, m.v) / r;
+            const Vec3 h0 = cross(m.p, m.v), hd0 = cross(m.p, m.a);
+            const Vec3 e = add(scale(cross(m.v, h0), 1.0 / mu), scale(m.p, -1.0 / r));
+            const Vec3 ed = add(scale(add(cross(m.a, h0), cross(m.v, hd0)), 1.0 / mu),
+                                add(scale(m.v, -1.0 / r), scale(m.p, rd / (r * r))));
+            direction(frame_1976_to_2006(jd, scale(e, -1.0)),
+                      frame_1976_to_2006(jd, scale(ed, -1.0)), out);
+        }
+        /* Inertial rate -> rate in the precessing ecliptic of date. */
+        out->longitude_speed += kPrecessionRate;
+    }
+    if (apparent) {
+        double dpsi, deps, d1, d2;
+        nutation(jd, dpsi, deps);
+        out->longitude = normalize(out->longitude + dpsi);
+        /* Nutation in longitude changes by up to ~0.1"/day. */
+        nutation(jd - 0.05, d1, deps);
+        nutation(jd + 0.05, d2, deps);
+        out->longitude_speed += (d2 - d1) / 0.1;
+    }
+    return true;
+}
+
 bool compute(eph_body body, double jd_tt, Kind kind, eph_position* out) {
     if (body < 0 || body >= EPH_BODY_COUNT || body == EPH_EARTH) return false;
+    if (body >= EPH_MEAN_NODE)
+        return lunar_point(body, jd_tt, kind == Kind::Apparent, out);
     const bool apparent = (kind == Kind::Apparent);
     /* Light-time applies to everything except the Sun (at the origin). */
     const bool light_time = apparent && body != EPH_SUN;
@@ -334,6 +506,12 @@ bool topocentric_eval(eph_body body, double jd_tt, double jd_ut,
                       double* dist) {
     eph_position g;
     if (eph_position_apparent_tt(body, jd_tt, &g) != 0) return false;
+    if (body >= EPH_MEAN_NODE) { /* directions, not bodies: no parallax */
+        *lon = g.longitude;
+        *lat = g.latitude;
+        *dist = g.distance;
+        return true;
+    }
     double ra, dec;
     ecliptic_to_equatorial(g.longitude, g.latitude, jd_tt, &ra, &dec);
     double ra2, dec2;

@@ -223,6 +223,31 @@ sidereal time.  The Moon's ~1 degree parallax is the dominant effect.  Refractio
 is not applied (it affects altitude, not the ecliptic longitude used in
 charts).
 
+## Lunar nodes and Lilith
+
+`EPH_MEAN_NODE`, `EPH_TRUE_NODE`, `EPH_MEAN_LILITH` and `EPH_OSCU_LILITH`
+work with the position functions like the bodies (geocentric ecliptic of
+date, distance 0, no parallax; the apparent functions add nutation):
+
+* **Mean node, mean Lilith** (mean lunar apogee): the ELP2000-82B
+  polynomials as given by Meeus (*Astronomical Algorithms*, ch. 47); the
+  mean apogee lies on the inclined mean orbit, so it has a latitude.  No
+  data file is needed.  They agree with Swiss Ephemeris to 0.13" / 0.7".
+* **True node, osculating Lilith**: from the osculating orbit of the
+  Moon's position and velocity (inertial, G(M_Earth + M_Moon) of DE440),
+  with speeds from its acceleration.  Against the same elements of the
+  DE440 Moon (1850–2140, max):
+
+  | Data file    | true node | osculating Lilith |
+  |--------------|-----------|-------------------|
+  | DE440 tables | 0.15″     | 1.9″              |
+  | full series  | 0.53″     | 2.0″              |
+  | 0.1″ file    | 1.6″      | 4.8″              |
+  | 1″ file      | 3.2″      | 17″               |
+
+  The node magnifies the Moon's latitude error ~11x and the apogee its
+  velocity error ~20x.  (Swiss Ephemeris' Moshier mode is 37" / 233" off.)
+
 ## Sidereal zodiac and houses
 
 ```c

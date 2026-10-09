@@ -197,6 +197,10 @@ const char* eph_body_name(eph_body body) {
         case EPH_JUNO:    return "Juno";
         case EPH_VESTA:   return "Vesta";
         case EPH_CHIRON:  return "Chiron";
+        case EPH_MEAN_NODE:   return "Mean Node";
+        case EPH_TRUE_NODE:   return "True Node";
+        case EPH_MEAN_LILITH: return "Mean Lilith";
+        case EPH_OSCU_LILITH: return "Osc. Lilith";
         default:          return "?";
     }
 }

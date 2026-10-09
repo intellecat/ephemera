@@ -47,6 +47,11 @@ typedef enum {
     EPH_JUNO,
     EPH_VESTA,
     EPH_CHIRON,
+    /* Lunar points (directions, distance 0; apparent adds nutation): */
+    EPH_MEAN_NODE,   /* mean ascending node (no data file needed)          */
+    EPH_TRUE_NODE,   /* osculating ascending node (needs the Moon's data)  */
+    EPH_MEAN_LILITH, /* mean lunar apogee, Black Moon (no data needed)     */
+    EPH_OSCU_LILITH, /* osculating lunar apogee (needs the Moon's data)    */
     EPH_BODY_COUNT
 } eph_body;
 

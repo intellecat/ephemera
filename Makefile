@@ -30,7 +30,8 @@ LIB     = $(BUILD)/libephemeris.a
 DE440_1800_2200 = $(foreach y,1800 1900 2000 2100,data/de440/de440-$(y).bin)
 
 TESTS = $(BUILD)/test_ephemeris $(BUILD)/test_compressed $(BUILD)/test_topocentric \
-        $(BUILD)/test_houses $(BUILD)/test_asteroids $(BUILD)/test_data
+        $(BUILD)/test_houses $(BUILD)/test_asteroids $(BUILD)/test_data \
+        $(BUILD)/test_lunar_points
 
 all: $(LIB) $(BUILD)/ephcliapp $(TESTS)
 
@@ -63,6 +64,7 @@ test: $(TESTS)
 	$(BUILD)/test_houses
 	$(BUILD)/test_asteroids data/eph-full.bin data/eph-asteroids.bin
 	$(BUILD)/test_data data
+	$(BUILD)/test_lunar_points data/eph-full.bin
 
 $(BUILD)/test_compressed: tests/test_compressed.cpp $(LIB)
 	$(CXX) $(CXXFLAGS) -Iinclude -Itests $< $(LIB) -lm -o $@
@@ -77,6 +79,9 @@ $(BUILD)/test_asteroids: tests/test_asteroids.cpp tests/asteroid_ref.h $(LIB)
 	$(CXX) $(CXXFLAGS) -Iinclude -Itests $< $(LIB) -lm -o $@
 
 $(BUILD)/test_data: tests/test_data.cpp tests/reference_data.h $(LIB)
+	$(CXX) $(CXXFLAGS) -Iinclude -Itests $< $(LIB) -lm -o $@
+
+$(BUILD)/test_lunar_points: tests/test_lunar_points.cpp tests/lunar_points_ref.h $(LIB)
 	$(CXX) $(CXXFLAGS) -Iinclude -Itests $< $(LIB) -lm -o $@
 
 # Development tools and the series data files (see README).

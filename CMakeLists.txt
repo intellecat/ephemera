@@ -95,4 +95,8 @@ if(EPHEMERIS_BUILD_TESTS)
     add_executable(test_data tests/test_data.cpp)
     target_link_libraries(test_data PRIVATE ephemeris)
     add_test(NAME data COMMAND test_data ${DATA})
+
+    add_executable(test_lunar_points tests/test_lunar_points.cpp)
+    target_link_libraries(test_lunar_points PRIVATE ephemeris)
+    add_test(NAME lunar_points COMMAND test_lunar_points ${DATA}/eph-full.bin)
 endif()
