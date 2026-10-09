@@ -10,7 +10,8 @@ LIB_SRC = src/time.cpp src/frames.cpp src/vsop87.cpp src/moon.cpp \
           src/elp.cpp src/pluto.cpp src/ephemeris.cpp src/correction.cpp \
           src/compressed.cpp src/houses.cpp src/asteroids.cpp \
           data/vsop87d_data.cpp data/pluto_data.cpp data/elp_data.cpp \
-          data/corr_data.cpp data/corr_moon.cpp data/asteroid_data.cpp
+          data/corr_data.cpp data/corr_moon.cpp data/asteroid_data.cpp \
+          data/delta_t_data.cpp
 LIB_OBJ = $(patsubst %.cpp,$(BUILD)/%.o,$(LIB_SRC))
 LIB     = $(BUILD)/libephemeris.a
 

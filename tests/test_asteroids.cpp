@@ -1,4 +1,5 @@
-/* Asteroid validation against JPL Horizons apparent geocentric positions. */
+/* Asteroid validation against JPL Horizons apparent geocentric positions
+ * (UT, so this also checks Delta-T); see tools/make_asteroid_reference.py. */
 #include <cmath>
 #include <cstdio>
 
@@ -28,8 +29,8 @@ int main() {
     }
     std::printf("\nAsteroids vs Horizons: max dlon %.3f\", dlat %.3f\"\n",
                 maxlon, maxlat);
-    if (maxlon > 0.5 || maxlat > 0.5) {
-        std::printf("FAIL: exceeds 0.5\"\n");
+    if (maxlon > 0.1 || maxlat > 0.1) {
+        std::printf("FAIL: exceeds 0.1\"\n");
         return 1;
     }
     std::printf("All asteroid checks passed.\n");

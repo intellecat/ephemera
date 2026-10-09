@@ -30,6 +30,7 @@ add_library(ephemeris STATIC
     data/corr_data.cpp
     data/corr_moon.cpp
     data/asteroid_data.cpp
+    data/delta_t_data.cpp
 )
 
 target_include_directories(ephemeris

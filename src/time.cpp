@@ -1,11 +1,13 @@
 #include "internal.h"
 
 #include "../include/ephemeris/ephemeris.h"
+#include "../data/delta_t_data.h"
 
 namespace {
 
-/* Espenak & Meeus polynomial expressions for Delta-T = TT - UT (seconds). */
-double delta_t_seconds(double y) {
+/* Espenak & Meeus polynomial expressions for Delta-T = TT - UT (seconds),
+ * used outside the tabulated range. */
+double delta_t_polynomial(double y) {
     double u, t;
     if (y < -500.0) {
         u = (y - 1820.0) / 100.0;
@@ -88,6 +90,22 @@ double delta_t_seconds(double y) {
     }
     u = (y - 1820.0) / 100.0;
     return -20.0 + 32.0 * u * u;
+}
+
+/* Delta-T: yearly table (IERS observations, Stephenson et al. 2016) with
+ * linear interpolation; outside it the polynomials, offset to join the
+ * table continuously. */
+double delta_t_seconds(double y) {
+    using namespace eph::delta_t;
+    if (y < kFirstYear)
+        return delta_t_polynomial(y) + kTable[0] -
+               delta_t_polynomial(kFirstYear);
+    if (y >= kLastYear)
+        return delta_t_polynomial(y) + kTable[kLastYear - kFirstYear] -
+               delta_t_polynomial(kLastYear);
+    const int i = static_cast<int>(std::floor(y)) - kFirstYear;
+    const double f = y - std::floor(y);
+    return kTable[i] + f * (kTable[i + 1] - kTable[i]);
 }
 
 }  // namespace

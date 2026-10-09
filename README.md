@@ -16,14 +16,15 @@ Internally it evaluates:
   because its constants are fitted to DE200/LE200.
 * Compact Chebyshev series for Ceres/Pallas/Juno/Vesta fitted to JPL
   Horizons (public data), heliocentric fit error <0.02" over 1850-2140.
-  (`tests/test_asteroids` compares *apparent UT* positions with Horizons and
-  shows up to ~0.3"; that is the ΔT polynomial, not the fit.)
+  Apparent positions from UT match Horizons to ~0.04".
 * A compact Poisson series for Pluto fitted to JPL DE440s over 1850-2140,
   and small Chebyshev DE440 corrections for Uranus and Neptune.
 * **IAU 1980** nutation (63 terms), a rotation from the series' native
   IAU-1976 frame to the **IAU-2006** ecliptic of date (the frame Swiss
-  Ephemeris and JPL Horizons use), and the Espenak–Meeus ΔT polynomials
-  for the UT↔TT conversion.
+  Ephemeris and JPL Horizons use), and a yearly ΔT table for UT↔TT
+  (IERS observations; Stephenson, Morrison & Hohenkerk 2016 before 1973
+  and as the forecast to 2150; Espenak–Meeus polynomials outside
+  1620–2150).
 
 Angles are radians, distances are AU, and time is Julian Date (TT or UT).
 
@@ -88,7 +89,7 @@ With CMake:
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
 ctest --test-dir build            # run the DE440s validation
-./build/ephcliapp 2026 1 1 12     # year month day [UT fraction]
+./build/ephcliapp 2026 1 1 12     # year month day [UT hours]
 ```
 
 Or with the convenience Makefile:
@@ -168,8 +169,12 @@ consistent with the output frame.
   light deflection, annual aberration and nutation in longitude.
 * The Moon uses the mean-equinox-of-date series; nutation is applied for
   apparent positions.
-* The `year` argument to the `_ut` functions is only used to evaluate the
-  ΔT polynomial; pass a fractional calendar year.
+* The `year` argument to the `_ut` functions is only used to look up ΔT;
+  pass a fractional calendar year.  ΔT is observed up to the last IERS
+  data and a forecast after it (a few seconds off within a decade, tens
+  of seconds by 2100); each second of ΔT error moves the Moon ~0.5" in
+  UT-based positions.  Re-run `tools/gen_delta_t.py`
+  occasionally to pick up new IERS data.
 
 ## Coefficient provenance and regeneration
 

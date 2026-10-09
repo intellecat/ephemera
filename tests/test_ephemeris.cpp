@@ -43,9 +43,16 @@ static int check_time() {
         std::printf("FAIL: calendar round-trip -> %d-%d-%.2f\n", y, m, d);
         failures++;
     }
-    if (std::fabs(eph_delta_t(2000.0) - 63.9) > 2.0) {
-        std::printf("FAIL: Delta-T(2000) = %.2f s\n", eph_delta_t(2000.0));
-        failures++;
+    /* Delta-T vs IERS (1 Jan): 63.83 s in 2000, 69.36 s in 2020. */
+    const struct {
+        double year, dt;
+    } dts[] = {{2000.0, 63.83}, {2020.0, 69.36}};
+    for (const auto& c : dts) {
+        if (std::fabs(eph_delta_t(c.year) - c.dt) > 0.1) {
+            std::printf("FAIL: Delta-T(%.0f) = %.2f s, expected %.2f\n",
+                        c.year, eph_delta_t(c.year), c.dt);
+            failures++;
+        }
     }
     return failures;
 }
