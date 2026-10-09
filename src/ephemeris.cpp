@@ -26,6 +26,16 @@ Vec3 pluto_heliocentric(double jd) {
 
 Vec3 body_heliocentric(eph_body body, double jd) {
     if (body == EPH_PLUTO) return pluto_heliocentric(jd);
+    if (body >= EPH_CERES && body <= EPH_VESTA) {
+        Vec3 v;
+        if (asteroid_heliocentric((int)body - EPH_CERES, jd, v)) {
+            double l, b, r;
+            cartesian_to_spherical(v, l, b, r);
+            precess_ecliptic_j2000_to_date(jd, l, b);
+            return spherical_to_cartesian(l, b, r);
+        }
+        return {0.0, 0.0, 0.0};
+    }
     return planet_heliocentric(static_cast<int>(body), jd);
 }
 
@@ -248,7 +258,9 @@ int eph_position_apparent_ut(eph_body body, double jd_ut, double year,
 
 int eph_heliocentric_tt(eph_body body, double jd_tt, double* lon, double* lat,
                         double* distance) {
-    if (body < EPH_MERCURY || body > EPH_PLUTO) return -1;
+    const bool planet = (body >= EPH_MERCURY && body <= EPH_PLUTO);
+    const bool asteroid = (body >= EPH_CERES && body <= EPH_VESTA);
+    if (!planet && !asteroid) return -1;
     Vec3 v = body_heliocentric(body, jd_tt);
     double r;
     double l, b;

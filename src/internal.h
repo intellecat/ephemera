@@ -75,6 +75,10 @@ void moon_position(double jd_tt, double& lon, double& lat, double& dist_au);
 /* Pluto heliocentric J2000 ecliptic (src/pluto.cpp). */
 void pluto_heliocentric_j2000(double jd_tt, double& lon, double& lat, double& r);
 
+/* Asteroids: heliocentric J2000 ecliptic rectangular (AU), idx 0..3
+ * (Ceres, Pallas, Juno, Vesta).  src/asteroids.cpp. */
+bool asteroid_heliocentric(int idx, double jd_tt, Vec3& v);
+
 }  // namespace eph
 
 #endif

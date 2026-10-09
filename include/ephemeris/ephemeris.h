@@ -38,6 +38,10 @@ typedef enum {
     EPH_PLUTO,
     EPH_SUN,
     EPH_MOON,
+    EPH_CERES,
+    EPH_PALLAS,
+    EPH_JUNO,
+    EPH_VESTA,
     EPH_BODY_COUNT
 } eph_body;
 

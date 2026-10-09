@@ -174,6 +174,10 @@ const char* eph_body_name(eph_body body) {
         case EPH_PLUTO:   return "Pluto";
         case EPH_SUN:     return "Sun";
         case EPH_MOON:    return "Moon";
+        case EPH_CERES:   return "Ceres";
+        case EPH_PALLAS:  return "Pallas";
+        case EPH_JUNO:    return "Juno";
+        case EPH_VESTA:   return "Vesta";
         default:          return "?";
     }
 }

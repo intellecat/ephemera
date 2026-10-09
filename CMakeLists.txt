@@ -21,6 +21,7 @@ add_library(ephemeris STATIC
     src/correction.cpp
     src/compressed.cpp
     src/houses.cpp
+    src/asteroids.cpp
     src/pluto.cpp
     src/ephemeris.cpp
     data/vsop87d_data.cpp
@@ -28,6 +29,7 @@ add_library(ephemeris STATIC
     data/elp_data.cpp
     data/corr_data.cpp
     data/corr_moon.cpp
+    data/asteroid_data.cpp
 )
 
 target_include_directories(ephemeris
@@ -62,4 +64,8 @@ if(EPHEMERIS_BUILD_TESTS)
     add_executable(test_houses tests/test_houses.cpp)
     target_link_libraries(test_houses PRIVATE ephemeris)
     add_test(NAME houses COMMAND test_houses)
+
+    add_executable(test_asteroids tests/test_asteroids.cpp)
+    target_link_libraries(test_asteroids PRIVATE ephemeris)
+    add_test(NAME asteroids COMMAND test_asteroids)
 endif()

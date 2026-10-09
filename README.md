@@ -1,7 +1,8 @@
 # ephemeris
 
 A small, dependency-free C/C++ library that computes positions of the Sun,
-Moon, Pluto and the eight planets from pure analytical series.  No JPL data
+Moon, Pluto, the eight planets and the four largest asteroids (Ceres,
+Pallas, Juno, Vesta) from pure analytical series.  No JPL data
 file, no SPICE kernel, no 30 MB download at runtime — every coefficient is
 compiled straight into the library.
 
@@ -13,6 +14,8 @@ Internally it evaluates:
 * **ELP2000-82B** (Chapront-Touze & Chapront) full lunar theory for the
   Moon; ~0.1" near J2000, growing to a few arcseconds at the range edges
   because its constants are fitted to DE200/LE200.
+* Compact Chebyshev series for Ceres/Pallas/Juno/Vesta fitted to JPL
+  Horizons (public data), ~0.02-0.03" over 1850-2140.
 * A compact Poisson series for Pluto fitted to JPL DE440s over 1850-2140,
   and small Chebyshev DE440 corrections for Uranus and Neptune.
 * **IAU 1980** nutation (63 terms), the IAU 1980 mean obliquity, and the
