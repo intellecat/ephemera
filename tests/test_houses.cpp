@@ -106,7 +106,7 @@ int main() {
 
     /* All systems vs Swiss Ephemeris: 1900-2030, |latitude| <= 65 degrees
      * and polar cases for the systems defined there. */
-    double worst[9] = {0};
+    double worst[14] = {0};
     for (const HouseRef& r : kHouseRef) {
         eph_observer ob = {r.lon * D2R, r.lat * D2R, 0.0};
         double c[12];
@@ -121,15 +121,35 @@ int main() {
                 worst[r.system],
                 std::fabs(wrap180(c[i] * R2D - r.cusp[i])) * 3600.0);
     }
-    static const char* kNames[9] = {"Whole Sign", "Equal",    "Porphyry",
-                                    "Placidus",   "Koch",     "Regiomontanus",
-                                    "Campanus",   "Alcabitius", "Topocentric"};
-    for (int s = 1; s < 9; ++s) {
+    static const char* kNames[14] = {
+        "Whole Sign", "Equal",    "Porphyry",    "Placidus",   "Koch",
+        "Regiomontanus", "Campanus", "Alcabitius", "Topocentric", "Vehlow",
+        "Equal (MC)", "Equal (Aries)", "Meridian", "Morinus"};
+    for (int s = 1; s < 14; ++s) {
         std::printf("%-14s max %.3f\" vs Swiss Ephemeris\n", kNames[s], worst[s]);
         if (worst[s] > 0.5) {
             std::printf("FAIL: %s\n", kNames[s]);
             fails++;
         }
+    }
+
+    /* Angles and sensitive points vs Swiss Ephemeris. */
+    double worst_angle = 0.0;
+    for (const AngleRef& r : kAngleRef) {
+        eph_observer ob = {r.lon * D2R, r.lat * D2R, 0.0};
+        eph_angles a;
+        eph_house_angles(r.jd_ut, &ob, &a);
+        const double v[8] = {a.ascendant, a.mc, a.armc, a.vertex,
+                             a.equatorial_ascendant, a.co_ascendant_koch,
+                             a.co_ascendant_munkasey, a.polar_ascendant};
+        for (int i = 0; i < 8; ++i)
+            worst_angle = std::fmax(
+                worst_angle, std::fabs(wrap180(v[i] * R2D - r.value[i])) * 3600.0);
+    }
+    std::printf("Angles         max %.3f\" vs Swiss Ephemeris\n", worst_angle);
+    if (worst_angle > 0.5) {
+        std::printf("FAIL: angles\n");
+        fails++;
     }
 
     /* Placidus and Koch are undefined inside the polar circles: Porphyry

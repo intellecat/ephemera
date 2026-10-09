@@ -185,7 +185,13 @@ typedef enum {
     EPH_HOUSES_REGIOMONTANUS,
     EPH_HOUSES_CAMPANUS,
     EPH_HOUSES_ALCABITIUS,
-    EPH_HOUSES_TOPOCENTRIC /* Polich-Page */
+    EPH_HOUSES_TOPOCENTRIC, /* Polich-Page */
+    EPH_HOUSES_VEHLOW,      /* equal, Ascendant in the middle of house 1   */
+    EPH_HOUSES_EQUAL_MC,    /* equal from the MC (house 10)                */
+    EPH_HOUSES_EQUAL_ARIES, /* equal from 0 Aries                          */
+    EPH_HOUSES_MERIDIAN,    /* axial rotation: equal steps of RA from RAMC */
+    EPH_HOUSES_MORINUS      /* equator steps, projected through the
+                               ecliptic poles                              */
 } eph_house_system;
 
 /* House cusps 1..12 as ecliptic longitudes (radians, tropical).  Returns
@@ -194,6 +200,22 @@ typedef enum {
  * sets): the cusps are then Porphyry's.  Needs no data file. */
 int eph_houses(double jd_ut, const eph_observer* observer,
                eph_house_system system, double cusps[12]);
+
+/* The chart's angles and sensitive points (ecliptic longitudes, radians,
+ * except armc).  Needs no data file. */
+typedef struct {
+    double ascendant;
+    double mc;
+    double armc;                  /* right ascension of the MC (sidereal time) */
+    double vertex;                /* ecliptic x prime vertical, in the west    */
+    double equatorial_ascendant;  /* "East point": ecliptic point at RA RAMC+90 */
+    double co_ascendant_koch;     /* W. Koch                                   */
+    double co_ascendant_munkasey; /* M. Munkasey                               */
+    double polar_ascendant;       /* M. Munkasey                               */
+} eph_angles;
+
+int eph_house_angles(double jd_ut, const eph_observer* observer,
+                     eph_angles* out);
 
 /* House position of an ecliptic longitude (radians) in the given cusps:
  * 1.0 at the start of house 1 up to 12.999..., linear in longitude within

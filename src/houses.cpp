@@ -239,6 +239,31 @@ int eph_houses(double jd_ut, const eph_observer* obs, eph_house_system sys,
             complete(asc, consistent_mc(mc, asc, c), c[0], c[1], c[2], c[3], cusps);
             break;
         }
+        case EPH_HOUSES_VEHLOW:
+            for (int i = 0; i < 12; ++i)
+                cusps[i] = eph::normalize(asc + (i - 0.5) * third);
+            break;
+        case EPH_HOUSES_EQUAL_MC:
+            for (int i = 0; i < 12; ++i)
+                cusps[i] = eph::normalize(mc + (i + 3) * third);
+            break;
+        case EPH_HOUSES_EQUAL_ARIES:
+            for (int i = 0; i < 12; ++i) cusps[i] = i * third;
+            break;
+        case EPH_HOUSES_MERIDIAN:
+            /* Equal 30 degree steps of right ascension from the RAMC. */
+            for (int i = 0; i < 12; ++i)
+                cusps[i] = ra_to_ecliptic(ramc + (i + 3) * third, eps);
+            break;
+        case EPH_HOUSES_MORINUS:
+            /* The same equator points, projected onto the ecliptic along
+             * circles through the ecliptic poles. */
+            for (int i = 0; i < 12; ++i) {
+                const double ra = ramc + (i + 3) * third;
+                cusps[i] = eph::normalize(
+                    std::atan2(std::sin(ra) * std::cos(eps), std::cos(ra)));
+            }
+            break;
         case EPH_HOUSES_WHOLE_SIGN: {
             const double start = std::floor(asc / (30.0 * eph::DEG)) *
                                  30.0 * eph::DEG;
@@ -270,6 +295,42 @@ int eph_houses(double jd_ut, const eph_observer* obs, eph_house_system sys,
         default:
             return -1;
     }
+    return 0;
+}
+
+int eph_house_angles(double jd_ut, const eph_observer* obs, eph_angles* out) {
+    if (!obs || !out) return -1;
+    double asc, mc;
+    if (eph_asc_mc(jd_ut, obs, &asc, &mc) != 0) return -1;
+    const double eps = true_obliquity(jd_ut);
+    const double ramc = eph::normalize(eph::gast_degrees(jd_ut) * eph::DEG +
+                                       obs->longitude);
+    const double phi = obs->latitude;
+    const double ce = std::cos(eps), se = std::sin(eps);
+    out->ascendant = asc;
+    out->mc = mc;
+    out->armc = ramc;
+
+    /* Vertex: the ecliptic meets the prime vertical (whose plane is normal
+     * to the north point of the horizon) in the west. */
+    const double cd = std::cos(eph::PI / 2 - phi), sd = std::sin(eph::PI / 2 - phi);
+    const double n[3] = {cd * std::cos(ramc + eph::PI), cd * std::sin(ramc + eph::PI), sd};
+    const double pole[3] = {0.0, -se, ce}; /* ecliptic pole, equatorial */
+    double v[3] = {pole[1] * n[2] - pole[2] * n[1], pole[2] * n[0] - pole[0] * n[2],
+                   pole[0] * n[1] - pole[1] * n[0]};
+    if (v[0] * std::cos(ramc - eph::PI / 2) + v[1] * std::sin(ramc - eph::PI / 2) < 0.0)
+        for (double& x : v) x = -x;
+    out->vertex = eph::normalize(std::atan2(v[1] * ce + v[2] * se, v[0]));
+
+    out->equatorial_ascendant = ra_to_ecliptic(ramc + eph::PI / 2, eps);
+    /* Koch's co-ascendant is the Ascendant for the opposite latitude and
+     * the polar ascendant its opposite point; Munkasey's co-ascendant uses
+     * the co-latitude (the raw oblique-ascension solution). */
+    out->co_ascendant_koch = ascendant(ramc, -phi, eps);
+    out->polar_ascendant = eph::normalize(out->co_ascendant_koch + eph::PI);
+    const double ra = ramc + eph::PI / 2;
+    out->co_ascendant_munkasey = eph::normalize(std::atan2(
+        std::sin(ra), std::cos(ra) * ce - se * std::tan(eph::PI / 2 - phi)));
     return 0;
 }
 

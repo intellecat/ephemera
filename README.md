@@ -259,9 +259,12 @@ double cusps[12];
 eph_houses(jd_ut, &obs, EPH_HOUSES_PORPHYRY, cusps);
 ```
 
-House systems: Whole Sign, Equal, Porphyry, Placidus, Koch,
-Regiomontanus, Campanus, Alcabitius and Topocentric (Polich–Page), from
-their standard definitions; no data file is needed.  They match Swiss
+House systems: Whole Sign, Equal (from the Ascendant, the MC or 0°
+Aries), Vehlow, Porphyry, Placidus, Koch, Regiomontanus, Campanus,
+Alcabitius, Topocentric (Polich–Page), Meridian (axial rotation) and
+Morinus, from their standard definitions; no data file is needed.
+`eph_house_angles` adds the Vertex, the equatorial Ascendant (East
+point), Koch's and Munkasey's co-Ascendants and the polar Ascendant.  They match Swiss
 Ephemeris to <0.03" for 1900–2030 at latitudes up to ±66°, and Asc/MC use
 the IAU 2006 sidereal time.  Placidus and Koch are undefined inside the
 polar circles (|latitude| > 90° − obliquity): `eph_houses` then returns

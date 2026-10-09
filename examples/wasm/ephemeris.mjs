@@ -23,7 +23,8 @@ export const Ayanamsa = Object.freeze({
 
 export const HouseSystem = Object.freeze({
   WholeSign: 0, Equal: 1, Porphyry: 2, Placidus: 3, Koch: 4, Regiomontanus: 5,
-  Campanus: 6, Alcabitius: 7, Topocentric: 8,
+  Campanus: 6, Alcabitius: 7, Topocentric: 8, Vehlow: 9, EqualMC: 10,
+  EqualAries: 11, Meridian: 12, Morinus: 13,
 });
 
 const DEG = 180 / Math.PI;
@@ -105,6 +106,19 @@ export async function createEphemeris(source) {
       e.free(cusps);
       e.free(obs);
       return out;
+    },
+    // Asc, MC, ARMC, Vertex, equatorial Ascendant, co-Ascendants, polar
+    // Ascendant (degrees).
+    houseAngles(jdUt, lonDeg, latDeg) {
+      const obs = observer(lonDeg, latDeg);
+      const out = e.malloc(64);
+      e.eph_house_angles(jdUt, obs, out);
+      const [ascendant, mc, armc, vertex, equatorialAscendant, coAscendantKoch,
+             coAscendantMunkasey, polarAscendant] = Array.from(f64(out, 8), (x) => x * DEG);
+      e.free(out);
+      e.free(obs);
+      return { ascendant, mc, armc, vertex, equatorialAscendant, coAscendantKoch,
+               coAscendantMunkasey, polarAscendant };
     },
     // House (1.0 .. 12.999) of an ecliptic longitude, cusps from houses().
     housePosition(cusps, lonDeg) {

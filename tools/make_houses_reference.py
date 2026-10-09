@@ -14,19 +14,22 @@ import swisseph as swe
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # eph_house_system value -> Swiss Ephemeris letter
 SYSTEMS = [(1, b"A"), (2, b"O"), (3, b"P"), (4, b"K"), (5, b"R"), (6, b"C"),
-           (7, b"B"), (8, b"T")]
-POLAR_OK = (1, 2, 5, 6, 7)  # defined inside the polar circles
+           (7, b"B"), (8, b"T"), (9, b"V"), (10, b"D"), (11, b"N"), (12, b"X"),
+           (13, b"M")]
+POLAR_OK = (1, 2, 5, 6, 7, 9, 10, 11, 12, 13)  # defined in the polar circles
 
 
 def main():
     rng = np.random.default_rng(11)
-    rows = []
+    rows, angles = [], []
     for k in range(48):
         polar = k >= 40
         jd = rng.uniform(2415020.5, 2462502.5)
         lat = (rng.choice([-1, 1]) * rng.uniform(67, 80) if polar
                else rng.uniform(-65, 65))
         lon = rng.uniform(-180, 180)
+        if not polar:
+            angles.append((jd, lat, lon) + tuple(swe.houses_ex(jd, lat, lon, b"P")[1][:8]))
         for sys, letter in SYSTEMS:
             if polar and sys not in POLAR_OK:
                 continue
@@ -44,6 +47,14 @@ def main():
             f.write("    {%.10f, %.10f, %.10f, %d, {%s}},\n"
                     % (r[0], r[1], r[2], r[3],
                        ", ".join("%.10f" % c for c in r[4:])))
+        f.write("};\n\n")
+        f.write("/* Asc, MC, ARMC, Vertex, equatorial Asc, co-Asc Koch, co-Asc\n"
+                " * Munkasey, polar Asc (degrees). */\n")
+        f.write("struct AngleRef { double jd_ut, lat, lon, value[8]; };\n\n")
+        f.write("static const AngleRef kAngleRef[%d] = {\n" % len(angles))
+        for r in angles:
+            f.write("    {%.10f, %.10f, %.10f, {%s}},\n"
+                    % (r[0], r[1], r[2], ", ".join("%.10f" % c for c in r[3:])))
         f.write("};\n")
     print("wrote", out, len(rows), "rows")
 
