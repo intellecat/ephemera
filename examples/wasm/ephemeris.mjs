@@ -162,6 +162,24 @@ export async function createEphemeris(source) {
       e.free(p);
       return h;
     },
+    // Event searches (UT in and out; null if none within maxDays).
+    longitudeCrossing(body, lonDeg, jdUt, direction = 1, maxDays = 400) {
+      const out = scratch;
+      return e.eph_longitude_crossing_ut(body, lonDeg / DEG, jdUt, direction, maxDays, out) === 0
+        ? f64(out, 1)[0] : null;
+    },
+    // TT in and out: { jd, node: 'ascending' | 'descending', longitude }.
+    nodeCrossing(body, jdTt, direction = 1, maxDays = 40) {
+      const rc = e.eph_node_crossing(body, jdTt, direction, maxDays, scratch, scratch + 8);
+      if (rc < 1) return null;
+      const [jd, lon] = f64(scratch, 2);
+      return { jd, node: rc === 1 ? 'ascending' : 'descending', longitude: lon * DEG };
+    },
+    // TT in and out: { jd, turns: 'retrograde' | 'direct' }.
+    station(body, jdTt, direction = 1, maxDays = 800) {
+      const rc = e.eph_station(body, jdTt, direction, maxDays, scratch);
+      return rc < 1 ? null : { jd: f64(scratch, 1)[0], turns: rc === 1 ? 'retrograde' : 'direct' };
+    },
     ayanamsa: (system, jdTt) => e.eph_ayanamsa(system, jdTt) * DEG,
     ayanamsaCustom: (jdT0, valueDegT0, jdTt) =>
       e.eph_ayanamsa_custom(jdT0, valueDegT0 / DEG, jdTt) * DEG,

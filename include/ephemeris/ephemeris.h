@@ -267,6 +267,36 @@ double eph_house_position(const double cusps[12], double longitude);
 
 const char* eph_body_name(eph_body body);
 
+/* ---- event searches -------------------------------------------------- *
+ * Search forward (direction +1) or backward (-1) from a date for at most
+ * max_days.  Return -1 if there is no event in that window or a position
+ * cannot be computed.  Times are TT unless the name ends in _ut; results
+ * are good to ~1e-8 day of the positions. */
+
+/* When the body's apparent geocentric longitude reaches `longitude`
+ * (radians): returns (Sun: solar return), ingresses, transits to a point.
+ * Returns 0.  Retrograde loops are followed (the first crossing is found);
+ * a target the body only touches at a station is not a crossing. */
+int eph_longitude_crossing(eph_body body, double longitude, double jd_tt,
+                           int direction, double max_days, double* jd_out);
+int eph_longitude_crossing_ut(eph_body body, double longitude, double jd_ut,
+                              int direction, double max_days, double* jd_out);
+
+/* The same for the heliocentric longitude (planets, Pluto, asteroids). */
+int eph_heliocentric_crossing(eph_body body, double longitude, double jd_tt,
+                              int direction, double max_days, double* jd_out);
+
+/* When the body crosses the ecliptic (latitude 0), e.g. the Moon at its
+ * node.  Returns 1 at the ascending node, 2 at the descending node; the
+ * longitude there is stored if `longitude` is not NULL. */
+int eph_node_crossing(eph_body body, double jd_tt, int direction,
+                      double max_days, double* jd_out, double* longitude);
+
+/* When the body's longitude speed changes sign.  Returns 1 if it turns
+ * retrograde, 2 if it turns direct. */
+int eph_station(eph_body body, double jd_tt, int direction, double max_days,
+                double* jd_out);
+
 /* ---- utilities -------------------------------------------------------- */
 
 /* Midpoint (radians) of the shorter arc between two longitudes. */

@@ -42,6 +42,7 @@ add_library(ephemeris STATIC
     src/data.cpp
     src/util.cpp
     src/ayanamsa.cpp
+    src/search.cpp
     ${EMBED_SRC}
     data/delta_t_data.cpp
 )
@@ -105,4 +106,8 @@ if(EPHEMERIS_BUILD_TESTS)
     add_executable(test_time tests/test_time.cpp)
     target_link_libraries(test_time PRIVATE ephemeris)
     add_test(NAME time COMMAND test_time ${DATA}/eph-full.bin)
+
+    add_executable(test_search tests/test_search.cpp)
+    target_link_libraries(test_search PRIVATE ephemeris)
+    add_test(NAME search COMMAND test_search ${DATA}/eph-full.bin)
 endif()

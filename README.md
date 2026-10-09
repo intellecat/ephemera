@@ -224,6 +224,20 @@ sidereal time.  The Moon's ~1 degree parallax is the dominant effect.  Refractio
 is not applied (it affects altitude, not the ecliptic longitude used in
 charts).
 
+## Event searches and time
+
+* `eph_longitude_crossing(_ut)`: when a body reaches a longitude --
+  solar and lunar returns, ingresses, transits to natal points (retrograde
+  loops are followed).  `eph_heliocentric_crossing` does the same for the
+  heliocentric longitude.
+* `eph_node_crossing`: when a body crosses the ecliptic (the Moon's node
+  passages); `eph_station`: when a planet turns retrograde or direct.
+* Results are refined to ~1e-8 day; solar and lunar crossings agree with
+  Swiss Ephemeris within its own few-second error.
+* `eph_utc_to_jd` (leap seconds; exact TT from 1972), `eph_sidereal_time`
+  (IAU 2006), `eph_equation_of_time`, `eph_midpoint` and
+  `eph_split_longitude`.
+
 ## Lunar nodes and Lilith
 
 `EPH_MEAN_NODE`, `EPH_TRUE_NODE`, `EPH_MEAN_LILITH` and `EPH_OSCU_LILITH`
