@@ -123,6 +123,19 @@ compare(withChiron, 'ephemeris-1as-chiron.wasm');
         temperate.cusps.every((c, i) => c === core.houses(2460000.5, 25, 50, HouseSystem.Placidus)[i]),
         'housesInfo fallback flag');
   check(core.heliocentricCrossing(Body.Mars, 0, 2451545.0) > 2451545.0, 'heliocentricCrossing');
+  // Sidereal solar return (Lahiri), UT in and out.
+  const natalUt = core.julianDate(1990, 6, 15 + 18.5 / 24);
+  const natalTt = core.utToTt(natalUt, 1990.45);
+  const sidSun = core.positionTT(Body.Sun, natalTt).longitude - core.ayanamsa(0, natalTt);
+  const ret = core.longitudeCrossing(Body.Sun, ((sidSun % 360) + 360) % 360, natalUt + 300, 1, 400,
+                                     { ayanamsa: 0 });
+  const retTt = core.utToTt(ret, 1991.45);
+  const sidRet = core.positionTT(Body.Sun, retTt).longitude - core.ayanamsa(0, retTt);
+  check(ret !== null && Math.abs(((sidRet - sidSun + 540) % 360) - 180) * 3600 < 0.01,
+        `sidereal return ${ret}`);
+  const retCustom = core.longitudeCrossing(Body.Sun, ((sidSun % 360) + 360) % 360, natalUt + 300,
+    1, 400, { ayanamsa: { jdT0: natalTt, valueAtT0: core.ayanamsa(0, natalTt) } });
+  check(Math.abs(retCustom - ret) < 1e-6, 'sidereal return, custom ayanamsa');
   const orb = core.orbit(Body.Mercury, 2475460.5); // Meeus example 31.a
   check(orb && near(orb.node, 49.107650, 1e-6) && near(orb.perihelion, 78.475382, 1e-6) &&
         near(orb.heliocentric.ascendingNode.longitude, orb.node, 1e-9) &&

@@ -387,6 +387,25 @@ int eph_longitude_crossing_ut(eph_body body, double longitude, double jd_ut,
 int eph_heliocentric_crossing(eph_body body, double longitude, double jd_tt,
                               int direction, double max_days, double* jd_out);
 
+/* Sidereal versions: when the longitude minus the ayanamsa *at that moment*
+ * reaches `longitude` (sidereal returns and ingresses; the target moves
+ * with the precession, ~50"/year).  `system` is an eph_ayanamsa_system;
+ * the _custom forms take a user-defined ayanamsa as eph_ayanamsa_custom
+ * (value_t0 at jd_t0).  Times are TT. */
+int eph_longitude_crossing_sidereal(eph_body body, double longitude,
+                                    eph_ayanamsa_system system, double jd_tt,
+                                    int direction, double max_days, double* jd_out);
+int eph_longitude_crossing_sidereal_custom(eph_body body, double longitude,
+                                           double jd_t0, double value_t0, double jd_tt,
+                                           int direction, double max_days, double* jd_out);
+int eph_heliocentric_crossing_sidereal(eph_body body, double longitude,
+                                       eph_ayanamsa_system system, double jd_tt,
+                                       int direction, double max_days, double* jd_out);
+int eph_heliocentric_crossing_sidereal_custom(eph_body body, double longitude,
+                                              double jd_t0, double value_t0, double jd_tt,
+                                              int direction, double max_days,
+                                              double* jd_out);
+
 /* When the body crosses the ecliptic (latitude 0), e.g. the Moon at its
  * node.  Returns 1 at the ascending node, 2 at the descending node; the
  * longitude there is stored if `longitude` is not NULL. */

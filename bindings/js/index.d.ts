@@ -136,6 +136,10 @@ export interface Orbit {
   geocentric: OrbitPoints;
 }
 
+/** An ayanamsa system, or a custom one: its value (degrees) at a TT Julian
+ *  day, carried by the IAU 2006 precession. */
+export type AyanamsaOption = Ayanamsa | { jdT0: number; valueAtT0: number };
+
 export interface Position {
   longitude: number;
   latitude: number;
@@ -266,14 +270,16 @@ export interface Ephemeris {
 
   phenomena(body: Body, jdTt: number): Phenomena | null;
 
-  /** UT in and out; null if not found within maxDays. */
+  /** UT in and out; null if not found within maxDays.  With `ayanamsa`
+   *  the longitude is sidereal, the ayanamsa taken at the crossing itself
+   *  (sidereal returns, ingresses). */
   longitudeCrossing(body: Body, lon: number, jdUt: number, direction?: 1 | -1,
-                    maxDays?: number): number | null;
+                    maxDays?: number, options?: { ayanamsa?: AyanamsaOption }): number | null;
   /** Planetary nodes and apsides; null if unsupported or without data. */
   orbit(body: Body, jdTt: number, method?: OrbitMethod): Orbit | null;
   /** Heliocentric longitude crossing; TT in and out. */
   heliocentricCrossing(body: Body, lon: number, jdTt: number, direction?: 1 | -1,
-                       maxDays?: number): number | null;
+                       maxDays?: number, options?: { ayanamsa?: AyanamsaOption }): number | null;
   /** TT in and out. */
   nodeCrossing(body: Body, jdTt: number, direction?: 1 | -1, maxDays?: number):
     { jd: number; node: 'ascending' | 'descending'; longitude: number } | null;

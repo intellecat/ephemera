@@ -248,10 +248,23 @@ export async function createEphemeris(source) {
                diameter: diameter * DEG, magnitude };
     },
     // Event searches (UT in and out; null if none within maxDays).
-    longitudeCrossing(body, lonDeg, jdUt, direction = 1, maxDays = 400) {
+    // With { ayanamsa } the longitude is sidereal: the ayanamsa (an Ayanamsa
+    // system, or { jdT0, valueAtT0 } in degrees for a custom one) is taken at
+    // the crossing itself, for sidereal returns and ingresses.
+    longitudeCrossing(body, lonDeg, jdUt, direction = 1, maxDays = 400, { ayanamsa } = {}) {
       const out = scratch;
-      return e.eph_longitude_crossing_ut(body, lonDeg / DEG, jdUt, direction, maxDays, out) === 0
-        ? f64(out, 1)[0] : null;
+      if (ayanamsa === undefined)
+        return e.eph_longitude_crossing_ut(body, lonDeg / DEG, jdUt, direction, maxDays, out) === 0
+          ? f64(out, 1)[0] : null;
+      const year = (jd) => 2000 + (jd - 2451545.0) / 365.25;
+      const jdTt = e.eph_ut_to_tt(jdUt, year(jdUt));
+      const rc = typeof ayanamsa === 'number'
+        ? e.eph_longitude_crossing_sidereal(body, lonDeg / DEG, ayanamsa, jdTt, direction, maxDays, out)
+        : e.eph_longitude_crossing_sidereal_custom(body, lonDeg / DEG, ayanamsa.jdT0,
+            ayanamsa.valueAtT0 / DEG, jdTt, direction, maxDays, out);
+      if (rc !== 0) return null;
+      const tt = f64(out, 1)[0];
+      return e.eph_tt_to_ut(tt, year(tt));
     },
     // Planetary nodes and apsides: the orbit's elements (degrees, AU) and its
     // ascending/descending nodes, perihelion and aphelion as points, each
@@ -277,9 +290,15 @@ export async function createEphemeris(source) {
       return out;
     },
     // Heliocentric longitude crossing (TT in and out).
-    heliocentricCrossing(body, lonDeg, jdTt, direction = 1, maxDays = 40000) {
-      return e.eph_heliocentric_crossing(body, lonDeg / DEG, jdTt, direction, maxDays, scratch) === 0
-        ? f64(scratch, 1)[0] : null;
+    heliocentricCrossing(body, lonDeg, jdTt, direction = 1, maxDays = 40000, { ayanamsa } = {}) {
+      const rc = ayanamsa === undefined
+        ? e.eph_heliocentric_crossing(body, lonDeg / DEG, jdTt, direction, maxDays, scratch)
+        : typeof ayanamsa === 'number'
+          ? e.eph_heliocentric_crossing_sidereal(body, lonDeg / DEG, ayanamsa, jdTt, direction,
+              maxDays, scratch)
+          : e.eph_heliocentric_crossing_sidereal_custom(body, lonDeg / DEG, ayanamsa.jdT0,
+              ayanamsa.valueAtT0 / DEG, jdTt, direction, maxDays, scratch);
+      return rc === 0 ? f64(scratch, 1)[0] : null;
     },
     // TT in and out: { jd, node: 'ascending' | 'descending', longitude }.
     nodeCrossing(body, jdTt, direction = 1, maxDays = 40) {

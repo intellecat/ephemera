@@ -36,7 +36,9 @@ fallback to Porphyry), ayanamsas, searches, eclipses and stars (`starCount`,
 `starName`, ...), there are the time and frame helpers: `utcToJd`,
 `calendarDate`, `ttToUt`, `siderealTime`, `equationOfTime`, `nutation`,
 `eclipticToEquatorial` (declination for parallels), `heliocentric`,
-`midpoint` and `splitLongitude`.  `index.d.ts` documents them all.
+`midpoint` and `splitLongitude`.  For sidereal returns and ingresses pass
+`{ ayanamsa: Ayanamsa.Lahiri }` (or a custom `{ jdT0, valueAtT0 }`) to
+`longitudeCrossing` or `heliocentricCrossing`.  `index.d.ts` documents them all.
 
 ## Modules and data
 

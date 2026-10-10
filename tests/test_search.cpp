@@ -107,6 +107,55 @@ int main(int argc, char** argv) {
         check(std::fabs((tt - ut) * 86400.0 - eph_delta_t(2024.2)) < 0.5, "UT crossing");
     }
 
+    /* Sidereal returns (Lahiri; natal 1990-06-15 14:30 New York = 18:30
+     * UT): at the result, the longitude minus the ayanamsa then equals the
+     * natal sidereal longitude. */
+    {
+        const double natal = eph_ut_to_tt(eph_julian_date(1990, 6, 15.0 + 18.5 / 24), 1990.45);
+        double worst = 0.0;
+        const struct {
+            eph_body body;
+            double after, max_days;
+        } cases[] = {{EPH_SUN, 300, 400}, {EPH_MOON, 20, 40}, {EPH_SATURN, 9000, 3000},
+                     {EPH_JUPITER, 4000, 1000}};
+        for (const auto& c : cases) {
+            eph_position p0, p1;
+            eph_position_apparent_tt(c.body, natal, &p0);
+            const double sid = p0.longitude - eph_ayanamsa(EPH_AYANAMSA_LAHIRI, natal);
+            double t;
+            if (eph_longitude_crossing_sidereal(c.body, sid, EPH_AYANAMSA_LAHIRI,
+                                                natal + c.after, 1, c.max_days, &t) != 0) {
+                check(false, "sidereal return found");
+                continue;
+            }
+            eph_position_apparent_tt(c.body, t, &p1);
+            const double d = wrap(p1.longitude - eph_ayanamsa(EPH_AYANAMSA_LAHIRI, t) - sid);
+            worst = std::fmax(worst, std::fabs(d) / D2R * 3600);
+        }
+        /* The custom form with Lahiri's own value matches, and the
+         * heliocentric form finds Saturn's sidereal heliocentric return. */
+        double t1, t2, th;
+        eph_position p0;
+        eph_position_apparent_tt(EPH_SUN, natal, &p0);
+        const double a0 = eph_ayanamsa(EPH_AYANAMSA_LAHIRI, natal);
+        eph_longitude_crossing_sidereal(EPH_SUN, p0.longitude - a0, EPH_AYANAMSA_LAHIRI,
+                                        natal + 300, 1, 400, &t1);
+        eph_longitude_crossing_sidereal_custom(EPH_SUN, p0.longitude - a0, natal, a0,
+                                               natal + 300, 1, 400, &t2);
+        double hl;
+        eph_heliocentric_tt(EPH_SATURN, natal, &hl, nullptr, nullptr);
+        const int rh = eph_heliocentric_crossing_sidereal(
+            EPH_SATURN, hl - a0, EPH_AYANAMSA_LAHIRI, natal + 9000, 1, 3000, &th);
+        double hl2;
+        eph_heliocentric_tt(EPH_SATURN, th, &hl2, nullptr, nullptr);
+        std::printf("Sidereal returns: worst %.5f\"\n", worst);
+        check(worst < 0.01, "sidereal returns hit the natal sidereal longitude");
+        check(std::fabs(t1 - t2) < 1e-6, "custom ayanamsa = system");
+        check(rh == 0 && std::fabs(wrap(hl2 - eph_ayanamsa(EPH_AYANAMSA_LAHIRI, th) - (hl - a0))) <
+                             0.01 / 3600 * D2R,
+              "heliocentric sidereal return");
+    }
+
     if (g_fails == 0) std::printf("All search checks passed.\n");
     return g_fails == 0 ? 0 : 1;
 }

@@ -245,6 +245,10 @@ charts).
   solar and lunar returns, ingresses, transits to natal points (retrograde
   loops are followed).  `eph_heliocentric_crossing` does the same for the
   heliocentric longitude.
+* `eph_longitude_crossing_sidereal` (and `_custom`, and the heliocentric
+  forms) give sidereal returns and ingresses: the longitude minus the
+  ayanamsa *at the crossing* reaches the target, in one search (the target
+  moves ~50"/year with the precession).
 * `eph_node_crossing`: when a body crosses the ecliptic (the Moon's node
   passages); `eph_station`: when a planet turns retrograde or direct.
 * Results are refined to ~1e-8 day; with the full series, solar and lunar

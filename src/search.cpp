@@ -134,6 +134,35 @@ double year_of(double jd) {
     return y + (jd - eph_julian_date(y, 1, 1.0)) / 365.25;
 }
 
+/* The sidereal crossings: the ayanamsa is evaluated at each trial time,
+ * so one root finding gives the exact moment.  ayan(t) is NaN when it
+ * cannot be evaluated (a star-based system without the stars). */
+template <typename A>
+int sidereal_crossing(eph_body body, double longitude, bool helio, A ayan, double jd_tt,
+                      int direction, double max_days, double* jd_out) {
+    if (!jd_out) return -1;
+    auto f = [&](double t, double& v) {
+        double lon;
+        if (helio) {
+            if (eph_heliocentric_tt(body, t, &lon, nullptr, nullptr) != 0) return false;
+        } else {
+            eph_position p;
+            if (eph_position_apparent_tt(body, t, &p) != 0) return false;
+            lon = p.longitude;
+        }
+        const double a = ayan(t);
+        if (std::isnan(a)) return false;
+        v = wrap(lon - a - longitude);
+        return true;
+    };
+    /* The ayanamsa moves ~1.4e-4 deg/day: the rate bounds still hold. */
+    const double rate = helio ? max_heliocentric_rate(body) : max_longitude_rate(body);
+    return find_zero(f, jd_tt, direction, max_days, helio ? 1.0 : search_step(body),
+                     rate * eph::DEG, true, *jd_out)
+               ? 0
+               : -1;
+}
+
 }  // namespace
 
 extern "C" {
@@ -177,6 +206,41 @@ int eph_heliocentric_crossing(eph_body body, double longitude, double jd_tt,
                      max_heliocentric_rate(body) * eph::DEG, true, *jd_out)
                ? 0
                : -1;
+}
+
+int eph_longitude_crossing_sidereal(eph_body body, double longitude,
+                                    eph_ayanamsa_system system, double jd_tt,
+                                    int direction, double max_days, double* jd_out) {
+    return sidereal_crossing(body, longitude, false,
+                             [system](double t) { return eph_ayanamsa(system, t); }, jd_tt,
+                             direction, max_days, jd_out);
+}
+
+int eph_longitude_crossing_sidereal_custom(eph_body body, double longitude,
+                                           double jd_t0, double value_t0, double jd_tt,
+                                           int direction, double max_days, double* jd_out) {
+    return sidereal_crossing(
+        body, longitude, false,
+        [=](double t) { return eph_ayanamsa_custom(jd_t0, value_t0, t); }, jd_tt, direction,
+        max_days, jd_out);
+}
+
+int eph_heliocentric_crossing_sidereal(eph_body body, double longitude,
+                                       eph_ayanamsa_system system, double jd_tt,
+                                       int direction, double max_days, double* jd_out) {
+    return sidereal_crossing(body, longitude, true,
+                             [system](double t) { return eph_ayanamsa(system, t); }, jd_tt,
+                             direction, max_days, jd_out);
+}
+
+int eph_heliocentric_crossing_sidereal_custom(eph_body body, double longitude,
+                                              double jd_t0, double value_t0, double jd_tt,
+                                              int direction, double max_days,
+                                              double* jd_out) {
+    return sidereal_crossing(
+        body, longitude, true,
+        [=](double t) { return eph_ayanamsa_custom(jd_t0, value_t0, t); }, jd_tt, direction,
+        max_days, jd_out);
 }
 
 int eph_node_crossing(eph_body body, double jd_tt, int direction,
