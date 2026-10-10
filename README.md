@@ -506,3 +506,24 @@ examples/positions.c            CLI that prints a chart
   catalogues are the eclipse test reference, `tools/make_nasa_eclipse_reference.py`).
 * P. K. Seidelmann (ed.), *Explanatory Supplement to the Astronomical
   Almanac* (University Science Books, 1992), ch. 8.
+
+## License
+
+MIT (see `LICENSE`): use it in any project, open or closed, commercial or
+not; just keep the copyright notice.
+
+The data the library and its data files are built from:
+
+* JPL DE440 / DE440s and Horizons, NASA's eclipse catalogues: US
+  government works, public domain.
+* VSOP87 and ELP2000-82B (IMCCE, Bureau des longitudes): published
+  theories, free to use with citation.
+* Hipparcos new reduction (ESA; van Leeuwen 2007), SIMBAD radial
+  velocities (CDS, Strasbourg), IAU Working Group on Star Names: free to
+  use with acknowledgement.
+* The *Indian Astronomical Ephemeris* (Positional Astronomy Centre, IMD):
+  used only as test reference for the Lahiri ayanamsa.
+
+The tests compare against JPL DE440 (via Skyfield and ERFA), NASA's
+eclipse catalogues, the Indian Astronomical Ephemeris and independent
+implementations in `tools/`; no third-party code is included.
