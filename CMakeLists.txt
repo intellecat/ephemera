@@ -48,6 +48,7 @@ add_library(ephemeris STATIC
     src/phenomena.cpp
     src/stars.cpp
     src/eclipses.cpp
+    src/orbits.cpp
     ${EMBED_SRC}
     data/delta_t_data.cpp
 )
@@ -134,6 +135,11 @@ if(EPHEMERIS_BUILD_TESTS)
         target_link_libraries(test_stars PRIVATE ephemeris)
         add_test(NAME stars COMMAND test_stars ${DATA}/eph-full.bin ${DATA}/eph-stars.bin)
     endif()
+
+    add_executable(test_orbits tests/test_orbits.cpp)
+    target_link_libraries(test_orbits PRIVATE ephemeris)
+    file(GLOB DE440_TABLES ${DATA}/de440/de440-*.bin)
+    add_test(NAME orbits COMMAND test_orbits ${DATA}/eph-full.bin ${DE440_TABLES})
 
     if(EPHEMERIS_ECLIPSES)
         add_executable(test_eclipses tests/test_eclipses.cpp)

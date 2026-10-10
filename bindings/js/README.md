@@ -6,6 +6,7 @@ Node (18+), browsers and bundlers.
 
 * The Sun, Moon, planets, Pluto, Chiron, Ceres, Pallas, Juno and Vesta,
   plus the mean and true lunar nodes and mean and osculating Lilith.
+* Planetary nodes and apsides, mean and osculating (`orbit()`).
 * Houses (Placidus, Koch, Whole Sign, Equal, Porphyry, Regiomontanus,
   Campanus, Alcabitius, Topocentric and more) and the angles: Vertex and
   co-ascendants.

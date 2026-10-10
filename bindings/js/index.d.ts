@@ -99,6 +99,35 @@ export declare const EclipseType: {
 };
 export type EclipseType = (typeof EclipseType)[keyof typeof EclipseType];
 
+export declare const OrbitMethod: {
+  /** Secular mean elements (Simon et al. 1994 / Meeus ch. 31): Mercury..Neptune. */
+  readonly Mean: 0;
+  /** From the position and velocity: planets but the Earth, Pluto, minor bodies. */
+  readonly Osculating: 1;
+};
+export type OrbitMethod = (typeof OrbitMethod)[keyof typeof OrbitMethod];
+
+export interface OrbitPoints {
+  ascendingNode: Position;
+  descendingNode: Position;
+  perihelion: Position;
+  aphelion: Position;
+}
+
+/** A heliocentric orbit, mean ecliptic and equinox of date. */
+export interface Orbit {
+  semiMajorAxis: number;
+  eccentricity: number;
+  inclination: number;
+  /** Longitude of the ascending node. */
+  node: number;
+  /** Longitude of perihelion. */
+  perihelion: number;
+  heliocentric: OrbitPoints;
+  /** Geometric, with nutation in longitude (like the apparent positions). */
+  geocentric: OrbitPoints;
+}
+
 export interface Position {
   longitude: number;
   latitude: number;
@@ -232,6 +261,8 @@ export interface Ephemeris {
   /** UT in and out; null if not found within maxDays. */
   longitudeCrossing(body: Body, lon: number, jdUt: number, direction?: 1 | -1,
                     maxDays?: number): number | null;
+  /** Planetary nodes and apsides; null if unsupported or without data. */
+  orbit(body: Body, jdTt: number, method?: OrbitMethod): Orbit | null;
   /** Heliocentric longitude crossing; TT in and out. */
   heliocentricCrossing(body: Body, lon: number, jdTt: number, direction?: 1 | -1,
                        maxDays?: number): number | null;

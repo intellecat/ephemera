@@ -65,6 +65,8 @@ export const HouseSystem = Object.freeze({
   EqualAries: 11, Meridian: 12, Morinus: 13,
 });
 
+export const OrbitMethod = Object.freeze({ Mean: 0, Osculating: 1 });
+
 export const EclipseType = Object.freeze({
   Total: 1, Annular: 2, Hybrid: 4, Partial: 8, Penumbral: 16, NonCentral: 32,
 });
@@ -247,6 +249,29 @@ export async function createEphemeris(source) {
       const out = scratch;
       return e.eph_longitude_crossing_ut(body, lonDeg / DEG, jdUt, direction, maxDays, out) === 0
         ? f64(out, 1)[0] : null;
+    },
+    // Planetary nodes and apsides: the orbit's elements (degrees, AU) and its
+    // ascending/descending nodes, perihelion and aphelion as points, each
+    // heliocentric and geocentric.  null if unsupported or without data.
+    orbit(body, jdTt, method = OrbitMethod.Mean) {
+      const p = e.malloc(424);
+      const rc = e.eph_orbit_tt(body, jdTt, method, p);
+      const [semiMajorAxis, eccentricity, inclination, node, perihelion] = f64(p, 5);
+      const point = (offset) => {
+        const [lon, lat, dist, vlon, vlat, vdist] = f64(p + offset, 6);
+        return { longitude: lon * DEG, latitude: lat * DEG, distance: dist,
+                 longitudeSpeed: vlon * DEG, latitudeSpeed: vlat * DEG, distanceSpeed: vdist };
+      };
+      const set = (base) => ({
+        ascendingNode: point(base), descendingNode: point(base + 48),
+        perihelion: point(base + 96), aphelion: point(base + 144),
+      });
+      const out = rc !== 0 ? null : {
+        semiMajorAxis, eccentricity, inclination: inclination * DEG, node: node * DEG,
+        perihelion: perihelion * DEG, heliocentric: set(40), geocentric: set(232),
+      };
+      e.free(p);
+      return out;
     },
     // Heliocentric longitude crossing (TT in and out).
     heliocentricCrossing(body, lonDeg, jdTt, direction = 1, maxDays = 40000) {

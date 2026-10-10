@@ -2,7 +2,7 @@
 // Usage: node tests/test_wasm.mjs <build dir> <data dir>
 import { readFileSync } from 'fs';
 import { execFileSync } from 'child_process';
-import { createEphemeris, Body, EclipseType, HouseSystem } from '../bindings/js/ephemeris.mjs';
+import { createEphemeris, Body, EclipseType, HouseSystem, OrbitMethod } from '../bindings/js/ephemeris.mjs';
 
 const [build, data] = process.argv.slice(2);
 let fails = 0;
@@ -120,6 +120,13 @@ compare(withChiron, 'ephemeris-1as-chiron.wasm');
         temperate.cusps.every((c, i) => c === core.houses(2460000.5, 25, 50, HouseSystem.Placidus)[i]),
         'housesInfo fallback flag');
   check(core.heliocentricCrossing(Body.Mars, 0, 2451545.0) > 2451545.0, 'heliocentricCrossing');
+  const orb = core.orbit(Body.Mercury, 2475460.5); // Meeus example 31.a
+  check(orb && near(orb.node, 49.107650, 1e-6) && near(orb.perihelion, 78.475382, 1e-6) &&
+        near(orb.heliocentric.ascendingNode.longitude, orb.node, 1e-9) &&
+        near(orb.heliocentric.perihelion.distance, orb.semiMajorAxis * (1 - orb.eccentricity), 1e-12) &&
+        orb.geocentric.aphelion.distance > 0, `orbit ${JSON.stringify(orb?.heliocentric?.perihelion)}`);
+  check(core.orbit(Body.Neptune, 2451545.0, 1)?.eccentricity < 0.02 &&
+        core.orbit(Body.Earth, 2451545.0, 1) === null, 'orbit: osculating, unsupported');
 }
 
 // The table and asteroids load into the core as well.

@@ -387,6 +387,42 @@ int eph_node_crossing(eph_body body, double jd_tt, int direction,
 int eph_station(eph_body body, double jd_tt, int direction, double max_days,
                 double* jd_out);
 
+/* ---- planetary nodes and apsides --------------------------------------- *
+ * A body's orbit around the Sun, referred to the mean ecliptic and equinox
+ * of date: its elements and four points on it, the ascending and
+ * descending nodes, perihelion and aphelion.  Each point is given
+ * heliocentric and geocentric (geometric, with nutation added to the
+ * longitude like the apparent positions; speeds per day). */
+
+typedef enum {
+    EPH_ORBIT_MEAN = 0,       /* secular mean elements (Simon et al. 1994, as
+                                 in Meeus ch. 31): Mercury..Neptune      */
+    EPH_ORBIT_OSCULATING = 1  /* from the position and velocity: the planets
+                                 but the Earth, Pluto and the minor bodies */
+} eph_orbit_method;
+
+enum {
+    EPH_ASCENDING_NODE = 0,
+    EPH_DESCENDING_NODE = 1,
+    EPH_PERIHELION = 2,
+    EPH_APHELION = 3
+};
+
+typedef struct {
+    double semi_major_axis;   /* AU                                      */
+    double eccentricity;
+    double inclination;       /* to the ecliptic of date, radians        */
+    double node;              /* longitude of the ascending node         */
+    double perihelion;        /* longitude of perihelion (node + argument) */
+    eph_position heliocentric[4]; /* indexed by EPH_ASCENDING_NODE ...   */
+    eph_position geocentric[4];
+} eph_orbit;
+
+/* Returns 0, or -1 for an unsupported body/method or without the data. */
+int eph_orbit_tt(eph_body body, double jd_tt, eph_orbit_method method, eph_orbit* out);
+int eph_orbit_ut(eph_body body, double jd_ut, double year, eph_orbit_method method,
+                 eph_orbit* out);
+
 /* ---- utilities -------------------------------------------------------- */
 
 /* Midpoint (radians) of the shorter arc between two longitudes. */

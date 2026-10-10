@@ -319,6 +319,27 @@ within 0.002. With the 1″ file the only change is 1986 Oct 3, a hybrid of
 magnitude 1.0000 that becomes annular.  A search takes ~8 ms with the full
 series and ~1 ms with the 1″ file.
 
+## Planetary nodes and apsides
+
+`eph_orbit_tt` gives a body's heliocentric orbit in the mean ecliptic and
+equinox of date: semi-major axis, eccentricity, inclination, the
+longitudes of the ascending node and of perihelion, and four points on
+the orbit (ascending and descending node, perihelion, aphelion), each
+heliocentric and geocentric, with speeds:
+
+* `EPH_ORBIT_MEAN`: the secular mean elements of Simon et al. (1994) as
+  tabulated by Meeus (*Astronomical Algorithms*, Table 31.A), for
+  Mercury to Neptune.  They reproduce Meeus' worked example 31.a exactly.
+* `EPH_ORBIT_OSCULATING`: from the position and velocity, for the planets
+  except the Earth, plus Pluto and the minor bodies.  With the DE440 tables
+  loaded, the elements and points agree with DE440 (Skyfield's osculating
+  elements) within 0.8".  With the series alone they agree within 0.5" for
+  Mercury to Saturn, but only 1" for Uranus, 3" for Neptune and 11" for
+  Pluto, because osculating elements magnify the series' small errors.
+
+The geocentric points are geometric, with nutation added so they compare
+with the apparent positions.
+
 ## Fixed stars
 
 `data/eph-stars.bin` (26 KB) holds the 410 stars with IAU-approved names
