@@ -5,6 +5,7 @@
 
 #include "ephemeris/ephemeris.h"
 #include "houses_ref.h"
+#include "lahiri_ref.h"
 
 static const double R2D = 180.0 / 3.14159265358979323846;
 static const double D2R = 3.14159265358979323846 / 180.0;
@@ -42,18 +43,20 @@ int main() {
                 worst_ayan, ntable);
 
     /* Definitions: J2000, J1900 (JD 2415020.0) and B1950 (JD 2433282.4235)
-     * are zero at their epochs; Lahiri (Indian Calendar Reform Committee)
-     * is 23 deg 15' 00.658" on 1956-03-21 0h including nutation;
+     * are zero at their epochs.  Lahiri: the Indian Astronomical Ephemeris
+     * defines the mean ayanamsa as 23 deg 51' 25.53" at J2000.0 plus the
+     * general precession (checked tightly below); the Calendar Reform
+     * Committee's original 23 deg 15' 00.658" on 1956-03-21 0h (including
+     * nutation) is 0.14" from it with IAU 2006 precession.
      * Fagan/Bradley's SVP at B1950.0 is 335 deg 57' 28.64" (ayanamsa
-     * 24 deg 02' 31.36").  The J2000 values of these two follow Swiss
-     * Ephemeris' realisation, which carries the definition to J2000 with a
-     * different precession treatment: +0.14" and -0.41" from the literal
-     * definition plus IAU 2006 precession. */
+     * 24 deg 02' 31.36"); our value, the one in common use, is 0.41" from
+     * that literal definition carried by IAU 2006 precession. */
     struct {
         eph_ayanamsa_system system;
         double jd, value, nutation, limit; /* degrees; limit in arcseconds */
     } anchors[] = {
         {EPH_AYANAMSA_J2000, 2451545.0, 0.0, 0.0, 1e-6},
+        {EPH_AYANAMSA_LAHIRI, 2451545.0, 23.0 + 51.0 / 60 + 25.53 / 3600, 0.0, 0.005},
         {EPH_AYANAMSA_J1900, 2415020.0, 0.0, 0.0, 1e-3},
         {EPH_AYANAMSA_B1950, 2433282.4235, 0.0, 0.0, 1e-3},
         {EPH_AYANAMSA_LAHIRI, 2435553.5, 23.0 + 15.0 / 60 + 0.658 / 3600, kNutation1956,
@@ -68,6 +71,29 @@ int main() {
                     d);
         if (std::fabs(d) > a.limit) {
             std::printf("FAIL: %s definition\n", eph_ayanamsa_name(a.system));
+            fails++;
+        }
+    }
+    /* Lahiri against the official tables of the Indian Astronomical
+     * Ephemeris (true ayanamsa every three days, 0.1" rounding;
+     * tests/lahiri_ref.h).  The 2026 edition uses IAU 2006 precession like
+     * us; the 2019 edition still used the IAU 1976 rate, 0.30"/century
+     * faster, which puts it 0.06" above ours in 2019. */
+    {
+        double worst[2] = {0.0, 0.0};
+        for (const LahiriRef& r : kLahiriRef) {
+            const int edition = r.jd_ut > 2460000.0; /* 0: 2019, 1: 2026 */
+            const double tt = eph_ut_to_tt(r.jd_ut, edition ? 2026.5 : 2019.5);
+            double dpsi, deps;
+            eph_nutation(tt, &dpsi, &deps);
+            const double d = std::fabs(
+                (eph_ayanamsa(EPH_AYANAMSA_LAHIRI, tt) + dpsi) * R2D * 3600.0 - r.arcsec);
+            worst[edition] = std::fmax(worst[edition], d);
+        }
+        std::printf("  Lahiri         max %.3f\" vs IAE 2026, %.3f\" vs IAE 2019\n",
+                    worst[1], worst[0]);
+        if (worst[1] > 0.06 || worst[0] > 0.13) {
+            std::printf("FAIL: Lahiri vs the Indian Astronomical Ephemeris\n");
             fails++;
         }
     }

@@ -15,11 +15,14 @@ double precession(double jd_tt) {
            eph::ARCSEC;
 }
 
-/* Each system's mean ayanamsa at J2000 (degrees), following its definition
- * (a value at a reference date) as realised by Swiss Ephemeris, e.g.
- * Lahiri: 23 deg 15' 00.658" (true) on 1956-03-21 (Indian Calendar Reform
- * Committee); Fagan/Bradley: SVP 24 deg 02' 31.36" in 1950; J1900: zero in
- * 1900. */
+/* Each system's mean ayanamsa at J2000 (degrees): its definition (a value
+ * at a reference date) carried to J2000, as commonly used in astrological
+ * software.  Lahiri is the Indian Astronomical Ephemeris' 23 deg 51'
+ * 25.53" at J2000.0 (it originates in the Calendar Reform Committee's
+ * 23 deg 15' 00.658" for 1956-03-21); Fagan/Bradley: SVP 335 deg 57'
+ * 28.64" in 1950; J1900, B1950: zero at those epochs.  The Babylonian
+ * "Aldebaran = 15 Tau" places Aldebaran at 15 deg Taurus around the 1st
+ * century BCE (Huber's epoch), not at all times. */
 const struct {
     double j2000;
     const char* name;

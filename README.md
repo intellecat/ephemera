@@ -373,10 +373,14 @@ seven star-based ones (see Fixed stars) -- plus user-defined ones
 (`eph_ayanamsa_custom`).  Each is its defining value
 carried by the IAU-2006 general precession (exactly ERFA's `p06e`).  The
 J2000 values are the common realisations used in astrological software:
-J2000, J1900 and B1950 match their definitions within 0.001", while
-Lahiri is 0.14" and Fagan/Bradley 0.41" from their literal 1956 / 1950
-definitions carried by IAU 2006 precession.  Lahiri follows the Calendar Reform Committee's 1956 definition
-(23°51'25.5" at J2000; earlier versions of this library used 23°51'11.6").
+J2000, J1900 and B1950 match their definitions within 0.001".  Lahiri
+matches the official tables of the *Indian Astronomical Ephemeris*
+(Positional Astronomy Centre, IMD) within their 0.1" rounding: the 2026
+edition to 0.05" (the 2019 edition, which still used the IAU 1976
+precession rate, to 0.12").  Fagan/Bradley is 0.41" from its literal 1950
+definition carried by IAU 2006 precession.  (Earlier versions of this
+library used 23°51'11.6" for Lahiri at J2000; the official value is
+23°51'25.53".)
 
 ## Conventions
 
