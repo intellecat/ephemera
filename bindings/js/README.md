@@ -28,7 +28,12 @@ const lahiri = eph.ayanamsa(Ayanamsa.Lahiri, eph.utToTt(jd, 2026));
 ```
 
 Angles are in degrees and times are Julian days, UT or TT as each method's
-name says.
+name says.  Besides positions, houses (`housesInfo` also reports the polar
+fallback to Porphyry), ayanamsas, searches, eclipses and stars (`starCount`,
+`starName`, ...), there are the time and frame helpers: `utcToJd`,
+`calendarDate`, `ttToUt`, `siderealTime`, `equationOfTime`, `nutation`,
+`eclipticToEquatorial` (declination for parallels), `heliocentric`,
+`midpoint` and `splitLongitude`.  `index.d.ts` documents them all.
 
 ## Modules and data
 

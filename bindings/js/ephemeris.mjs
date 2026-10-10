@@ -88,6 +88,16 @@ export async function createEphemeris(source) {
     return p;
   };
 
+  // A NUL-terminated string in wasm memory ('' for NULL).
+  const cString = (ptr) => {
+    if (!ptr) return '';
+    const bytes = new Uint8Array(e.memory.buffer, ptr);
+    let end = 0;
+    while (bytes[end] !== 0) end++;
+    return new TextDecoder().decode(bytes.subarray(0, end));
+  };
+  const i32 = (ptr, n) => new Int32Array(e.memory.buffer, ptr, n);
+
   const readPosition = (rc) => {
     if (rc !== 0) return null; // no data loaded for this body or date
     const [lon, lat, dist, vlon, vlat, vdist] = f64(scratch, 6);
@@ -112,6 +122,41 @@ export async function createEphemeris(source) {
     julianDate: (year, month, day) => e.eph_julian_date(year, month, day),
     deltaT: (year) => e.eph_delta_t(year),
     utToTt: (jdUt, year) => e.eph_ut_to_tt(jdUt, year),
+    ttToUt: (jdTt, year) => e.eph_tt_to_ut(jdTt, year),
+    // { year, month, day } with the fraction of the day in day.
+    calendarDate(jd) {
+      e.eph_calendar_date(jd, scratch, scratch + 4, scratch + 8);
+      const [year, month] = i32(scratch, 2);
+      return { year, month, day: f64(scratch + 8, 1)[0] };
+    },
+    // Civil UTC (leap seconds from 1972) to { jdTt, jdUt }; null if invalid.
+    utcToJd(year, month, day, hour = 0, minute = 0, second = 0) {
+      if (e.eph_utc_to_jd(year, month, day, hour, minute, second, scratch, scratch + 8) !== 0)
+        return null;
+      const [jdTt, jdUt] = f64(scratch, 2);
+      return { jdTt, jdUt };
+    },
+    tdbMinusTt: (jdTt) => e.eph_tdb_minus_tt(jdTt), // seconds
+    // Greenwich apparent sidereal time (IAU 2006), degrees.
+    siderealTime: (jdUt) => e.eph_sidereal_time(jdUt) * DEG,
+    // Equation of time (apparent - mean solar time), minutes; null without data.
+    equationOfTime(jdUt) {
+      return e.eph_equation_of_time(jdUt, scratch) === 0 ? f64(scratch, 1)[0] * 1440 : null;
+    },
+    // Mean obliquity (IAU 2006) and nutation (IAU 2000B), degrees.
+    meanObliquity: (jdTt) => e.eph_mean_obliquity(jdTt) * DEG,
+    nutation(jdTt) {
+      e.eph_nutation(jdTt, scratch, scratch + 8);
+      const [dpsi, deps] = f64(scratch, 2);
+      return { longitude: dpsi * DEG, obliquity: deps * DEG };
+    },
+    // Apparent ecliptic -> equatorial (true obliquity), degrees: declination
+    // for parallels, right ascension.
+    eclipticToEquatorial(lonDeg, latDeg, jdTt) {
+      e.eph_ecliptic_to_equatorial(lonDeg / DEG, latDeg / DEG, jdTt, scratch, scratch + 8);
+      const [ra, dec] = f64(scratch, 2);
+      return { rightAscension: ra * DEG, declination: dec * DEG };
+    },
 
     // Apparent geocentric position for a UT Julian date (null if no data).
     // year (fractional) selects Delta-T; derived from jdUt if omitted.
@@ -124,6 +169,14 @@ export async function createEphemeris(source) {
       const fn = apparent ? e.eph_position_apparent_tt : e.eph_position_tt;
       return readPosition(fn(body, jdTt, scratch));
     },
+    // Heliocentric ecliptic of date { longitude, latitude, distance }; null
+    // for the Sun and Moon or without data.
+    heliocentric(body, jdTt) {
+      if (e.eph_heliocentric_tt(body, jdTt, scratch, scratch + 8, scratch + 16) !== 0) return null;
+      const [lon, lat, distance] = f64(scratch, 3);
+      return { longitude: lon * DEG, latitude: lat * DEG, distance };
+    },
+    bodyName: (body) => cString(e.eph_body_name(body)),
     topocentric(body, jdUt, lonDeg, latDeg, elevationM = 0, { year } = {}) {
       const y = year ?? 2000 + (jdUt - 2451545.0) / 365.25;
       const obs = observer(lonDeg, latDeg, elevationM);
@@ -145,6 +198,18 @@ export async function createEphemeris(source) {
       const rc = e.eph_houses(jdUt, obs, system, cusps);
       // rc 1: the system is undefined there (polar); Porphyry cusps.
       const out = rc >= 0 ? Array.from(f64(cusps, 12), (c) => c * DEG) : null;
+      e.free(cusps);
+      e.free(obs);
+      return out;
+    },
+    // houses() plus fallback: true where the system is undefined (Placidus,
+    // Koch, Alcabitius inside the polar circles) and Porphyry was used.
+    housesInfo(jdUt, lonDeg, latDeg, system = HouseSystem.Porphyry) {
+      const obs = observer(lonDeg, latDeg);
+      const cusps = e.malloc(96);
+      const rc = e.eph_houses(jdUt, obs, system, cusps);
+      const out = rc >= 0
+        ? { cusps: Array.from(f64(cusps, 12), (c) => c * DEG), fallback: rc === 1 } : null;
       e.free(cusps);
       e.free(obs);
       return out;
@@ -182,6 +247,11 @@ export async function createEphemeris(source) {
       const out = scratch;
       return e.eph_longitude_crossing_ut(body, lonDeg / DEG, jdUt, direction, maxDays, out) === 0
         ? f64(out, 1)[0] : null;
+    },
+    // Heliocentric longitude crossing (TT in and out).
+    heliocentricCrossing(body, lonDeg, jdTt, direction = 1, maxDays = 40000) {
+      return e.eph_heliocentric_crossing(body, lonDeg / DEG, jdTt, direction, maxDays, scratch) === 0
+        ? f64(scratch, 1)[0] : null;
     },
     // TT in and out: { jd, node: 'ascending' | 'descending', longitude }.
     nodeCrossing(body, jdTt, direction = 1, maxDays = 40) {
@@ -228,6 +298,25 @@ export async function createEphemeris(source) {
         magnitude, obscuration, altitude: altitude * DEG, saros,
       };
     },
+    // Where the shadow axis meets the Earth at jdTt: { latitude, longitude },
+    // or null if it misses.
+    solarEclipseWhere(jdTt) {
+      if (e.eph_solar_eclipse_where(jdTt, scratch, scratch + 8) !== 0) return null;
+      const [lat, lon] = f64(scratch, 2);
+      return { latitude: lat * DEG, longitude: lon * DEG };
+    },
+    // The eclipse seen from a place at an instant: { type (0: none),
+    // magnitude, obscuration, altitude }.
+    solarEclipseHow(jdTt, lonDeg, latDeg, elevationM = 0) {
+      const obs = observer(lonDeg, latDeg, elevationM);
+      const p = e.malloc(32);
+      const rc = e.eph_solar_eclipse_how(jdTt, obs, p);
+      const type = i32(p, 1)[0];
+      const [magnitude, obscuration, altitude] = f64(p + 8, 3);
+      e.free(p);
+      e.free(obs);
+      return rc !== 0 ? null : { type, magnitude, obscuration, altitude: altitude * DEG };
+    },
     lunarEclipse(jdTt, direction = 1) {
       const p = e.malloc(96);
       const rc = e.eph_lunar_eclipse_next(jdTt, direction, p);
@@ -251,6 +340,11 @@ export async function createEphemeris(source) {
       e.free(p);
       return i;
     },
+    // Listing the catalogue: indices 0 .. starCount() - 1.
+    starCount: () => e.eph_star_count(),
+    starName: (index) => cString(e.eph_star_name(index)),               // "Regulus"
+    starDesignation: (index) => cString(e.eph_star_designation(index)), // "alf Leo" or ""
+    starMagnitude: (index) => e.eph_star_magnitude(index),              // V
     starPosition(index, jdUt, { year } = {}) {
       const y = year ?? 2000 + (jdUt - 2451545.0) / 365.25;
       return readPosition(e.eph_star_position_apparent_ut(index, jdUt, y, scratch));
@@ -259,5 +353,15 @@ export async function createEphemeris(source) {
     ayanamsaCustom: (jdT0, valueDegT0, jdTt) =>
       e.eph_ayanamsa_custom(jdT0, valueDegT0 / DEG, jdTt) * DEG,
     ayanamsaLahiri: (jdTt) => e.eph_ayanamsa_lahiri(jdTt) * DEG,
+    ayanamsaName: (system) => cString(e.eph_ayanamsa_name(system)),
+
+    // Utilities (degrees).
+    midpoint: (aDeg, bDeg) => e.eph_midpoint(aDeg / DEG, bDeg / DEG) * DEG,
+    // { sign (0 = Aries .. 11), degrees, minutes, seconds } within the sign.
+    splitLongitude(lonDeg) {
+      e.eph_split_longitude(lonDeg / DEG, scratch, scratch + 4, scratch + 8, scratch + 16);
+      const [sign, degrees, minutes] = i32(scratch, 3);
+      return { sign, degrees, minutes, seconds: f64(scratch + 16, 1)[0] };
+    },
   };
 }

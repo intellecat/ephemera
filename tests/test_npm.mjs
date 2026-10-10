@@ -23,6 +23,15 @@ const core = await load({ module: 'core', data: ['01as', 'chiron', 'stars', 'ast
 check(core.position(Body.Chiron, jd) !== null && core.position(Body.Ceres, jd) !== null,
       'core + data: Chiron, Ceres');
 check(core.starFind('Regulus') >= 0, 'core + stars: Regulus');
+{
+  const n = core.starCount();
+  const reg = core.starFind('Regulus');
+  let roundTrip = true;
+  for (let i = 0; i < n; i++) if (core.starFind(core.starName(i)) !== i) roundTrip = false;
+  check(n === 411 && roundTrip && core.starName(reg) === 'Regulus' &&
+        core.starDesignation(reg) === 'alf Leo' && Math.abs(core.starMagnitude(reg) - 1.4) < 0.1,
+        `star listing (${n} stars)`);
+}
 check(core.solarEclipse(2460400.0)?.saros === 139, 'core: eclipse');
 
 let threw = false;

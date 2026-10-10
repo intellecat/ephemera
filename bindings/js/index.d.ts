@@ -185,16 +185,44 @@ export interface Ephemeris {
   julianDate(year: number, month: number, day: number): number;
   deltaT(year: number): number;
   utToTt(jdUt: number, year: number): number;
+  ttToUt(jdTt: number, year: number): number;
+  /** Inverse of julianDate; `day` carries the fraction of the day. */
+  calendarDate(jd: number): { year: number; month: number; day: number };
+  /** Civil UTC (leap seconds from 1972) to TT and UT; null for an invalid date. */
+  utcToJd(year: number, month: number, day: number, hour?: number, minute?: number,
+          second?: number): { jdTt: number; jdUt: number } | null;
+  /** TDB - TT, seconds. */
+  tdbMinusTt(jdTt: number): number;
+  /** Greenwich apparent sidereal time (IAU 2006), degrees. */
+  siderealTime(jdUt: number): number;
+  /** Apparent minus mean solar time, minutes; null without the Sun's data. */
+  equationOfTime(jdUt: number): number | null;
+  /** Mean obliquity of the ecliptic (IAU 2006), degrees. */
+  meanObliquity(jdTt: number): number;
+  /** Nutation in longitude and obliquity (IAU 2000B), degrees. */
+  nutation(jdTt: number): { longitude: number; obliquity: number };
+  /** Apparent ecliptic to equatorial coordinates (true obliquity), degrees. */
+  eclipticToEquatorial(lon: number, lat: number, jdTt: number):
+    { rightAscension: number; declination: number };
 
   /** Geocentric position, apparent by default; null without data. */
   position(body: Body, jdUt: number, options?: { apparent?: boolean; year?: number }): Position | null;
   positionTT(body: Body, jdTt: number, options?: { apparent?: boolean }): Position | null;
+  /** Heliocentric ecliptic of date; null for the Sun, the Moon or without data. */
+  heliocentric(body: Body, jdTt: number):
+    { longitude: number; latitude: number; distance: number } | null;
+  /** "Sun", "Moon", ... */
+  bodyName(body: Body): string;
   topocentric(body: Body, jdUt: number, lon: number, lat: number, elevationM?: number,
               options?: { year?: number }): Position | null;
 
   ascMc(jdUt: number, lon: number, lat: number): { asc: number; mc: number };
   /** Twelve cusps; null on error. */
   houses(jdUt: number, lon: number, lat: number, system?: HouseSystem): number[] | null;
+  /** houses() plus `fallback`: true where the system is undefined (Placidus,
+   *  Koch, Alcabitius inside the polar circles) and Porphyry was used. */
+  housesInfo(jdUt: number, lon: number, lat: number, system?: HouseSystem):
+    { cusps: number[]; fallback: boolean } | null;
   houseAngles(jdUt: number, lon: number, lat: number): HouseAngles;
   /** House 1.0 .. 12.999 of a longitude, given cusps from houses(). */
   housePosition(cusps: number[], lon: number): number;
@@ -204,6 +232,9 @@ export interface Ephemeris {
   /** UT in and out; null if not found within maxDays. */
   longitudeCrossing(body: Body, lon: number, jdUt: number, direction?: 1 | -1,
                     maxDays?: number): number | null;
+  /** Heliocentric longitude crossing; TT in and out. */
+  heliocentricCrossing(body: Body, lon: number, jdTt: number, direction?: 1 | -1,
+                       maxDays?: number): number | null;
   /** TT in and out. */
   nodeCrossing(body: Body, jdTt: number, direction?: 1 | -1, maxDays?: number):
     { jd: number; node: 'ascending' | 'descending'; longitude: number } | null;
@@ -214,15 +245,35 @@ export interface Ephemeris {
   solarEclipse(jdTt: number, direction?: 1 | -1): SolarEclipse | null;
   solarEclipseLocal(jdTt: number, lon: number, lat: number, elevationM?: number,
                     direction?: 1 | -1): LocalSolarEclipse | null;
+  /** Where the shadow axis meets the Earth; null if it misses. */
+  solarEclipseWhere(jdTt: number): { latitude: number; longitude: number } | null;
+  /** The solar eclipse seen from a place at an instant (type 0: none). */
+  solarEclipseHow(jdTt: number, lon: number, lat: number, elevationM?: number):
+    { type: number; magnitude: number; obscuration: number; altitude: number } | null;
   lunarEclipse(jdTt: number, direction?: 1 | -1): LunarEclipse | null;
 
   /** Star index by name, "alf Leo" or "HIP 49669"; -1 if unknown. */
   starFind(name: string): number;
+  /** Number of stars loaded (0 without eph-stars.bin); indices 0 .. count - 1. */
+  starCount(): number;
+  /** IAU name, e.g. "Regulus". */
+  starName(index: number): string;
+  /** Bayer designation, e.g. "alf Leo", or "". */
+  starDesignation(index: number): string;
+  /** V magnitude. */
+  starMagnitude(index: number): number;
   starPosition(index: number, jdUt: number, options?: { year?: number }): Position | null;
 
   ayanamsa(system: Ayanamsa, jdTt: number): number;
   ayanamsaCustom(jdT0: number, valueAtT0: number, jdTt: number): number;
   ayanamsaLahiri(jdTt: number): number;
+  /** "Lahiri", "Fagan/Bradley", ... */
+  ayanamsaName(system: Ayanamsa): string;
+
+  /** Midpoint of the shorter arc between two longitudes, degrees. */
+  midpoint(a: number, b: number): number;
+  /** Zodiac sign (0 = Aries .. 11) and the position within it. */
+  splitLongitude(lon: number): { sign: number; degrees: number; minutes: number; seconds: number };
 }
 
 /** Instantiate a module from its .wasm bytes (or a compiled module). */
