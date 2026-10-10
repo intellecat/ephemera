@@ -1,11 +1,10 @@
 <!doctype html>
-<!-- Minimal browser demo.  After `make wasm`, copy this directory's files
-     and build/wasm/ephemeris-1as.wasm into one folder and serve it, e.g.
-       cp build/wasm/ephemeris-1as.wasm examples/wasm/
-       python3 -m http.server -d examples/wasm 8000 -->
+<!-- Minimal browser demo: `make npm`, then serve the package directory,
+       python3 -m http.server -d build/npm 8000
+     and open http://localhost:8000/demo.html -->
 <html lang="en">
 <meta charset="utf-8">
-<title>Ephemeris demo</title>
+<title>Ephemera demo</title>
 <style>
   body { font: 15px/1.5 system-ui, sans-serif; margin: 2em; }
   table { border-collapse: collapse; }
@@ -20,10 +19,9 @@
   <tbody id="rows"></tbody>
 </table>
 <script type="module">
-  import { createEphemeris, Body } from './ephemeris.mjs';
+  import { load, Body } from './index.mjs';
 
-  const wasm = await (await fetch('ephemeris-1as.wasm')).arrayBuffer();
-  const eph = await createEphemeris(wasm); // 1" data built in
+  const eph = await load(); // 1" data built in
 
   const signs = ['Ari', 'Tau', 'Gem', 'Can', 'Leo', 'Vir',
                  'Lib', 'Sco', 'Sag', 'Cap', 'Aqu', 'Pis'];

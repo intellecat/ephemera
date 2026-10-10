@@ -30,7 +30,7 @@ endif
 LIB_OBJ = $(patsubst %.cpp,$(BUILD)/%.o,$(patsubst $(BUILD)/%,%,$(LIB_SRC)))
 LIB     = $(BUILD)/libephemeris.a
 
-.PHONY: all test tools data wasm wasm-test clean
+.PHONY: all test tools data wasm wasm-test npm npm-test clean
 
 # The DE440 tables covering the test reference (1850-2140).
 DE440_1800_2200 = $(foreach y,1800 1900 2000 2100,data/de440/de440-$(y).bin)
@@ -184,6 +184,23 @@ $(BUILD)/test_wasm_ref: tests/test_wasm_ref.c $(LIB)
 
 wasm-test: wasm $(BUILD)/test_wasm_ref
 	node tests/test_wasm.mjs $(BUILD) data
+
+# The npm package @astrologer/ephemera, staged in build/npm (publish with
+# `cd build/npm && npm publish --access public`).
+NPM_DATA = 1as 1as-chiron 01as 01as-chiron chiron asteroids stars
+
+npm: wasm
+	rm -rf $(BUILD)/npm
+	mkdir -p $(BUILD)/npm/wasm $(BUILD)/npm/data
+	cp bindings/js/package.json bindings/js/README.md bindings/js/index.mjs \
+	   bindings/js/index.d.ts bindings/js/ephemeris.mjs bindings/js/demo.html \
+	   LICENSE $(BUILD)/npm/
+	cp $(BUILD)/wasm/*.wasm $(BUILD)/npm/wasm/
+	cp $(foreach d,$(NPM_DATA),data/eph-$(d).bin) $(BUILD)/npm/data/
+
+npm-test: npm
+	node tests/test_npm.mjs $(BUILD)/npm
+	cd $(BUILD)/npm && npm pack --dry-run 2>&1 | tail -n 6
 
 clean:
 	rm -rf $(BUILD)

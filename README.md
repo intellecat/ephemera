@@ -1,6 +1,7 @@
-# ephemeris
+# Ephemera
 
-A small, dependency-free C/C++ library that computes positions of the Sun,
+A pocket-sized, MIT-licensed ephemeris for astrology and astronomy: a
+small, dependency-free C/C++ library that computes positions of the Sun,
 Moon, Pluto, the eight planets, Chiron and the four largest asteroids
 (Ceres, Pallas, Juno, Vesta) from analytical series.  No JPL kernel and no SPICE:
 a ~111 KB core (as WebAssembly; ~46 KB brotli; 93 KB / 39 KB without
@@ -160,12 +161,18 @@ runtime: `WebAssembly.instantiate(bytes, {})` is enough):
 | `build/wasm/ephemeris-1as.wasm`        | 256 KB | 159 KB | `eph-1as.bin`               |
 | `build/wasm/ephemeris-1as-chiron.wasm` | 315 KB | 214 KB | `eph-1as-chiron.bin`        |
 
-`examples/wasm/ephemeris.mjs` wraps them for browsers and Node (angles in
-degrees), and `examples/wasm/index.html` is a small demo page:
+They ship as the npm package **`@astrologer/ephemera`** (`bindings/js/`:
+the wrapper `ephemeris.mjs`, a `load()` helper, TypeScript types and a
+demo page; angles in degrees):
+
+```sh
+make npm           # stages the package in build/npm (wasm modules, data files)
+make npm-test      # smoke-tests it with node and shows the tarball size (1.8 MB)
+```
 
 ```js
-import { createEphemeris, Body } from './ephemeris.mjs';
-const eph = await createEphemeris(await (await fetch('ephemeris-1as.wasm')).arrayBuffer());
+import { load, Body } from '@astrologer/ephemera';
+const eph = await load();                            // 1" data built in
 const jd = eph.julianDate(2026, 1, 1.5);            // UT
 const moon = eph.position(Body.Moon, jd);           // { longitude, latitude, ..., longitudeSpeed }
 const { asc, mc } = eph.ascMc(jd, -0.1278, 51.5074); // observer lon, lat (degrees)
@@ -176,9 +183,9 @@ but return -1 (null in the wrapper).  Native builds do the same with
 `make NO_ECLIPSES=1 NO_STARS=1` or CMake's `-DEPHEMERIS_ECLIPSES=OFF
 -DEPHEMERIS_STARS=OFF`.
 
-With the core module, fetch a data file and pass it to
-`eph.loadData(bytes)` first; the asteroid file and the DE440 table load
-the same way into either module.
+With the core module, pass data files: `load({ module: 'core', data:
+['01as', 'stars'] })`, or raw bytes such as a DE440 table; any module
+can take more data the same way (or with `eph.loadData(bytes)`).
 
 ## Using the API
 
@@ -492,8 +499,9 @@ data/*_data.{h,cpp}             generated coefficient tables (sources of
 data/*.bin                      data files
 tools/                          coefficient, fit, data-file and reference
                                 generators
-tests/                          DE440s / Skyfield / Horizons validation,
-                                topocentric, houses, data files, DE440 table
+tests/                          tests and their reference data (DE440,
+                                ERFA, NASA, Indian Astronomical Ephemeris)
+bindings/js/                    npm package @astrologer/ephemera
 examples/positions.c            CLI that prints a chart
 ```
 

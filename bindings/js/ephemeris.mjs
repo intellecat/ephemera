@@ -1,4 +1,4 @@
-// ephemeris.mjs -- JavaScript wrapper for build/wasm/ephemeris*.wasm
+// ephemeris.mjs -- JavaScript wrapper for the ephemeris*.wasm modules
 // (make wasm).  Works in browsers and Node; the module needs no imports.
 //
 //   import { createEphemeris, Body } from './ephemeris.mjs';

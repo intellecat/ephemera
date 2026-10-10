@@ -2,7 +2,7 @@
 // Usage: node tests/test_wasm.mjs <build dir> <data dir>
 import { readFileSync } from 'fs';
 import { execFileSync } from 'child_process';
-import { createEphemeris, Body, EclipseType, HouseSystem } from '../examples/wasm/ephemeris.mjs';
+import { createEphemeris, Body, EclipseType, HouseSystem } from '../bindings/js/ephemeris.mjs';
 
 const [build, data] = process.argv.slice(2);
 let fails = 0;

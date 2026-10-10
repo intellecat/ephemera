@@ -1,0 +1,44 @@
+{
+  "name": "@astrologer/ephemera",
+  "version": "0.1.0",
+  "description": "Pocket-sized ephemeris for astrology and astronomy: planets, Moon, Chiron, nodes, houses, ayanamsas, stars and eclipses in a 46 KB WebAssembly core, no dependencies.",
+  "license": "MIT",
+  "author": "Intellecat",
+  "type": "module",
+  "main": "./index.mjs",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.mjs"
+    },
+    "./ephemeris.mjs": "./ephemeris.mjs",
+    "./wasm/*": "./wasm/*",
+    "./data/*": "./data/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.mjs",
+    "index.d.ts",
+    "ephemeris.mjs",
+    "demo.html",
+    "wasm/",
+    "data/"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "ephemeris",
+    "astrology",
+    "astronomy",
+    "planets",
+    "houses",
+    "ayanamsa",
+    "sidereal",
+    "eclipse",
+    "wasm",
+    "webassembly"
+  ]
+}
