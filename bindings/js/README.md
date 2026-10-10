@@ -45,10 +45,10 @@ from the package:
 
 | `module` | Size (brotli) | Data built in |
 |---|---|---|
-| `'1as'` (default) | 159 KB | 1" series, 1550–2650 |
-| `'1as-chiron'` | 214 KB | the same plus Chiron |
-| `'core'` | 46 KB | none: pass `data` |
-| `'lite'` | 39 KB | none; no eclipses or fixed stars |
+| `'1as'` (default) | 162 KB | 1" series, 1550–2650 |
+| `'1as-chiron'` | 217 KB | the same plus Chiron |
+| `'core'` | 49 KB | none: pass `data` |
+| `'lite'` | 42 KB | none; no eclipses or fixed stars |
 
 The `data` names are `'1as'`, `'01as'` (~0.2"), `'chiron'`,
 `'1as-chiron'`, `'01as-chiron'`, `'asteroids'` (Ceres–Vesta and Chiron)

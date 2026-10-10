@@ -5,7 +5,7 @@ small, dependency-free C/C++ library that computes positions of the Sun,
 Moon, Pluto, the eight planets, Chiron and the four largest asteroids
 (Ceres, Pallas, Juno, Vesta) from analytical series, plus the lunar
 points, planetary nodes and apsides and the Uranian points.  No JPL kernel and no SPICE:
-a ~111 KB core (as WebAssembly; ~46 KB brotli; 93 KB / 39 KB without
+a ~118 KB core (as WebAssembly; ~49 KB brotli; 100 KB / 42 KB without
 eclipses and fixed stars) loads one small data file
 with the series coefficients at the accuracy you need -- from 145 KB for
 ~0.5" to DE440 tables at ~320 KB per century for ~0.002", over 1550–2650
@@ -157,10 +157,10 @@ runtime: `WebAssembly.instantiate(bytes, {})` is enough):
 
 | Module                                 | Size   | brotli | Data built in               |
 |----------------------------------------|--------|--------|-----------------------------|
-| `build/wasm/ephemeris.wasm`            | 111 KB | 46 KB  | none: load a file           |
-| `build/wasm/ephemeris-lite.wasm`       | 93 KB  | 39 KB  | none; no eclipses or stars  |
-| `build/wasm/ephemeris-1as.wasm`        | 256 KB | 159 KB | `eph-1as.bin`               |
-| `build/wasm/ephemeris-1as-chiron.wasm` | 315 KB | 214 KB | `eph-1as-chiron.bin`        |
+| `build/wasm/ephemeris.wasm`            | 118 KB | 49 KB  | none: load a file           |
+| `build/wasm/ephemeris-lite.wasm`       | 100 KB | 42 KB  | none; no eclipses or stars  |
+| `build/wasm/ephemeris-1as.wasm`        | 263 KB | 162 KB | `eph-1as.bin`               |
+| `build/wasm/ephemeris-1as-chiron.wasm` | 322 KB | 217 KB | `eph-1as-chiron.bin`        |
 
 They ship as the npm package **`@astrologer/ephemera`** (`bindings/js/`:
 the wrapper `ephemeris.mjs`, a `load()` helper, TypeScript types and a
