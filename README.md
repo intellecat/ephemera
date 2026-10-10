@@ -3,7 +3,8 @@
 A pocket-sized, MIT-licensed ephemeris for astrology and astronomy: a
 small, dependency-free C/C++ library that computes positions of the Sun,
 Moon, Pluto, the eight planets, Chiron and the four largest asteroids
-(Ceres, Pallas, Juno, Vesta) from analytical series.  No JPL kernel and no SPICE:
+(Ceres, Pallas, Juno, Vesta) from analytical series, plus the lunar
+points, planetary nodes and apsides and the Uranian points.  No JPL kernel and no SPICE:
 a ~111 KB core (as WebAssembly; ~46 KB brotli; 93 KB / 39 KB without
 eclipses and fixed stars) loads one small data file
 with the series coefficients at the accuracy you need -- from 145 KB for
@@ -318,6 +319,28 @@ only grazes the Earth), local magnitudes within 0.0003 and obscuration
 within 0.002. With the 1″ file the only change is 1986 Oct 3, a hybrid of
 magnitude 1.0000 that becomes annular.  A search takes ~8 ms with the full
 series and ~1 ms with the 1″ file.
+
+## Uranian points
+
+`EPH_CUPIDO`, `EPH_HADES`, `EPH_ZEUS`, `EPH_KRONOS`, `EPH_APOLLON`,
+`EPH_ADMETOS`, `EPH_VULKANUS` and `EPH_POSEIDON` are the Hamburg School's
+hypothetical points.  Cupido to Kronos were defined by Alfred Witte
+(1923–24) and the other four by Friedrich Sieggrün (1927, 1934).  They
+work with all the position, heliocentric and search functions.
+
+Their orbits are the elements Paul Schlyter fitted to the published
+Witte/Sieggrün ephemeris ("Hypothetical astrological planets",
+alt.astrology, 1994):
+
+* a mean longitude that moves uniformly in the tropical zodiac;
+* for the four inner points, the first term of the equation of centre;
+* for Cupido and Hades, their small inclinations.
+
+Schlyter found that these fit the ephemeris to a few arcminutes, so that
+is the accuracy to expect against the printed *Transneptun-Ephemeride*
+(Witte-Verlag).  Other software may use revised element sets and can
+differ by a similar amount.  Geocentric positions add the Earth's position
+and the same aberration and nutation as the stars.
 
 ## Planetary nodes and apsides
 

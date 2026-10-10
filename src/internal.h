@@ -119,6 +119,13 @@ void reduce_direction(double jd_tt, bool apparent, const Vec3& g, const Vec3& e,
                       const Vec3& ev, double& lon, double& lat);
 Vec3 ecliptic_j2000_to_date(double jd_tt, const Vec3& v);
 
+/* The Uranian points (src/uranian.cpp): heliocentric ecliptic of date
+ * (AU), and geocentric positions. */
+bool is_uranian(int body);
+bool uranian_heliocentric(int body, double jd_tt, Vec3& v);
+bool uranian_position(int body, double jd_tt, bool apparent, double& lon, double& lat,
+                      double& dist);
+
 }  // namespace eph
 
 #endif

@@ -17,6 +17,9 @@ export const Body = Object.freeze({
   Neptune: 7, Pluto: 8, Sun: 9, Moon: 10, Ceres: 11, Pallas: 12, Juno: 13,
   Vesta: 14, Chiron: 15, MeanNode: 16, TrueNode: 17, MeanLilith: 18,
   OscuLilith: 19,
+  // The Hamburg school's Uranian points (Witte, Sieggrün).
+  Cupido: 20, Hades: 21, Zeus: 22, Kronos: 23, Apollon: 24, Admetos: 25,
+  Vulkanus: 26, Poseidon: 27,
 });
 
 export const Ayanamsa = Object.freeze({

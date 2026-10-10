@@ -201,6 +201,14 @@ const char* eph_body_name(eph_body body) {
         case EPH_TRUE_NODE:   return "True Node";
         case EPH_MEAN_LILITH: return "Mean Lilith";
         case EPH_OSCU_LILITH: return "Osc. Lilith";
+        case EPH_CUPIDO:      return "Cupido";
+        case EPH_HADES:       return "Hades";
+        case EPH_ZEUS:        return "Zeus";
+        case EPH_KRONOS:      return "Kronos";
+        case EPH_APOLLON:     return "Apollon";
+        case EPH_ADMETOS:     return "Admetos";
+        case EPH_VULKANUS:    return "Vulkanus";
+        case EPH_POSEIDON:    return "Poseidon";
         default:          return "?";
     }
 }

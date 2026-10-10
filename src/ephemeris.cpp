@@ -432,8 +432,21 @@ bool lunar_point(eph_body body, double jd, bool apparent, eph_position* out) {
 
 bool compute(eph_body body, double jd_tt, Kind kind, eph_position* out) {
     if (body < 0 || body >= EPH_BODY_COUNT || body == EPH_EARTH) return false;
-    if (body >= EPH_MEAN_NODE)
+    if (body >= EPH_MEAN_NODE && body <= EPH_OSCU_LILITH)
         return lunar_point(body, jd_tt, kind == Kind::Apparent, out);
+    if (is_uranian(body)) {
+        const bool app = kind == Kind::Apparent;
+        double l1, b1, r1, l2, b2, r2;
+        const double h = 0.5;
+        if (!uranian_position(body, jd_tt, app, out->longitude, out->latitude, out->distance) ||
+            !uranian_position(body, jd_tt - h, app, l1, b1, r1) ||
+            !uranian_position(body, jd_tt + h, app, l2, b2, r2))
+            return false;
+        out->longitude_speed = angle_diff(l2, l1) / (2 * h);
+        out->latitude_speed = (b2 - b1) / (2 * h);
+        out->distance_speed = (r2 - r1) / (2 * h);
+        return true;
+    }
     const bool apparent = (kind == Kind::Apparent);
     /* Light-time applies to everything except the Sun (at the origin). */
     const bool light_time = apparent && body != EPH_SUN;
@@ -506,7 +519,7 @@ bool topocentric_eval(eph_body body, double jd_tt, double jd_ut,
                       double* dist) {
     eph_position g;
     if (eph_position_apparent_tt(body, jd_tt, &g) != 0) return false;
-    if (body >= EPH_MEAN_NODE) { /* directions, not bodies: no parallax */
+    if (body >= EPH_MEAN_NODE && body <= EPH_OSCU_LILITH) { /* directions: no parallax */
         *lon = g.longitude;
         *lat = g.latitude;
         *dist = g.distance;
@@ -568,9 +581,11 @@ int eph_heliocentric_tt(eph_body body, double jd_tt, double* lon, double* lat,
                         double* distance) {
     const bool planet = (body >= EPH_MERCURY && body <= EPH_PLUTO);
     const bool asteroid = (body >= EPH_CERES && body <= EPH_CHIRON);
-    if (!planet && !asteroid) return -1;
+    if (!planet && !asteroid && !is_uranian(body)) return -1;
     Vec3 h;
-    if (!body_heliocentric(body, jd_tt, h, jd_tt)) return -1;
+    if (is_uranian(body) ? !uranian_heliocentric(body, jd_tt, h)
+                         : !body_heliocentric(body, jd_tt, h, jd_tt))
+        return -1;
     const Vec3 v = frame_1976_to_2006(jd_tt, h);
     double r;
     double l, b;

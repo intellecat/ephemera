@@ -109,7 +109,10 @@ compare(withChiron, 'ephemeris-1as-chiron.wasm');
   const h = core.heliocentric(Body.Mars, 2451545.0);
   check(h && near(h.distance, 1.39, 0.01) && core.heliocentric(Body.Moon, 2451545.0) === null,
         `heliocentric ${JSON.stringify(h)}`);
-  check(core.bodyName(Body.Moon) === 'Moon' && core.ayanamsaName(0) === 'Lahiri', 'names');
+  check(core.bodyName(Body.Moon) === 'Moon' && core.ayanamsaName(0) === 'Lahiri' &&
+        core.bodyName(Body.Poseidon) === 'Poseidon', 'names');
+  const cup = core.positionTT(Body.Cupido, 2461323.5);
+  check(cup && near(cup.longitude, 279.09, 0.01), `Cupido ${JSON.stringify(cup)}`);
   check(near(core.midpoint(350, 10), 0, 1e-9) || near(core.midpoint(350, 10), 360, 1e-9), 'midpoint');
   const sp = core.splitLongitude(123.5);
   check(sp.sign === 4 && sp.degrees === 3 && sp.minutes === 30 && near(sp.seconds, 0, 1e-6),

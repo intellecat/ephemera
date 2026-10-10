@@ -22,6 +22,14 @@ export declare const Body: {
   readonly TrueNode: 17;
   readonly MeanLilith: 18;
   readonly OscuLilith: 19;
+  readonly Cupido: 20;
+  readonly Hades: 21;
+  readonly Zeus: 22;
+  readonly Kronos: 23;
+  readonly Apollon: 24;
+  readonly Admetos: 25;
+  readonly Vulkanus: 26;
+  readonly Poseidon: 27;
 };
 export type Body = (typeof Body)[keyof typeof Body];
 

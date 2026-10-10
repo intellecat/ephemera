@@ -52,6 +52,17 @@ typedef enum {
     EPH_TRUE_NODE,   /* osculating ascending node (needs the Moon's data)  */
     EPH_MEAN_LILITH, /* mean lunar apogee, Black Moon (no data needed)     */
     EPH_OSCU_LILITH, /* osculating lunar apogee (needs the Moon's data)    */
+    /* The Hamburg school's hypothetical (Uranian) points, from Witte's and
+     * Sieggrun's ephemeris as fitted by P. Schlyter (1994); positions need
+     * the Earth's data. */
+    EPH_CUPIDO,
+    EPH_HADES,
+    EPH_ZEUS,
+    EPH_KRONOS,
+    EPH_APOLLON,
+    EPH_ADMETOS,
+    EPH_VULKANUS,
+    EPH_POSEIDON,
     EPH_BODY_COUNT
 } eph_body;
 

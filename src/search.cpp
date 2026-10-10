@@ -41,6 +41,9 @@ double max_longitude_rate(eph_body body) {
         case EPH_TRUE_NODE: return 0.6;
         case EPH_MEAN_LILITH: return 0.15;
         case EPH_OSCU_LILITH: return 20.0;
+        case EPH_CUPIDO: case EPH_HADES: case EPH_ZEUS: case EPH_KRONOS:
+        case EPH_APOLLON: case EPH_ADMETOS: case EPH_VULKANUS: case EPH_POSEIDON:
+            return 0.03; /* the Earth's parallax dominates */
         default: return 2.0; /* asteroids */
     }
 }
@@ -57,6 +60,9 @@ double max_heliocentric_rate(eph_body body) {
         case EPH_NEPTUNE:
         case EPH_PLUTO: return 0.01;
         case EPH_CHIRON: return 0.05;
+        case EPH_CUPIDO: case EPH_HADES: case EPH_ZEUS: case EPH_KRONOS:
+        case EPH_APOLLON: case EPH_ADMETOS: case EPH_VULKANUS: case EPH_POSEIDON:
+            return 0.001;
         default: return 0.5; /* asteroids */
     }
 }
