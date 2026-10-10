@@ -4,6 +4,15 @@
   "description": "Pocket-sized ephemeris for astrology and astronomy: planets, Moon, Chiron, nodes, houses, ayanamsas, stars and eclipses in a 46 KB WebAssembly core, no dependencies.",
   "license": "MIT",
   "author": "Intellecat",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/intellecat/ephemera.git",
+    "directory": "bindings/js"
+  },
+  "homepage": "https://github.com/intellecat/ephemera#readme",
+  "bugs": {
+    "url": "https://github.com/intellecat/ephemera/issues"
+  },
   "type": "module",
   "main": "./index.mjs",
   "types": "./index.d.ts",

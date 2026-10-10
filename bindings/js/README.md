@@ -58,4 +58,5 @@ example page.
 ## More
 
 The C library, the accuracy figures, the methods and the references are
-in the main repository.  License: MIT.
+in the main repository: https://github.com/intellecat/ephemera.
+License: MIT.
