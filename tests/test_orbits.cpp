@@ -81,6 +81,32 @@ int main(int argc, char** argv) {
             fails++;
         }
     }
+    /* The mean elements at J2000 against the secular terms of VSOP87
+     * (tools/vsop87_secular.py; Meeus' table adds long-period terms, up
+     * to 0.0005 deg in Saturn's perihelion and 9e-5 in Uranus' e). */
+    {
+        static const struct {
+            eph_body body;
+            double e, i, node, peri;
+        } kVsop[] = {{EPH_MERCURY, 0.20563175, 7.004986, 48.330893, 77.456119},
+                     {EPH_VENUS, 0.00677188, 3.394662, 76.679920, 131.563707},
+                     {EPH_MARS, 0.09340062, 1.849726, 49.558093, 336.060234},
+                     {EPH_JUPITER, 0.04849485, 1.303270, 100.464441, 14.331309},
+                     {EPH_SATURN, 0.05550862, 2.488878, 113.665524, 93.056787},
+                     {EPH_URANUS, 0.04629590, 0.773196, 74.005947, 173.005159},
+                     {EPH_NEPTUNE, 0.00898809, 1.769952, 131.784057, 48.123691}};
+        for (const auto& v : kVsop) {
+            eph_orbit m;
+            eph_orbit_tt(v.body, 2451545.0, EPH_ORBIT_MEAN, &m);
+            if (std::fabs(m.eccentricity - v.e) > 1e-4 ||
+                std::fabs(m.inclination * R2D - v.i) > 1e-5 ||
+                std::fabs(wrap(m.node * R2D - v.node)) > 1e-4 ||
+                std::fabs(wrap(m.perihelion * R2D - v.peri)) > 6e-4) {
+                std::printf("FAIL: %s mean elements vs VSOP87\n", kNames[v.body]);
+                fails++;
+            }
+        }
+    }
     /* Mean and osculating orbits agree to the size of the perturbations. */
     for (int b : {0, 1, 3, 4, 5, 6, 7}) {
         eph_orbit m, o;
