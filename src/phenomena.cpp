@@ -19,7 +19,9 @@ double angle(const eph::Vec3& a, const eph::Vec3& b) {
     return std::acos(std::fmax(-1.0, std::fmin(1.0, c)));
 }
 
-/* Mean radii (km): IAU 2015 (Sun: nominal), Moon IAU. */
+/* Mean radii (km): IAU 2015 (Sun: nominal), Moon IAU; the minor bodies
+ * from the JPL Small-Body Database (diameter / 2; checked by
+ * tools/audit_constants.py). */
 double radius_km(eph_body body) {
     switch (body) {
         case EPH_SUN: return 695700.0;
@@ -33,10 +35,10 @@ double radius_km(eph_body body) {
         case EPH_NEPTUNE: return 24622.0;
         case EPH_PLUTO: return 1188.3;
         case EPH_CERES: return 469.7;
-        case EPH_PALLAS: return 256.0;
+        case EPH_PALLAS: return 256.5;
         case EPH_JUNO: return 123.3;
-        case EPH_VESTA: return 262.7;
-        case EPH_CHIRON: return 103.0;
+        case EPH_VESTA: return 261.4;
+        case EPH_CHIRON: return 83.0;
         default: return 0.0;
     }
 }
@@ -118,11 +120,13 @@ double magnitude(eph_body body, double r, double delta, double i, double lat_sun
             return v;
         }
         case EPH_PLUTO: return -1.01 + d + 0.041 * i;
-        case EPH_CERES: return hg_magnitude(3.33, 0.12, r, delta, i * eph::DEG);
-        case EPH_PALLAS: return hg_magnitude(4.11, 0.11, r, delta, i * eph::DEG);
+        /* H, G from the JPL Small-Body Database (Chiron: no G there, the
+         * standard 0.15); checked by tools/audit_constants.py. */
+        case EPH_CERES: return hg_magnitude(3.34, 0.12, r, delta, i * eph::DEG);
+        case EPH_PALLAS: return hg_magnitude(4.12, 0.11, r, delta, i * eph::DEG);
         case EPH_JUNO: return hg_magnitude(5.19, 0.32, r, delta, i * eph::DEG);
         case EPH_VESTA: return hg_magnitude(3.25, 0.32, r, delta, i * eph::DEG);
-        case EPH_CHIRON: return hg_magnitude(5.8, 0.15, r, delta, i * eph::DEG);
+        case EPH_CHIRON: return hg_magnitude(5.54, 0.15, r, delta, i * eph::DEG);
         default: return std::nan("");
     }
 }
