@@ -10,7 +10,9 @@
  * uniformly in the tropical zodiac (the rate includes precession), the
  * first term of the equation of centre for the four inner points, and the
  * inclination of Cupido and Hades; Schlyter found the ephemeris fitted to a
- * few arcminutes.  The points are then seen from the Earth like a body. */
+ * few arcminutes.  Checked here: the mean longitudes and rates (1900.0 to
+ * 1950.0) and the distances (Kepler's third law); the e, perihelion and
+ * node terms (< ~0.5 deg in position) are as transcribed, unverified.  The points are then seen from the Earth like a body. */
 
 namespace eph {
 

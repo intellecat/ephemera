@@ -342,7 +342,11 @@ alt.astrology, 1994):
 
 Schlyter found that these fit the ephemeris to a few arcminutes, so that
 is the accuracy to expect against the printed *Transneptun-Ephemeride*
-(Witte-Verlag).  Other software may use revised element sets and can
+(Witte-Verlag).  Our copy of the table was checked for its mean
+longitudes and rates (1900.0 to 1950.0) and its distances (Kepler's third
+law from the periods).  The small eccentricity, perihelion and node terms
+of Cupido to Kronos could not be cross-checked against a second copy; they
+move the positions by at most ~0.5°.  Other software may use revised element sets and can
 differ by a similar amount.  Geocentric positions add the Earth's position
 and the same aberration and nutation as the stars.
 
