@@ -180,6 +180,33 @@ bool parse_stars(Reader r, Data& d) {
     return true;
 }
 
+/* Minor planets: see MinorRecord.  Bounds and ordering are checked here
+ * so that evaluation needs no checks. */
+bool parse_minor(Reader r, Data& d) {
+    uint32_t n, pool;
+    const MinorRecord* rec;
+    const char* strings;
+    if (d.nminor_sets >= kMaxMinorSets || !r.read(n) || !r.read(pool) || n > 1000000 ||
+        !r.array(n, &rec) || !r.array(pool, &strings) || pool == 0 ||
+        strings[pool - 1] != '\0')
+        return false;
+    for (uint32_t i = 0; i < n; ++i) {
+        const MinorRecord& m = rec[i];
+        if (m.name >= pool || m.nseg < 1 || m.nseg > 10000000 || m.ncoef < 1 ||
+            m.ncoef > 64 || m.data_off % 8 != 0)
+            return false;
+        const uint64_t need = 8ull * (m.nseg + 1) + 24ull * m.nseg +
+                              12ull * m.nseg * (m.ncoef - 1);
+        if (m.data_off > r.size || need > r.size - m.data_off) return false;
+        const double* t = reinterpret_cast<const double*>(r.p + m.data_off);
+        for (uint32_t k = 0; k < m.nseg; ++k)
+            if (!(t[k + 1] > t[k])) return false;
+    }
+    d.minor[d.nminor_sets++] = {rec, (int)n, strings, pool, r.p};
+    d.nminor += (int)n;
+    return true;
+}
+
 /* Apply every section of a file to d (later files override earlier
  * ones).  False if the file is malformed. */
 bool apply(const unsigned char* p, uint64_t size, Data& d, bool& has_table) {
@@ -224,6 +251,9 @@ bool apply(const unsigned char* p, uint64_t size, Data& d, bool& has_table) {
                 break;
             case kSectionStars:
                 ok = parse_stars(r, d);
+                break;
+            case kSectionMinor:
+                ok = parse_minor(r, d);
                 break;
             case kSectionTable:
                 ok = d.ntables < kMaxTables;

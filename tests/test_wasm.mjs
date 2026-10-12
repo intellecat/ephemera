@@ -145,6 +145,17 @@ compare(withChiron, 'ephemeris-1as-chiron.wasm');
         core.orbit(Body.Earth, 2451545.0, 1) === null, 'orbit: osculating, unsupported');
 }
 
+// A minor-planet file loads into the core: lookup and positions.
+{
+  check(core.loadData(readFileSync(`${data}/eph-minor.bin`)), 'minor-planet file');
+  const eros = core.minorBody('433 Eros');
+  const p = eros !== null ? core.positionTT(eros, 2461324.0) : null;
+  check(eros !== null && core.minorBody('eros') === eros && core.minorBody('nope') === null &&
+        p !== null && core.bodyName(eros) === 'Eros' && core.minorCount() === core.minorList().length &&
+        core.minorList().some((m) => m.number === 136199 && m.name === 'Eris'),
+        `minor planets ${JSON.stringify(p)}`);
+}
+
 // The table and asteroids load into the core as well.
 check(core.loadData(readFileSync(`${data}/eph-asteroids.bin`)), 'asteroids');
 check(core.positionTT(Body.Ceres, 2451545.0) !== null, 'Ceres');

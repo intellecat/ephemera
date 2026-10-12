@@ -63,7 +63,10 @@ typedef enum {
     EPH_ADMETOS,
     EPH_VULKANUS,
     EPH_POSEIDON,
-    EPH_BODY_COUNT
+    EPH_BODY_COUNT,
+    /* Minor planets from a loaded minor-planet file: EPH_MINOR_BASE + the
+     * index from eph_minor_find (see "minor planets" below). */
+    EPH_MINOR_BASE = 1000
 } eph_body;
 
 typedef struct {
@@ -416,6 +419,18 @@ int eph_node_crossing(eph_body body, double jd_tt, int direction,
  * retrograde, 2 if it turns direct. */
 int eph_station(eph_body body, double jd_tt, int direction, double max_days,
                 double* jd_out);
+
+/* ---- minor planets ------------------------------------------------------ *
+ * A minor-planet data file (data/eph-minor*.bin, loaded like any other)
+ * adds numbered asteroids, centaurs and trans-Neptunian objects.  Body
+ * EPH_MINOR_BASE + index works with the position, heliocentric, search,
+ * phenomena and orbit functions; indices run over all loaded files. */
+int eph_minor_count(void);
+/* Index of a body by number ("433"), name ("Eros", any case) or both
+ * ("433 Eros"); -1 if none is loaded. */
+int eph_minor_find(const char* name);
+int eph_minor_number(int index);       /* 0 if no such index  */
+const char* eph_minor_name(int index); /* NULL if no such index */
 
 /* ---- planetary nodes and apsides --------------------------------------- *
  * A body's orbit around the Sun, referred to the mean ecliptic and equinox

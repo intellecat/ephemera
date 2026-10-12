@@ -9,6 +9,7 @@ Node (18+), browsers and bundlers.
 * Planetary nodes and apsides, mean and osculating (`orbit()`).
 * The Uranian points: Cupido, Hades, Zeus, Kronos, Apollon, Admetos,
   Vulkanus and Poseidon.
+* 1,000+ more asteroids, centaurs and TNOs from optional data files.
 * Houses (Placidus, Koch, Whole Sign, Equal, Porphyry, Regiomontanus,
   Campanus, Alcabitius, Topocentric and more) and the angles: Vertex and
   co-ascendants.
@@ -59,6 +60,22 @@ repository's `data/de440/`:
 
 ```js
 const eph = await load({ module: 'core', data: ['01as', 'stars', tableBytes] });
+```
+
+### Minor planets
+
+More asteroids, centaurs and TNOs (1900–2100, ~0.5″) come in two optional
+files from the repository, not in this package:
+
+- `eph-minor.bin`, 180 popular bodies, 5.7 MB;
+- `eph-minor-1000.bin`, numbered 1–1000, 17 MB.
+
+```js
+const url = 'https://raw.githubusercontent.com/intellecat/ephemera/main/data/eph-minor.bin';
+const minor = new Uint8Array(await (await fetch(url)).arrayBuffer());
+const eph = await load({ data: [minor] });
+const eros = eph.minorBody('Eros');          // or '433', '433 Eros'
+const pos = eph.position(eros, jd);
 ```
 
 In a browser without a bundler, serve the package directory and

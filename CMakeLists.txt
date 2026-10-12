@@ -50,6 +50,7 @@ add_library(ephemeris STATIC
     src/eclipses.cpp
     src/orbits.cpp
     src/uranian.cpp
+    src/minor.cpp
     ${EMBED_SRC}
     data/delta_t_data.cpp
 )
@@ -136,6 +137,10 @@ if(EPHEMERIS_BUILD_TESTS)
         target_link_libraries(test_stars PRIVATE ephemeris)
         add_test(NAME stars COMMAND test_stars ${DATA}/eph-full.bin ${DATA}/eph-stars.bin)
     endif()
+
+    add_executable(test_minor tests/test_minor.cpp)
+    target_link_libraries(test_minor PRIVATE ephemeris)
+    add_test(NAME minor COMMAND test_minor ${DATA}/eph-full.bin ${DATA}/eph-minor.bin)
 
     add_executable(test_uranian tests/test_uranian.cpp)
     target_link_libraries(test_uranian PRIVATE ephemeris)

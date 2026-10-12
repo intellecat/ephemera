@@ -25,6 +25,13 @@ double search_step(eph_body body) {
  * geocentric longitude can change: far from a target, the search may step
  * as far as the body could possibly move. */
 double max_longitude_rate(eph_body body) {
+    double h, g, radius, q;
+    if (eph::is_minor(body) && eph::minor_info(body, h, g, radius, q)) {
+        /* From the closest approach to the Earth: up to ~40 km/s over a
+         * distance of at least q - 1 AU (near-Earth objects: 0.02 AU). */
+        const double near = std::fmax(q - 1.0, 0.02);
+        return std::fmin(0.023 / near / eph::DEG, 120.0);
+    }
     switch (body) {
         case EPH_SUN: return 1.1;
         case EPH_MOON: return 16.0;
@@ -50,6 +57,10 @@ double max_longitude_rate(eph_body body) {
 
 /* The same for the heliocentric longitude. */
 double max_heliocentric_rate(eph_body body) {
+    double h, g, radius, q;
+    if (eph::is_minor(body) && eph::minor_info(body, h, g, radius, q))
+        /* At perihelion: ~ sqrt(2 GM / q) / q (radians/day). */
+        return std::fmin(0.0243 / (q * std::sqrt(q)) / eph::DEG, 30.0);
     switch (body) {
         case EPH_MERCURY: return 6.5;
         case EPH_VENUS: return 1.7;

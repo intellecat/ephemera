@@ -32,6 +32,7 @@ enum SectionType {
     kSectionTable = 6,      /* DE440 residual table    */
     kSectionInfo = 7,       /* free text               */
     kSectionStars = 8,      /* fixed-star catalogue    */
+    kSectionMinor = 9,      /* minor planets           */
 };
 
 /* Series role: the theory used for analytical positions, or the truncated
@@ -60,6 +61,21 @@ struct StarRecord {
 static_assert(sizeof(StarRecord) == 48, "StarRecord layout");
 constexpr int kAsteroids = 5; /* Ceres, Pallas, Juno, Vesta, Chiron */
 
+/* Minor-planet section: u32 count, u32 string pool size, `count` records,
+ * the string pool (padded to 8 bytes), then each body's data at its
+ * data_off (from the section start, 8-aligned): f64 t[nseg + 1] (piece
+ * boundaries, TT), f64 c0[nseg][3] (constant terms), f32
+ * c[nseg][3][ncoef - 1] (the other Chebyshev coefficients) of the
+ * heliocentric ecliptic-J2000 position (AU). */
+struct MinorRecord {
+    uint32_t number, name; /* asteroid number, name offset in the pool */
+    float h, g, radius, q; /* H, G, mean radius (km, 0: unknown), perihelion (AU) */
+    uint32_t nseg, ncoef;
+    uint64_t data_off, reserved;
+};
+static_assert(sizeof(MinorRecord) == 48, "MinorRecord layout");
+constexpr int kMaxMinorSets = 8;
+
 struct Data {
     SeriesSet set[2]; /* indexed by Role */
     bool pluto_ok;
@@ -74,6 +90,17 @@ struct Data {
         const unsigned char* p;
         uint64_t size;
     } tables[kMaxTables];
+    /* Minor-planet sections in load order; bodies are numbered across
+     * them. */
+    struct {
+        const MinorRecord* rec;
+        int count;
+        const char* pool;
+        uint32_t pool_size;
+        const unsigned char* base; /* section start */
+    } minor[kMaxMinorSets];
+    int nminor_sets;
+    int nminor;
     /* Fixed stars: records and their string pool. */
     const StarRecord* stars;
     int nstars;

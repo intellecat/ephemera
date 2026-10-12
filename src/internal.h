@@ -119,6 +119,12 @@ void reduce_direction(double jd_tt, bool apparent, const Vec3& g, const Vec3& e,
                       const Vec3& ev, double& lon, double& lat);
 Vec3 ecliptic_j2000_to_date(double jd_tt, const Vec3& v);
 
+/* Minor planets (src/minor.cpp): a loaded body id; the heliocentric
+ * ecliptic-J2000 position (AU); H, G, radius (km), perihelion (AU). */
+bool is_minor(int body);
+bool minor_heliocentric(int body, double jd, Vec3& v);
+bool minor_info(int body, double& h, double& g, double& radius, double& q);
+
 /* The Uranian points (src/uranian.cpp): heliocentric ecliptic of date
  * (AU), and geocentric positions. */
 bool is_uranian(int body);

@@ -75,6 +75,7 @@ export const EclipseType = Object.freeze({
 });
 
 const DEG = 180 / Math.PI;
+const MINOR_BASE = 1000; // EPH_MINOR_BASE
 
 // source: an ArrayBuffer / typed array with the .wasm bytes, or a
 // WebAssembly.Module.
@@ -377,6 +378,26 @@ export async function createEphemeris(source) {
         type, maximum, gamma, umbralMagnitude, penumbralMagnitude, saros,
         penumbralBegin, penumbralEnd, partialBegin, partialEnd, totalBegin, totalEnd,
       };
+    },
+    // Minor planets (load a minor-planet file such as eph-minor.bin): the
+    // body id for "433", "Eros" or "433 Eros" (usable with position(),
+    // searches, phenomena, orbit()), or null.
+    minorBody(name) {
+      const bytes = new TextEncoder().encode(name + '\0');
+      const p = e.malloc(bytes.length);
+      new Uint8Array(e.memory.buffer, p, bytes.length).set(bytes);
+      const i = e.eph_minor_find(p);
+      e.free(p);
+      return i < 0 ? null : MINOR_BASE + i;
+    },
+    minorCount: () => e.eph_minor_count(),
+    // { body, number, name } of each loaded minor planet.
+    minorList() {
+      const n = e.eph_minor_count(), out = [];
+      for (let i = 0; i < n; i++)
+        out.push({ body: MINOR_BASE + i, number: e.eph_minor_number(i),
+                   name: cString(e.eph_minor_name(i)) });
+      return out;
     },
     // Fixed stars (load eph-stars.bin): index by name, "alf Leo" or "HIP n".
     starFind(name) {

@@ -23,6 +23,8 @@ double angle(const eph::Vec3& a, const eph::Vec3& b) {
  * from the JPL Small-Body Database (diameter / 2; checked by
  * tools/audit_constants.py). */
 double radius_km(eph_body body) {
+    double h, g, radius, q;
+    if (eph::is_minor(body) && eph::minor_info(body, h, g, radius, q)) return radius;
     switch (body) {
         case EPH_SUN: return 695700.0;
         case EPH_MOON: return 1737.4;
@@ -61,6 +63,9 @@ double hg_magnitude(double h, double g, double r, double delta, double i) {
 double magnitude(eph_body body, double r, double delta, double i, double lat_sun,
                  double lat_earth, double year) {
     const double d = 5 * std::log10(r * delta);
+    double h, g, radius, q;
+    if (eph::is_minor(body) && eph::minor_info(body, h, g, radius, q))
+        return hg_magnitude(h, g, r, delta, i * eph::DEG); /* NaN without H */
     switch (body) {
         case EPH_SUN: return -26.74 + 5 * std::log10(delta);
         case EPH_MOON: return 0.23 + d + 0.026 * i + 4e-9 * std::pow(i, 4);
@@ -157,7 +162,9 @@ double sub_latitude(double jd_tt, const eph::Vec3& planet, double ra_deg,
 extern "C" {
 
 int eph_phenomena_tt(eph_body body, double jd_tt, eph_phenomena* out) {
-    if (!out || body < 0 || body >= EPH_MEAN_NODE || body == EPH_EARTH) return -1;
+    if (!out || body < 0 || (body >= EPH_MEAN_NODE && !eph::is_minor(body)) ||
+        body == EPH_EARTH)
+        return -1;
     /* Apparent positions (geometric ones would change the
      * phase angle by ~20-150", the magnitude by <0.001). */
     eph_position b, s;

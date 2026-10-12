@@ -39,6 +39,12 @@ bool body_heliocentric(eph_body body, double jd, Vec3& out, double anchor) {
         out = j2000_to_date(jd, v);
         return true;
     }
+    if (is_minor(body)) {
+        Vec3 v;
+        if (!minor_heliocentric(body, jd, v)) return false;
+        out = j2000_to_date(jd, v);
+        return true;
+    }
     return planet_heliocentric(static_cast<int>(body), jd, out);
 }
 
@@ -431,7 +437,8 @@ bool lunar_point(eph_body body, double jd, bool apparent, eph_position* out) {
 }
 
 bool compute(eph_body body, double jd_tt, Kind kind, eph_position* out) {
-    if (body < 0 || body >= EPH_BODY_COUNT || body == EPH_EARTH) return false;
+    if (body < 0 || (body >= EPH_BODY_COUNT && !is_minor(body)) || body == EPH_EARTH)
+        return false;
     if (body >= EPH_MEAN_NODE && body <= EPH_OSCU_LILITH)
         return lunar_point(body, jd_tt, kind == Kind::Apparent, out);
     if (is_uranian(body)) {
@@ -580,7 +587,7 @@ int eph_position_apparent_ut(eph_body body, double jd_ut, double year,
 int eph_heliocentric_tt(eph_body body, double jd_tt, double* lon, double* lat,
                         double* distance) {
     const bool planet = (body >= EPH_MERCURY && body <= EPH_PLUTO);
-    const bool asteroid = (body >= EPH_CERES && body <= EPH_CHIRON);
+    const bool asteroid = (body >= EPH_CERES && body <= EPH_CHIRON) || is_minor(body);
     if (!planet && !asteroid && !is_uranian(body)) return -1;
     Vec3 h;
     if (is_uranian(body) ? !uranian_heliocentric(body, jd_tt, h)

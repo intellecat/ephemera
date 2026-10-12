@@ -4,7 +4,8 @@ A pocket-sized, MIT-licensed ephemeris for astrology and astronomy: a
 small, dependency-free C/C++ library that computes positions of the Sun,
 Moon, Pluto, the eight planets, Chiron and the four largest asteroids
 (Ceres, Pallas, Juno, Vesta) from analytical series, plus the lunar
-points, planetary nodes and apsides and the Uranian points.  No JPL kernel and no SPICE:
+points, planetary nodes and apsides and the Uranian points, and, from
+optional data files, 1,000+ further asteroids, centaurs and TNOs.  No JPL kernel and no SPICE:
 a ~118 KB core (as WebAssembly; ~49 KB brotli; 100 KB / 42 KB without
 eclipses and fixed stars) loads one small data file
 with the series coefficients at the accuracy you need -- from 145 KB for
@@ -323,6 +324,50 @@ only grazes the Earth), local magnitudes within 0.0003 and obscuration
 within 0.002. With the 1″ file the only change is 1986 Oct 3, a hybrid of
 magnitude 1.0000 that becomes annular.  A search takes ~8 ms with the full
 series and ~1 ms with the 1″ file.
+
+## Minor planets
+
+Two optional data files add numbered asteroids, centaurs and
+trans-Neptunian objects over 1900–2100. Load them like any other data
+file; they are not in the npm package. Download them from the
+repository (`data/`):
+
+| File | Bodies | Size |
+|---|---|---|
+| `eph-minor.bin` | 180: the classic numbered asteroids 5–100 (Astraea, Hebe, Hygiea, Psyche, Urania, Pandora, Sappho, …), near-Earth objects (Eros, Lilith 1181, Amor, Icarus, Apollo, Toro, Phaethon, Apophis, Bennu, Ryugu, …), centaurs (Chiron, Pholus, Nessus, Chariklo, Asbolus, …), TNOs (Eris, Sedna, Makemake, Haumea, Quaoar, Orcus, Varuna, Ixion, Gonggong, …) and other named favourites | 5.7 MB |
+| `eph-minor-1000.bin` | all numbered asteroids 1–1000 | 17.2 MB |
+
+```c
+eph_load_file("data/eph-minor.bin");
+int i = eph_minor_find("Eros");            /* or "433", "433 Eros" */
+eph_position p;
+eph_position_apparent_ut(EPH_MINOR_BASE + i, jd_ut, year, &p);
+```
+
+Body `EPH_MINOR_BASE + index` works with the position, heliocentric,
+search, phenomena (H, G and diameter from the JPL Small-Body Database)
+and orbit functions. In JS, `eph.minorBody("Eros")` returns that id;
+`minorList()` lists what is loaded.
+
+How the files are made (`tools/make_minor_planets.py`):
+
+1. Each body starts from its osculating elements in the JPL Small-Body
+   Database.
+2. It is integrated over the span with the Sun, planets, Moon and Pluto
+   from DE440, the 16 massive asteroids of JPL's own ephemerides, and the
+   Sun's relativistic term.
+3. Every body is checked against JPL Horizons. Bodies that miss, which
+   are near-Earth objects with close approaches, are integrated again
+   from Horizons states every 10, 2 or ½ years.
+4. The positions are stored as Chebyshev pieces, accurate to 0.5″ as seen
+   from the closest the Earth can get.
+
+Against Horizons the apparent positions agree within 0.25″ (55 test
+positions). The exception is Hermes (69230): its Horizons ephemeris is
+consistent with itself only to ~2×10⁻⁵ AU around its long-lost years.
+Apophis is chaotic after its 2029 Earth flyby, so Horizons must be
+queried with dates on one side of its orbit epoch at a time; the tools
+do this.
 
 ## Uranian points
 

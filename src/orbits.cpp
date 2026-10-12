@@ -122,7 +122,8 @@ Vec3 date_to_date(double t1, double t0, const Vec3& v) {
 /* Osculating elements from the heliocentric state: the velocity from a
  * fourth-order central difference of positions carried to one frame. */
 bool osculating(eph_body body, double jd, Elements& el) {
-    if (body == EPH_EARTH || body == EPH_SUN || body == EPH_MOON || body >= EPH_MEAN_NODE)
+    if (body == EPH_EARTH || body == EPH_SUN || body == EPH_MOON ||
+        (body >= EPH_MEAN_NODE && !eph::is_minor(body)))
         return false;
     const double h = 0.1;
     Vec3 p0;

@@ -180,6 +180,10 @@ void eph_ecliptic_to_equatorial(double lon, double lat, double jd_tt,
 }
 
 const char* eph_body_name(eph_body body) {
+    if (body >= EPH_MINOR_BASE) {
+        const char* name = eph_minor_name(body - EPH_MINOR_BASE);
+        return name ? name : "?";
+    }
     switch (body) {
         case EPH_MERCURY: return "Mercury";
         case EPH_VENUS:   return "Venus";

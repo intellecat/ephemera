@@ -10,7 +10,7 @@ CORE_SRC = src/time.cpp src/frames.cpp src/vsop87.cpp src/moon.cpp \
            src/elp.cpp src/pluto.cpp src/ephemeris.cpp src/correction.cpp \
            src/compressed.cpp src/houses.cpp src/asteroids.cpp src/data.cpp \
            src/util.cpp src/ayanamsa.cpp src/search.cpp src/phenomena.cpp \
-           src/stars.cpp src/eclipses.cpp src/orbits.cpp src/uranian.cpp \
+           src/stars.cpp src/eclipses.cpp src/orbits.cpp src/uranian.cpp src/minor.cpp \
            data/delta_t_data.cpp
 LIB_SRC = $(CORE_SRC)
 
@@ -40,7 +40,7 @@ TESTS = $(BUILD)/test_ephemeris $(BUILD)/test_compressed $(BUILD)/test_topocentr
         $(BUILD)/test_lunar_points $(BUILD)/test_time $(BUILD)/test_search \
         $(BUILD)/test_phenomena $(if $(NO_STARS),,$(BUILD)/test_stars) \
         $(if $(NO_ECLIPSES),,$(BUILD)/test_eclipses) $(BUILD)/test_orbits \
-        $(BUILD)/test_uranian
+        $(BUILD)/test_uranian $(BUILD)/test_minor
 
 all: $(LIB) $(BUILD)/ephcliapp $(TESTS)
 
@@ -81,6 +81,7 @@ test: $(TESTS)
 	$(if $(NO_ECLIPSES),,$(BUILD)/test_eclipses data/eph-full.bin)
 	$(BUILD)/test_orbits data/eph-full.bin $(wildcard data/de440/de440-*.bin)
 	$(BUILD)/test_uranian data/eph-full.bin
+	$(BUILD)/test_minor data/eph-full.bin data/eph-minor.bin
 
 $(BUILD)/test_compressed: tests/test_compressed.cpp $(LIB)
 	$(CXX) $(CXXFLAGS) -Iinclude -Itests $< $(LIB) -lm -o $@
@@ -110,6 +111,9 @@ $(BUILD)/test_phenomena: tests/test_phenomena.cpp tests/phenomena_ref.h $(LIB)
 	$(CXX) $(CXXFLAGS) -Iinclude -Itests $< $(LIB) -lm -o $@
 
 $(BUILD)/test_stars: tests/test_stars.cpp tests/stars_ref.h $(LIB)
+	$(CXX) $(CXXFLAGS) -Iinclude -Itests $< $(LIB) -lm -o $@
+
+$(BUILD)/test_minor: tests/test_minor.cpp tests/minor_ref.h $(LIB)
 	$(CXX) $(CXXFLAGS) -Iinclude -Itests $< $(LIB) -lm -o $@
 
 $(BUILD)/test_uranian: tests/test_uranian.cpp $(LIB)

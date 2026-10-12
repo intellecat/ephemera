@@ -31,7 +31,7 @@ export declare const Body: {
   readonly Vulkanus: 26;
   readonly Poseidon: 27;
 };
-export type Body = (typeof Body)[keyof typeof Body];
+export type Body = (typeof Body)[keyof typeof Body] | number; // or a minor-planet id
 
 export declare const Ayanamsa: {
   readonly Lahiri: 0;
@@ -299,6 +299,12 @@ export interface Ephemeris {
 
   /** Star index by name, "alf Leo" or "HIP 49669"; -1 if unknown. */
   starFind(name: string): number;
+  /** The body id of a loaded minor planet: "433", "Eros" or "433 Eros";
+   *  null if none is loaded.  Works with position(), searches, phenomena(),
+   *  orbit() and heliocentric(). */
+  minorBody(name: string): number | null;
+  minorCount(): number;
+  minorList(): { body: number; number: number; name: string }[];
   /** Number of stars loaded (0 without eph-stars.bin); indices 0 .. count - 1. */
   starCount(): number;
   /** IAU name, e.g. "Regulus". */
