@@ -1,3 +1,5 @@
+<p align="center"><img alt="Ephemera" src="https://raw.githubusercontent.com/intellecat/ephemera/main/assets/logo/lockup-horizontal-light.svg" width="420"></p>
+
 # @astrologer/ephemera
 
 **A pocket-sized, MIT-licensed ephemeris for astrology and astronomy.**

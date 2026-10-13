@@ -1,4 +1,9 @@
-# Ephemera
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo/lockup-horizontal-dark.svg">
+    <img alt="Ephemera" src="assets/logo/lockup-horizontal-light.svg" width="460">
+  </picture>
+</p>
 
 **A pocket-sized, MIT-licensed ephemeris for astrology and astronomy.**
 JPL-grade planetary positions, houses, ayanamsas, eclipses, fixed stars and
