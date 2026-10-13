@@ -1,13 +1,13 @@
 // @astrologer/ephemera -- entry point.  Re-exports the wrapper and adds
-// load(), which finds the packaged .wasm modules and data files next to
-// this file (Node: read from disk; browsers and bundlers: fetched).
+// createEphemera(), which finds the packaged .wasm modules and data files
+// next to this file (Node: read from disk; browsers and bundlers: fetched).
 //
-//   import { load, Body } from '@astrologer/ephemera';
-//   const eph = await load();                       // 1" data built in
-//   const eph = await load({ data: ['stars'] });    // + fixed stars
-//   const eph = await load({ module: 'core', data: ['01as', 'chiron'] });
+//   import { createEphemera, Body } from '@astrologer/ephemera';
+//   const eph = await createEphemera();                      // 1" data built in
+//   const eph = await createEphemera({ data: ['stars'] });   // + fixed stars
+//   const eph = await createEphemera({ module: 'core', data: ['01as', 'chiron'] });
 
-import { createEphemeris } from './ephemeris.mjs';
+import { fromWasm } from './ephemeris.mjs';
 
 export * from './ephemeris.mjs';
 
@@ -29,13 +29,16 @@ async function readAsset(path) {
   return new Uint8Array(await response.arrayBuffer());
 }
 
-export async function load({ module = '1as', data = [] } = {}) {
+export async function createEphemera({ module = '1as', data = [] } = {}) {
   const file = MODULES[module];
   if (!file) throw new Error(`unknown module "${module}"`);
-  const eph = await createEphemeris(await readAsset(`./wasm/${file}`));
+  const eph = await fromWasm(await readAsset(`./wasm/${file}`));
   for (const d of data) {
     const bytes = typeof d === 'string' ? await readAsset(`./data/eph-${d}.bin`) : d;
     if (!eph.loadData(bytes)) throw new Error(`cannot load data ${typeof d === 'string' ? d : ''}`);
   }
   return eph;
 }
+
+/** @deprecated Renamed createEphemera (0.4.0). */
+export const load = createEphemera;

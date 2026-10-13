@@ -327,8 +327,16 @@ export interface Ephemeris {
   splitLongitude(lon: number): { sign: number; degrees: number; minutes: number; seconds: number };
 }
 
-/** Instantiate a module from its .wasm bytes (or a compiled module). */
-export declare function createEphemeris(
+/** Create an ephemeris from a packaged WebAssembly module and data files
+ *  (Node: read from the package; browsers and bundlers: fetched). */
+export declare function createEphemera(options?: {
+  module?: ModuleName;
+  data?: (DataName | Uint8Array)[];
+}): Promise<Ephemeris>;
+
+/** Create an ephemeris from .wasm bytes (or a compiled module) you load
+ *  yourself. */
+export declare function fromWasm(
   source: BufferSource | WebAssembly.Module): Promise<Ephemeris>;
 
 export type ModuleName = '1as' | '1as-chiron' | 'core' | 'lite';
@@ -336,8 +344,7 @@ export type ModuleName = '1as' | '1as-chiron' | 'core' | 'lite';
 export type DataName =
   | '1as' | '1as-chiron' | '01as' | '01as-chiron' | 'chiron' | 'asteroids' | 'stars';
 
-/** Load a packaged module and data files. */
-export declare function load(options?: {
-  module?: ModuleName;
-  data?: (DataName | Uint8Array)[];
-}): Promise<Ephemeris>;
+/** @deprecated Renamed createEphemera (0.4.0). */
+export declare const load: typeof createEphemera;
+/** @deprecated Renamed fromWasm (0.4.0). */
+export declare const createEphemeris: typeof fromWasm;

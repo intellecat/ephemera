@@ -1,30 +1,25 @@
 # @astrologer/ephemera
 
-A pocket-sized, MIT-licensed ephemeris for astrology and astronomy, as a
-WebAssembly module with no dependencies and no imports.  It works in
-Node (18+), browsers and bundlers.
+**A pocket-sized, MIT-licensed ephemeris for astrology and astronomy.**
+JPL-grade planetary positions, houses, ayanamsas, eclipses, fixed stars and
+1,000+ asteroids, in a 49 KB WebAssembly core with no dependencies. It
+works in Node 18+, browsers and bundlers.
 
-* The Sun, Moon, planets, Pluto, Chiron, Ceres, Pallas, Juno and Vesta,
-  plus the mean and true lunar nodes and mean and osculating Lilith.
-* Planetary nodes and apsides, mean and osculating (`orbit()`).
-* The Uranian points: Cupido, Hades, Zeus, Kronos, Apollon, Admetos,
-  Vulkanus and Poseidon.
-* 1,000+ more asteroids, centaurs and TNOs from optional data files.
-* Houses (Placidus, Koch, Whole Sign, Equal, Porphyry, Regiomontanus,
-  Campanus, Alcabitius, Topocentric and more) and the angles: Vertex and
-  co-ascendants.
-* 42 ayanamsas: Lahiri, Fagan/Bradley, Krishnamurti, Raman and others,
-  including the star-based ones.
-* 410 named fixed stars.
-* Solar and lunar eclipses, both global and local circumstances.
-* Phases and magnitudes, ingresses and returns, and stations.
-* Accuracy: about 0.5" with the built-in data over 1550–2650, matched
-  against JPL DE440.
+- **Tiny:** 49 KB core plus 145 KB of planetary data, built in by default.
+- **Accurate:** within 0.6″ of NASA JPL's DE440 over 1550–2650, or 0.03″
+  with the high-precision tables.
+- **MIT licensed:** use it in closed-source and commercial apps.
+- **Complete for astrology:** 14 house systems, 42 ayanamsas, nodes and
+  Lilith, Uranian points, eclipses, returns and stations, sidereal
+  returns, planetary nodes and apsides, and 411 fixed stars.
+- **Independently verified** against JPL, NASA's eclipse canon and
+  India's official ephemeris. See the
+  [accuracy page](https://github.com/intellecat/ephemera/blob/main/docs/accuracy.md).
 
 ```js
-import { load, Body, HouseSystem, Ayanamsa } from '@astrologer/ephemera';
+import { createEphemera, Body, HouseSystem, Ayanamsa } from '@astrologer/ephemera';
 
-const eph = await load();                          // 1" data built in
+const eph = await createEphemera();                 // 1" data built in
 const jd = eph.julianDate(2026, 1, 1.5);           // UT
 const moon = eph.position(Body.Moon, jd);          // degrees, AU, per day
 const cusps = eph.houses(jd, -0.1278, 51.5074, HouseSystem.Placidus);
@@ -43,7 +38,7 @@ fallback to Porphyry), ayanamsas, searches, eclipses and stars (`starCount`,
 
 ## Modules and data
 
-`load({ module, data })` picks a WebAssembly module and adds data files
+`createEphemera({ module, data })` picks a WebAssembly module and adds data files
 from the package:
 
 | `module` | Size (brotli) | Data built in |
@@ -59,7 +54,7 @@ and `'stars'`.  Raw bytes work too, e.g. a DE440 table (~0.002") from the
 repository's `data/de440/`:
 
 ```js
-const eph = await load({ module: 'core', data: ['01as', 'stars', tableBytes] });
+const eph = await createEphemera({ module: 'core', data: ['01as', 'stars', tableBytes] });
 ```
 
 ### Minor planets
@@ -73,13 +68,13 @@ files from the repository, not in this package:
 ```js
 const url = 'https://raw.githubusercontent.com/intellecat/ephemera/main/data/eph-minor.bin';
 const minor = new Uint8Array(await (await fetch(url)).arrayBuffer());
-const eph = await load({ data: [minor] });
+const eph = await createEphemera({ data: [minor] });
 const eros = eph.minorBody('Eros');          // or '433', '433 Eros'
 const pos = eph.position(eros, jd);
 ```
 
 In a browser without a bundler, serve the package directory and
-`load()` fetches the files next to `index.mjs`.  `demo.html` is a small
+`createEphemera()` fetches the files next to `index.mjs`.  `demo.html` is a small
 example page.
 
 ## More

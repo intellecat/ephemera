@@ -10,11 +10,11 @@ JPL-grade planetary positions, houses, ayanamsas, eclipses, fixed stars and
 ![wasm core: 49 KB](https://img.shields.io/badge/wasm%20core-49%20KB%20brotli-informational)
 
 ```js
-import { load, Body } from '@astrologer/ephemera';
+import { createEphemera, Body } from '@astrologer/ephemera';
 
-const eph = await load();                          // planetary data built in
-const jd = eph.julianDate(2026, 1, 1.5);           // 1 Jan 2026, 12:00 UT
-eph.position(Body.Moon, jd);                       // { longitude: 74.23, latitude: 5.05, longitudeSpeed: 15.04, … }
+const eph = await createEphemera();       // planetary data built in
+const jd = eph.julianDate(2026, 1, 1.5);  // 1 Jan 2026, 12:00 UT
+eph.position(Body.Moon, jd);              // { longitude: 74.23, latitude: 5.05, longitudeSpeed: 15.04, … }
 ```
 
 ## Why Ephemera
@@ -62,9 +62,9 @@ npm install @astrologer/ephemera
 ```
 
 ```js
-import { load, Body, HouseSystem, Ayanamsa } from '@astrologer/ephemera';
+import { createEphemera, Body, HouseSystem, Ayanamsa } from '@astrologer/ephemera';
 
-const eph = await load();
+const eph = await createEphemera();
 const jd = eph.julianDate(2026, 1, 1.5);                              // UT
 const sun = eph.position(Body.Sun, jd);                               // degrees, AU, per day
 const cusps = eph.houses(jd, -0.1278, 51.5074, HouseSystem.Placidus); // London

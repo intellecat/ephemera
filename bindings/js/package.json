@@ -1,7 +1,7 @@
 {
   "name": "@astrologer/ephemera",
-  "version": "0.3.0",
-  "description": "Pocket-sized ephemeris for astrology and astronomy: planets, Moon, Chiron, nodes, houses, ayanamsas, stars, eclipses and Uranian points in a 49 KB WebAssembly core, no dependencies.",
+  "version": "0.4.0",
+  "description": "Pocket-sized ephemeris for astrology and astronomy: planets, Moon, Chiron, nodes, houses, ayanamsas, stars, eclipses, Uranian points and 1,000+ asteroids in a 49 KB WebAssembly core, no dependencies, MIT.",
   "license": "MIT",
   "author": "Intellecat",
   "repository": {

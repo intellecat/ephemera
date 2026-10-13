@@ -1,8 +1,11 @@
 // ephemeris.mjs -- JavaScript wrapper for the ephemeris*.wasm modules
 // (make wasm).  Works in browsers and Node; the module needs no imports.
 //
-//   import { createEphemeris, Body } from './ephemeris.mjs';
-//   const eph = await createEphemeris(await (await fetch('ephemeris.wasm')).arrayBuffer());
+//   import { fromWasm, Body } from './ephemeris.mjs';
+//   const eph = await fromWasm(await (await fetch('ephemeris.wasm')).arrayBuffer());
+//
+// Most code uses createEphemera() from the package entry point instead,
+// which finds the packaged modules and data files itself.
 //   eph.loadData(new Uint8Array(await (await fetch('eph-1as.bin')).arrayBuffer()));
 //   const jd = eph.julianDate(2026, 1, 1.5);
 //   const moon = eph.position(Body.Moon, jd);   // degrees, AU, per day
@@ -79,7 +82,7 @@ const MINOR_BASE = 1000; // EPH_MINOR_BASE
 
 // source: an ArrayBuffer / typed array with the .wasm bytes, or a
 // WebAssembly.Module.
-export async function createEphemeris(source) {
+export async function fromWasm(source) {
   const result = await WebAssembly.instantiate(source, {});
   const instance = result.instance ?? result;
   const e = instance.exports;
@@ -433,3 +436,6 @@ export async function createEphemeris(source) {
     },
   };
 }
+
+/** @deprecated Renamed fromWasm (0.4.0). */
+export const createEphemeris = fromWasm;

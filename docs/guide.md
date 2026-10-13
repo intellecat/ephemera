@@ -66,7 +66,7 @@ runtime: `WebAssembly.instantiate(bytes, {})` is enough):
 | `build/wasm/ephemeris-1as-chiron.wasm` | 322 KB | 217 KB | `eph-1as-chiron.bin`        |
 
 They ship as the npm package **`@astrologer/ephemera`** (`bindings/js/`:
-the wrapper `ephemeris.mjs`, a `load()` helper, TypeScript types and a
+the wrapper `ephemeris.mjs`, `createEphemera()`, TypeScript types and a
 demo page; angles in degrees):
 
 ```sh
@@ -75,8 +75,8 @@ make npm-test      # smoke-tests it with node and shows the tarball size (1.8 MB
 ```
 
 ```js
-import { load, Body } from '@astrologer/ephemera';
-const eph = await load();                            // 1" data built in
+import { createEphemera, Body } from '@astrologer/ephemera';
+const eph = await createEphemera();                            // 1" data built in
 const jd = eph.julianDate(2026, 1, 1.5);            // UT
 const moon = eph.position(Body.Moon, jd);           // { longitude, latitude, ..., longitudeSpeed }
 const { asc, mc } = eph.ascMc(jd, -0.1278, 51.5074); // observer lon, lat (degrees)
@@ -87,7 +87,7 @@ but return -1 (null in the wrapper).  Native builds do the same with
 `make NO_ECLIPSES=1 NO_STARS=1` or CMake's `-DEPHEMERIS_ECLIPSES=OFF
 -DEPHEMERIS_STARS=OFF`.
 
-With the core module, pass data files: `load({ module: 'core', data:
+With the core module, pass data files: `createEphemera({ module: 'core', data:
 ['01as', 'stars'] })`, or raw bytes such as a DE440 table; any module
 can take more data the same way (or with `eph.loadData(bytes)`).
 
