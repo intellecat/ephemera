@@ -1,0 +1,7 @@
+# JitPack builds the Android library (bindings/kotlin) from a tag or commit:
+#   repositories { maven("https://jitpack.io") }
+#   dependencies { implementation("com.github.intellecat:ephemera:0.4.1") }
+jdk:
+  - openjdk17
+install:
+  - cd bindings/kotlin && ./gradlew --no-daemon publishReleasePublicationToMavenLocal

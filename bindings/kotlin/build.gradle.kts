@@ -6,8 +6,9 @@ plugins {
     `maven-publish`
 }
 
-group = "io.github.intellecat"
-version = "0.4.1"
+// JitPack sets GROUP and VERSION (com.github.intellecat, the tag).
+group = System.getenv("GROUP") ?: "io.github.intellecat"
+version = System.getenv("VERSION") ?: "0.4.1"
 
 android {
     namespace = "io.github.intellecat.ephemera"
