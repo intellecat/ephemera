@@ -16,3 +16,7 @@ __pycache__/
 *.pyc
 core
 /build-*/
+
+# Swift Package Manager
+/.build/
+/.swiftpm/

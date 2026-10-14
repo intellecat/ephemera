@@ -117,6 +117,35 @@ eph.load_data("data/de440/de440-2000.bin")            # or any file, by path or 
 The loaded data is shared by the whole process.  Release wheels for Linux,
 macOS and Windows are built by `.github/workflows/python.yml`.
 
+## Swift and Kotlin
+
+**Swift** (iOS, macOS, tvOS, watchOS, visionOS, Linux): the repository is a
+Swift package (`Package.swift`; the API in `bindings/swift`).  Add
+`https://github.com/intellecat/ephemera` in Xcode or `Package.swift`; the
+C++ library compiles from `src/` and the 1" series with Chiron is bundled:
+
+```swift
+import Ephemera
+
+let jd = Ephemera.julianDate(2026, 1, 1.5)
+let moon = Ephemera.position(.moon, jdUT: jd)!
+let cusps = Ephemera.houses(jdUT: jd, longitude: -0.1278, latitude: 51.5074, system: .placidus)
+```
+
+**Kotlin and Java** (Android 5.0+, and the desktop JVM): `bindings/kotlin` is
+an Android library with JNI glue and the API in
+`io.github.intellecat.ephemera`; `./gradlew assembleRelease` there builds the
+AAR for arm64-v8a, armeabi-v7a, x86_64 and x86:
+
+```kotlin
+val jd = Ephemera.julianDate(2026, 1, 1.5)
+val moon = Ephemera.position(Body.MOON, jd)!!
+val cusps = Ephemera.houses(jd, -0.1278, 51.5074, HouseSystem.PLACIDUS)
+```
+
+Both follow the JavaScript API (degrees, nil/null when nothing is found);
+`make swift-test` and `make kotlin-test` run their checks.
+
 ## Using the API
 
 ```c

@@ -30,7 +30,7 @@ endif
 LIB_OBJ = $(patsubst %.cpp,$(BUILD)/%.o,$(patsubst $(BUILD)/%,%,$(LIB_SRC)))
 LIB     = $(BUILD)/libephemeris.a
 
-.PHONY: all test tools data wasm wasm-test npm npm-test python python-test clean
+.PHONY: all test tools data wasm wasm-test npm npm-test python python-test kotlin-test swift-test clean
 
 # The DE440 tables covering the test reference (1850-2140).
 DE440_1800_2200 = $(foreach y,1800 1900 2000 2100,data/de440/de440-$(y).bin)
@@ -243,6 +243,30 @@ python-test: python
 	$(BUILD)/python-venv/bin/pip install -q $(BUILD)/python-dist/pyephemera-*.whl
 	cd $(BUILD) && python-venv/bin/python -m pytest -q $(abspath $(PY))/tests
 	ls -l $(BUILD)/python-dist
+
+# The Kotlin binding (bindings/kotlin) on the desktop JVM: its JNI library
+# built for this machine with the 1" series and Chiron, and its Kotlin
+# sources with jvmtest/Check.kt (needs JAVA_HOME with a JDK, and kotlinc).
+# The Android library is built with Gradle (bindings/kotlin, CI).
+KOTLINC ?= kotlinc
+KT = $(BUILD)/kotlin
+
+kotlin-test:
+	mkdir -p $(KT)
+	cmake -DIN=data/eph-1as-chiron.bin -DOUT=$(KT)/embedded_data.cpp -P tools/embed.cmake
+	$(CC) -O2 -fPIC -Iinclude -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux \
+	   -c bindings/kotlin/src/main/cpp/ephemera_jni.c -o $(KT)/ephemera_jni.o
+	$(CXX) $(CXXFLAGS) -fPIC -shared $(INCLUDES) $(CORE_SRC) $(KT)/embedded_data.cpp $(KT)/ephemera_jni.o \
+	   -o $(KT)/libephemera.so
+	$(KOTLINC) bindings/kotlin/src/main/kotlin bindings/kotlin/jvmtest/Check.kt -include-runtime \
+	   -d $(KT)/check.jar 2>&1 | grep -v '^warning: unable to find kotlin-stdlib' || true
+	$(JAVA_HOME)/bin/java -Djava.library.path=$(KT) -jar $(KT)/check.jar data
+
+# The Swift package (Package.swift, bindings/swift); its built-in data must
+# match data/eph-1as-chiron.bin.
+swift-test:
+	cmp data/eph-1as-chiron.bin bindings/swift/Sources/Ephemera/Resources/eph-1as-chiron.bin
+	swift test
 
 clean:
 	rm -rf $(BUILD)

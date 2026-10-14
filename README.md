@@ -31,8 +31,9 @@ eph.position(Body.Moon, jd);              // { longitude: 74.23, latitude: 5.05,
   high-precision tables, and within 0.6″ with the smallest data file.
 - **MIT licensed.** Use it in closed-source and commercial apps, with no
   AGPL obligations and no licence fee.
-- **Runs anywhere.** C and C++, Python, WebAssembly, Node and browsers,
-  from one codebase with no dependencies and no runtime imports.
+- **Runs anywhere.** C and C++, Python, Swift (iOS, macOS), Kotlin and
+  Java (Android), WebAssembly, Node and browsers, from one codebase with no
+  dependencies and no runtime imports.
 - **Complete for astrology.** 14 house systems, 42 ayanamsas, nodes and
   Lilith, Uranian points, fixed stars, eclipses, returns, stations and
   1,000+ asteroids.
@@ -88,6 +89,10 @@ jd = eph.julian_date(2026, 1, 1.5)                                    # UT
 moon = eph.position(eph.Body.MOON, jd)                                # degrees, AU, per day
 cusps = eph.houses(jd, -0.1278, 51.5074, eph.HouseSystem.PLACIDUS)    # London
 ```
+
+**Swift** (Swift Package Manager: `https://github.com/intellecat/ephemera`)
+and **Kotlin/Java** (Android): see [bindings/swift](bindings/swift) and
+[bindings/kotlin](bindings/kotlin).
 
 **C** (any C or C++ compiler; build with CMake or `make`):
 
