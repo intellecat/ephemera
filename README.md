@@ -51,12 +51,10 @@ eph.position(Body.Moon, jd);              // { longitude: 74.23, latitude: 5.05,
 | Date range at full accuracy | 1550–2650 | **13,000 BC – AD 17,000** |
 | House systems | 14 | **~25** |
 | Asteroids | 1,083 pre-built (1900–2100) | **any numbered asteroid** from its own files |
-| Rise and set, heliacal events, occultations | not yet | **yes** |
 | Verification | tested against JPL, NASA and IAE in this repository | long track record in astrology software |
 
-Swiss Ephemeris remains the reference for ancient and far-future dates and
-for rarely used techniques. Ephemera covers what modern astrology apps need,
-in a fraction of the size and under a permissive licence.
+Swiss Ephemeris remains the reference for ancient and far-future dates.
+Ephemera covers what modern astrology apps need, at a fraction of the size.
 
 ## Quick start
 
