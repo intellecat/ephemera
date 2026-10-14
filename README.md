@@ -31,8 +31,8 @@ eph.position(Body.Moon, jd);              // { longitude: 74.23, latitude: 5.05,
   high-precision tables, and within 0.6″ with the smallest data file.
 - **MIT licensed.** Use it in closed-source and commercial apps, with no
   AGPL obligations and no licence fee.
-- **Runs anywhere.** C and C++, WebAssembly, Node and browsers, from one
-  codebase with no dependencies and no runtime imports.
+- **Runs anywhere.** C and C++, Python, WebAssembly, Node and browsers,
+  from one codebase with no dependencies and no runtime imports.
 - **Complete for astrology.** 14 house systems, 42 ayanamsas, nodes and
   Lilith, Uranian points, fixed stars, eclipses, returns, stations and
   1,000+ asteroids.
@@ -73,6 +73,20 @@ const sun = eph.position(Body.Sun, jd);                               // degrees
 const cusps = eph.houses(jd, -0.1278, 51.5074, HouseSystem.Placidus); // London
 const lahiri = eph.ayanamsa(Ayanamsa.Lahiri, eph.utToTt(jd, 2026));  // sidereal = tropical − ayanamsa
 const eclipse = eph.solarEclipse(eph.utToTt(jd, 2026));               // the next solar eclipse
+```
+
+**Python** (3.9+; wheels for Linux, macOS and Windows):
+
+```sh
+pip install pyephemera
+```
+
+```python
+import ephemera as eph
+
+jd = eph.julian_date(2026, 1, 1.5)                                    # UT
+moon = eph.position(eph.Body.MOON, jd)                                # degrees, AU, per day
+cusps = eph.houses(jd, -0.1278, 51.5074, eph.HouseSystem.PLACIDUS)    # London
 ```
 
 **C** (any C or C++ compiler; build with CMake or `make`):
@@ -120,6 +134,7 @@ Details are in [data files](docs/data.md).
 ```sh
 make -j && make test            # or: cmake -S . -B build && cmake --build build && ctest --test-dir build
 make wasm && make npm           # WebAssembly modules and the npm package (needs zig and node)
+make python-test                # the Python package: builds a wheel and tests it
 ```
 
 ## Documentation

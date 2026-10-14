@@ -1,0 +1,43 @@
+[build-system]
+requires = ["scikit-build-core>=0.10"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "pyephemera"
+version = "0.4.1"
+description = "Pocket-sized ephemeris for astrology and astronomy: planets, Moon, Chiron, nodes, houses, ayanamsas, stars, eclipses, Uranian points and 1,000+ asteroids. No dependencies, MIT."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Intellecat" }]
+requires-python = ">=3.9"
+keywords = ["ephemeris", "astrology", "astronomy", "planets", "houses", "ayanamsa", "sidereal", "eclipse"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: C++",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/intellecat/ephemera"
+Documentation = "https://github.com/intellecat/ephemera/blob/main/docs/guide.md"
+Issues = "https://github.com/intellecat/ephemera/issues"
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+# The extension is a plain shared library loaded with ctypes: one wheel per
+# platform serves every Python 3 version.
+wheel.py-api = "py3"
+wheel.packages = ["src/ephemera"]
+sdist.include = ["csrc", "src/ephemera/data"]
+
+[tool.cibuildwheel]
+build = "cp312-*"
+skip = "*-musllinux_i686 *-manylinux_i686 *-win32"
+test-requires = "pytest"
+test-command = "pytest {package}/tests -q"

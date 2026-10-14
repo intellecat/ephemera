@@ -91,6 +91,32 @@ With the core module, pass data files: `createEphemera({ module: 'core', data:
 ['01as', 'stars'] })`, or raw bytes such as a DE440 table; any module
 can take more data the same way (or with `eph.loadData(bytes)`).
 
+## Python
+
+The Python package **`pyephemera`** (`bindings/python/`) wraps the same
+library through ctypes, with the 1" series and Chiron built in and the
+other data files in the package.  Angles are degrees and the names follow
+the JavaScript API in snake_case; calls that find nothing return `None`:
+
+```sh
+pip install pyephemera
+make python-test   # or build it here: stages build/python, builds a wheel and tests it
+```
+
+```python
+import ephemera as eph
+
+jd = eph.julian_date(2026, 1, 1.5)                    # UT
+moon = eph.position(eph.Body.MOON, jd)                # degrees, AU, per day
+cusps = eph.houses(jd, -0.1278, 51.5074, eph.HouseSystem.PLACIDUS)
+eph.load_package_data("stars", "asteroids")           # packaged data files
+eph.load_data("data/de440/de440-2000.bin")            # or any file, by path or bytes
+```
+
+`utc_to_jd` also takes a `datetime` (an aware one is converted to UTC).
+The loaded data is shared by the whole process.  Release wheels for Linux,
+macOS and Windows are built by `.github/workflows/python.yml`.
+
 ## Using the API
 
 ```c

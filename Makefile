@@ -30,7 +30,7 @@ endif
 LIB_OBJ = $(patsubst %.cpp,$(BUILD)/%.o,$(patsubst $(BUILD)/%,%,$(LIB_SRC)))
 LIB     = $(BUILD)/libephemeris.a
 
-.PHONY: all test tools data wasm wasm-test npm npm-test clean
+.PHONY: all test tools data wasm wasm-test npm npm-test python python-test clean
 
 # The DE440 tables covering the test reference (1850-2140).
 DE440_1800_2200 = $(foreach y,1800 1900 2000 2100,data/de440/de440-$(y).bin)
@@ -214,6 +214,35 @@ npm: wasm
 npm-test: npm
 	node tests/test_npm.mjs $(BUILD)/npm
 	cd $(BUILD)/npm && npm pack --dry-run 2>&1 | tail -n 6
+
+# The Python package pyephemera, staged in build/python with the C sources
+# it compiles (build a wheel with `pip wheel build/python`; release wheels
+# come from cibuildwheel).
+PY = $(BUILD)/python
+
+python:
+	rm -rf $(PY)
+	mkdir -p $(PY)/csrc/src $(PY)/csrc/include/ephemeris $(PY)/csrc/data $(PY)/csrc/tools
+	cp -r bindings/python/pyproject.toml bindings/python/CMakeLists.txt bindings/python/README.md \
+	   bindings/python/src bindings/python/tests LICENSE $(PY)/
+	cp src/*.cpp src/*.h $(PY)/csrc/src/
+	cp include/ephemeris/ephemeris.h $(PY)/csrc/include/ephemeris/
+	cp data/*.h data/delta_t_data.cpp $(PY)/csrc/data/
+	cp tools/embed.cmake $(PY)/csrc/tools/
+	cp data/eph-1as-chiron.bin $(PY)/csrc/
+	mkdir -p $(PY)/src/ephemera/data
+	cp $(foreach d,$(NPM_DATA),data/eph-$(d).bin) $(PY)/src/ephemera/data/
+
+# Builds a wheel, installs it in a fresh virtual environment and runs the
+# tests there (needs python3 with venv and network access for the build).
+python-test: python
+	rm -rf $(BUILD)/python-venv $(BUILD)/python-dist
+	python3 -m venv $(BUILD)/python-venv
+	$(BUILD)/python-venv/bin/pip install -q pytest
+	$(BUILD)/python-venv/bin/pip wheel -q $(PY) -w $(BUILD)/python-dist
+	$(BUILD)/python-venv/bin/pip install -q $(BUILD)/python-dist/pyephemera-*.whl
+	cd $(BUILD) && python-venv/bin/python -m pytest -q $(abspath $(PY))/tests
+	ls -l $(BUILD)/python-dist
 
 clean:
 	rm -rf $(BUILD)
